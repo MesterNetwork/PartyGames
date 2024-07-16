@@ -189,9 +189,10 @@ class Game(private val _plugin: Tournament) {
                 .append(Component.text("\n\n").append(_runningMinigame!!.description))
         )
 
-        class RotatePeopleTask : Consumer<BukkitTask> {
+        _plugin.server.scheduler.runTaskTimer(_plugin, object : Consumer<BukkitTask> {
             private var degrees = 0.0
             private var lastTime = System.currentTimeMillis()
+
             override fun accept(t: BukkitTask) {
                 if (_state != GameState.LOADING) {
                     t.cancel()
@@ -200,8 +201,8 @@ class Game(private val _plugin: Tournament) {
 
                 val deltaTime = System.currentTimeMillis() - lastTime
                 lastTime = System.currentTimeMillis()
-                // rotate so that 15 seconds is 360 degrees
-                degrees += deltaTime * 360.0 / 15000.0
+                // rotate so that a full revolution takes 20 seconds
+                degrees += deltaTime * 360.0 / 20000.0
                 if (degrees > 360.0) {
                     degrees = 0.0
                 }
@@ -220,12 +221,11 @@ class Game(private val _plugin: Tournament) {
 
                 for (player in players()) {
                     player.teleport(finalPos)
+                    @Suppress("UnstableApiUsage")
                     player.lookAt(_runningMinigame!!.startPos, LookAnchor.EYES)
                 }
             }
-        }
-
-        _plugin.server.scheduler.runTaskTimer(_plugin, RotatePeopleTask(), 0, 1)
+        }, 0, 1)
     }
 
     fun nextMinigame(): Boolean {

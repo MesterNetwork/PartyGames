@@ -2,34 +2,16 @@ package info.mester.bedless.tournament.game
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
-import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitTask
-import java.util.*
 import java.util.function.Consumer
 import kotlin.math.floor
-
-class ShowDistanceTask(private val minigame: RunawayMinigame) : Consumer<BukkitTask> {
-    override fun accept(t: BukkitTask) {
-        if(!minigame.running) {
-            t.cancel()
-            return
-        }
-
-        val distances = minigame.sortedDistances
-
-        for (player in minigame.game.players()) {
-            val distance = distances.find { it.first.uniqueId == player.uniqueId }!!.second
-            // show message in player's actionbar
-            player.sendActionBar(Component.text("Distance from start: $distance blocks"))
-        }
-    }
-}
 
 class RunawayMinigame(private val _game: Game) : Minigame(_game) {
     init {
         _startPos = game.plugin.config.getLocation("locations.minigames.runaway")!!
     }
+
     override fun start() {
         super.start()
 
@@ -41,8 +23,22 @@ class RunawayMinigame(private val _game: Game) : Minigame(_game) {
         }, 20 * 20)
 
         // start a timer that is constantly updating every player's actionbar with the distance from the start position
-        val showDistanceTask = ShowDistanceTask(this)
-        plugin.server.scheduler.runTaskTimer(plugin, showDistanceTask, 0, 2)
+        plugin.server.scheduler.runTaskTimer(plugin, object : Consumer<BukkitTask> {
+            override fun accept(t: BukkitTask) {
+                if (!running) {
+                    t.cancel()
+                    return
+                }
+
+                val distances = sortedDistances
+
+                for (player in game.players()) {
+                    val distance = distances.find { it.first.uniqueId == player.uniqueId }!!.second
+                    // show message in player's actionbar
+                    player.sendActionBar(Component.text("Distance from start: $distance blocks"))
+                }
+            }
+        }, 0, 2)
     }
 
     val sortedDistances: List<Pair<Player, Double>>
@@ -65,7 +61,7 @@ class RunawayMinigame(private val _game: Game) : Minigame(_game) {
 
             val score = distanceScore + when (position) {
                 0 -> 5
-                1,2 -> 3
+                1, 2 -> 3
                 in 3..9 -> 1
                 else -> 0
             }
