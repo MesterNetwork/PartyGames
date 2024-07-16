@@ -36,7 +36,7 @@ class TournamentBootstrap : PluginBootstrap {
                                     NamedTextColor.GREEN
                                 )
                             )
-                            Tournament.game().start()
+                            Tournament.game.start()
                             Command.SINGLE_SUCCESS
                         }
                         .build()
@@ -52,7 +52,7 @@ class TournamentBootstrap : PluginBootstrap {
                                                 .resolve(ctx.source)[0]
 
                                         // get admin status
-                                        val game = Tournament.game()
+                                        val game = Tournament.game
                                         val admin = game.isAdmin(player.uniqueId)
 
                                         // toggle admin status
@@ -86,7 +86,7 @@ class TournamentBootstrap : PluginBootstrap {
                     // begin
                     .then(Commands.literal("begin")
                         .executes { ctx ->
-                            if (Tournament.game().state() != GameState.LOADING) {
+                            if (Tournament.game.state != GameState.LOADING) {
                                 ctx.source.sender.sendMessage(
                                     Component.text(
                                         "You can only begin the game when it is loading!",
@@ -95,7 +95,22 @@ class TournamentBootstrap : PluginBootstrap {
                                 )
                                 return@executes 0
                             }
-                            Tournament.game().begin()
+                            Tournament.game.begin()
+                            Command.SINGLE_SUCCESS
+                        })
+                    // next
+                    .then(Commands.literal("next")
+                        .executes { ctx ->
+                            if (Tournament.game.state != GameState.POST_GAME) {
+                                ctx.source.sender.sendMessage(
+                                    Component.text(
+                                        "You can only start the next minigame when the current one has ended!",
+                                        NamedTextColor.RED
+                                    )
+                                )
+                                return@executes 0
+                            }
+                            Tournament.game.nextMinigame()
                             Command.SINGLE_SUCCESS
                         })
                     .build(),
@@ -106,6 +121,6 @@ class TournamentBootstrap : PluginBootstrap {
     }
 
     override fun createPlugin(context: PluginProviderContext): JavaPlugin {
-        return Tournament.instance()
+        return Tournament.plugin
     }
 }

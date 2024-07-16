@@ -1,19 +1,28 @@
 package info.mester.bedless.tournament.game
 
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.GameMode
 import org.bukkit.Location
 
-abstract class Minigame(private val game: Game, private val startPos: Location) {
-    private var running = false
+abstract class Minigame(private val _game: Game) {
+    private var _running = false
+    protected var _startPos: Location? = null
+
+    val startPos: Location
+        get() = _startPos!!.clone()
+    val running: Boolean
+        get() = _running
+    val game: Game
+        get() = _game
 
     /**
      * Function to start the minigame
      */
     open fun start() {
-        running = true
+        _running = true
 
-        game.players().forEach { player ->
+        _game.players().forEach { player ->
             player.teleport(startPos)
             player.gameMode = GameMode.ADVENTURE
         }
@@ -24,21 +33,13 @@ abstract class Minigame(private val game: Game, private val startPos: Location) 
      * Function to stop and evaluate the minigame (also set player scores)
      */
     open fun end() {
-        running = false
+        _running = false
+
+        _game.endMinigame()
     }
 
-    fun running(): Boolean {
-        return running
-    }
-
-    fun game(): Game {
-        return game
-    }
-
-    fun startPos(): Location {
-        return startPos.clone()
-    }
-
-    abstract fun name(): Component
-    abstract fun description(): Component
+    open val name: Component
+        get() = Component.text("[DEFAULT MINIGAME NAME]", NamedTextColor.DARK_RED)
+    open val description: Component
+        get() = Component.text("[DEFAULT MINIGAME DESCRIPTION]", NamedTextColor.DARK_RED)
 }

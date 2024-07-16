@@ -38,7 +38,7 @@ class PlayerAdminUI(managedPlayer: Entity) : InventoryHolder {
     private val inventory = Bukkit.createInventory(this, 9, Component.text("Admin UI"))
 
     init {
-        Tournament.game().addPlayer(managedPlayer.uniqueId)
+        Tournament.game.addPlayer(managedPlayer.uniqueId)
 
         val openVoiceItem = ItemStack(Material.NOTE_BLOCK)
         openVoiceItem.itemMeta = openVoiceItem.itemMeta.apply {
@@ -53,7 +53,7 @@ class PlayerAdminUI(managedPlayer: Entity) : InventoryHolder {
 
         val playerDataItem = ItemStack(Material.PAPER)
         playerDataItem.itemMeta = playerDataItem.itemMeta.apply {
-            val playerData = Tournament.game().playerData(managedPlayer.uniqueId)
+            val playerData = Tournament.game.playerData(managedPlayer.uniqueId)
             if (playerData == null) {
                 displayName(Component.text("No player data").decoration(TextDecoration.ITALIC, false))
                 return@apply
@@ -84,7 +84,7 @@ class PlayerAdminUI(managedPlayer: Entity) : InventoryHolder {
                 .url("https://bedless.mester.info/api/packdata")
                 .build()
 
-            Tournament.client().newCall(request).execute().use { response ->
+            Tournament.client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     event.whoClicked.sendMessage(
                         Component.text("Failed to fetch pack data", NamedTextColor.RED)

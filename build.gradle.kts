@@ -23,6 +23,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation(kotlin("reflect"))
+    implementation("net.objecthunter:exp4j:0.4.8")
 }
 
 val targetJavaVersion = 21

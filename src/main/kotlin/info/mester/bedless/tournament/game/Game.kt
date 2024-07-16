@@ -6,7 +6,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
-import org.bukkit.Location
+import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitTask
 import java.util.*
@@ -29,10 +29,24 @@ enum class GameState {
      * A minigame is currently running
      */
     PLAYING,
-    STOPPED
+
+    /**
+     * A minigame has just ended, but the tournament is still running, ready to load the next minigame
+     */
+    POST_GAME,
+
+    /**
+     * The game is over
+     */
+    STOPPED,
+
+    /**
+     * The game has just started, ready to load the next minigame
+     */
+    STARTING
 }
 
-class Game(private val plugin: Tournament) {
+class Game(private val _plugin: Tournament) {
     /**
      * List of UUIDs of players who are admins
      */
@@ -46,7 +60,7 @@ class Game(private val plugin: Tournament) {
     /**
      * List of Minigame classes that may be used in the game
      */
-    private val minigames = listOf<KClass<out Minigame>>(RunawayMinigame::class)
+    private val minigames = listOf<KClass<out Minigame>>(RunawayMinigame::class, MathMinigame::class)
 
     /**
      * Shuffled list of constructed Minigame classes, which will be used in the game
@@ -56,23 +70,19 @@ class Game(private val plugin: Tournament) {
     /**
      * Currently running Minigame, or null if no Minigame is running
      */
-    private var runningMinigame: Minigame? = null
+    private var _runningMinigame: Minigame? = null
+    val runningMinigame: Minigame?
+        get() = _runningMinigame
 
     /**
      * Current state of the game
      */
-    private var state = GameState.STOPPED
+    private var _state = GameState.STOPPED
+    val state: GameState
+        get() = _state
 
-    init {
-        // set up a task that adds a score to every player every second
-        plugin.run {
-            server.scheduler.runTaskTimer(this, Runnable {
-                for (player in players.values) {
-                    player.score++
-                }
-            }, 0, 20)
-        }
-    }
+    val plugin: Tournament
+        get() = _plugin
 
     /**
      * Function to set a player's admin status
@@ -126,23 +136,21 @@ class Game(private val plugin: Tournament) {
     }
 
     fun players(): List<Player> {
-        return players.keys.map { plugin.server.getPlayer(it)!! }
+        return players.keys.map { _plugin.server.getPlayer(it)!! }
     }
 
     fun plugin(): Tournament {
-        return plugin
-    }
-
-    fun state(): GameState {
-        return state
+        return _plugin
     }
 
     fun start() {
         // reset current game state
         reset()
 
+        _state = GameState.STARTING
+
         // add all online players who are not admins
-        for (player in plugin.server.onlinePlayers) {
+        for (player in _plugin.server.onlinePlayers) {
             if (!isAdmin(player.uniqueId)) {
                 addPlayer(player.uniqueId)
             }
@@ -150,18 +158,25 @@ class Game(private val plugin: Tournament) {
 
         readyMinigames.addAll(
             minigames.shuffled()
-                .map { it.constructors.first().call(this, Location(plugin().server.worlds[0], 165.5, 135.0, 76.5)) })
+                .map { it.constructors.first().call(this) })
         loadNextMinigame()
     }
 
     private fun loadNextMinigame() {
         if (readyMinigames.isEmpty()) {
-            return
+            // throw an exception
+            throw IllegalStateException("No minigames are ready!")
         }
 
-        state = GameState.LOADING
+        if (_state != GameState.STARTING && _state != GameState.POST_GAME) {
+            // throw an exception
+            throw IllegalStateException("The game is not in the starting or post game state!")
+        }
 
-        runningMinigame = readyMinigames.removeAt(0)
+        _state = GameState.LOADING
+
+        // load the next minigame
+        _runningMinigame = readyMinigames.removeAt(0)
 
         // put every player in spectator mode
         for (player in players().toList()) {
@@ -169,16 +184,16 @@ class Game(private val plugin: Tournament) {
         }
 
         Bukkit.broadcast(
-            Component.text("Welcome to the ").append(runningMinigame!!.name())
+            Component.text("Welcome to the ", NamedTextColor.GREEN).append(_runningMinigame!!.name)
                 .append(Component.text(" minigame!", NamedTextColor.GREEN))
-                .append(Component.text("\n\n").append(runningMinigame!!.description()))
+                .append(Component.text("\n\n").append(_runningMinigame!!.description))
         )
 
         class RotatePeopleTask : Consumer<BukkitTask> {
             private var degrees = 0.0
             private var lastTime = System.currentTimeMillis()
             override fun accept(t: BukkitTask) {
-                if (state != GameState.LOADING) {
+                if (_state != GameState.LOADING) {
                     t.cancel()
                     return
                 }
@@ -197,7 +212,7 @@ class Game(private val plugin: Tournament) {
                 val hitZ = 15.0 * sin(radians)
 
                 // to construct the final location for all players, take the x and z coordinates and set y to startPos.y + 15
-                val finalPos = runningMinigame!!.startPos().apply {
+                val finalPos = _runningMinigame!!.startPos.apply {
                     x += hitX
                     z += hitZ
                     y += 15.0
@@ -205,21 +220,71 @@ class Game(private val plugin: Tournament) {
 
                 for (player in players()) {
                     player.teleport(finalPos)
-                    player.lookAt(runningMinigame!!.startPos(), LookAnchor.EYES)
+                    player.lookAt(_runningMinigame!!.startPos, LookAnchor.EYES)
                 }
             }
         }
 
-        plugin.server.scheduler.runTaskTimer(plugin, RotatePeopleTask(), 0, 1)
+        _plugin.server.scheduler.runTaskTimer(_plugin, RotatePeopleTask(), 0, 1)
+    }
+
+    fun nextMinigame(): Boolean {
+        if (readyMinigames.isEmpty() || (_state != GameState.POST_GAME && _state != GameState.STARTING)) {
+            return false
+        }
+
+        loadNextMinigame()
+        return true
     }
 
     /**
      * Begins the current minigame
      */
     fun begin() {
-        state = GameState.PLAYING
+        _state = GameState.PLAYING
 
         // start the minigame
-        runningMinigame!!.start()
+        _runningMinigame!!.start()
+    }
+
+    fun endMinigame() {
+        _state = GameState.POST_GAME
+
+        val lobby = _plugin.config.getLocation("locations.waiting-lobby")!!
+        for (player in players()) {
+            // remove all status effects
+            for (effect in player.activePotionEffects) {
+                player.removePotionEffect(effect.type)
+            }
+
+            // clear inventory
+            player.inventory.clear()
+
+            // heal to full and set food level to 20
+            player.health = player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.value ?: 20.0
+            player.foodLevel = 20
+
+            // teleport to lobby
+            player.teleport(lobby)
+        }
+
+        if (readyMinigames.isEmpty()) {
+            end()
+        }
+    }
+
+    private fun end() {
+        _state = GameState.STOPPED
+
+        Bukkit.broadcast(Component.text("The tournament has ended!", NamedTextColor.GREEN))
+
+        // create a sorted list of player data based on their score
+        val sortedPlayerData =
+            players().associateWith { playerData(it.uniqueId)!!.score }.toList().sortedByDescending { it.second }
+
+        // display the top 3 players
+        for ((player, score) in sortedPlayerData.take(3)) {
+            Bukkit.broadcast(Component.text("${player.name} has scored $score points!", NamedTextColor.GOLD))
+        }
     }
 }
