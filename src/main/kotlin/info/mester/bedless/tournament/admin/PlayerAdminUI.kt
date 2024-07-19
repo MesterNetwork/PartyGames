@@ -16,7 +16,7 @@ import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
 
 data class PackInfo(
-    val packs: List<Pack>
+    val packs: List<Pack>,
 )
 
 data class Pack(
@@ -25,69 +25,77 @@ data class Pack(
     @SerializedName("short_name") val shortName: String,
     @SerializedName("friendly_name") val friendlyName: String,
     val description: String,
-    val downloads: Downloads
+    val downloads: Downloads,
 )
 
 data class Downloads(
     @SerializedName("1.8.9") val version189: String,
     @SerializedName("1.20.5") val version1205: String,
-    val bedrock: String
+    val bedrock: String,
 )
 
-class PlayerAdminUI(managedPlayer: Entity) : InventoryHolder {
+class PlayerAdminUI(
+    managedPlayer: Entity,
+) : InventoryHolder {
     private val inventory = Bukkit.createInventory(this, 9, Component.text("Admin UI"))
 
     init {
         Tournament.game.addPlayer(managedPlayer.uniqueId)
 
-        val openVoiceItem = ItemStack(Material.NOTE_BLOCK)
-        openVoiceItem.itemMeta = openVoiceItem.itemMeta.apply {
-            displayName(Component.text("Open Voice Chat").decoration(TextDecoration.ITALIC, false))
-            lore(
-                listOf(
-                    Component.text("Moves the selected player into the Discord stage").color(NamedTextColor.GRAY)
-                        .decoration(TextDecoration.ITALIC, false)
+        val openVoiceItem = ItemStack.of(Material.NOTE_BLOCK)
+        openVoiceItem.itemMeta =
+            openVoiceItem.itemMeta.apply {
+                displayName(Component.text("Open Voice Chat").decoration(TextDecoration.ITALIC, false))
+                lore(
+                    listOf(
+                        Component
+                            .text("Moves the selected player into the Discord stage")
+                            .color(NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false),
+                    ),
                 )
-            )
-        }
-
-        val playerDataItem = ItemStack(Material.PAPER)
-        playerDataItem.itemMeta = playerDataItem.itemMeta.apply {
-            val playerData = Tournament.game.playerData(managedPlayer.uniqueId)
-            if (playerData == null) {
-                displayName(Component.text("No player data").decoration(TextDecoration.ITALIC, false))
-                return@apply
             }
 
-            displayName(Component.text("Player Data").decoration(TextDecoration.ITALIC, false))
-            lore(
-                listOf(
-                    Component.text("Score: ${playerData.score}").color(NamedTextColor.GRAY)
-                        .decoration(TextDecoration.ITALIC, false)
+        val playerDataItem = ItemStack.of(Material.PAPER)
+        playerDataItem.itemMeta =
+            playerDataItem.itemMeta.apply {
+                val playerData = Tournament.game.playerData(managedPlayer.uniqueId)
+                if (playerData == null) {
+                    displayName(Component.text("No player data").decoration(TextDecoration.ITALIC, false))
+                    return@apply
+                }
+
+                displayName(Component.text("Player Data").decoration(TextDecoration.ITALIC, false))
+                lore(
+                    listOf(
+                        Component
+                            .text("Score: ${playerData.score}")
+                            .color(NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false),
+                    ),
                 )
-            )
-        }
+            }
         inventory.apply {
             setItem(0, openVoiceItem)
             setItem(1, playerDataItem)
         }
     }
 
-    override fun getInventory(): Inventory {
-        return inventory
-    }
+    override fun getInventory(): Inventory = inventory
 
     fun onInventoryClick(event: InventoryClickEvent) {
         if (event.rawSlot == 0) {
             // send a GET request to https://bedless.mester.info/api/packdata (expect JSON)
-            val request = Request.Builder()
-                .url("https://bedless.mester.info/api/packdata")
-                .build()
+            val request =
+                Request
+                    .Builder()
+                    .url("https://bedless.mester.info/api/packdata")
+                    .build()
 
             Tournament.client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     event.whoClicked.sendMessage(
-                        Component.text("Failed to fetch pack data", NamedTextColor.RED)
+                        Component.text("Failed to fetch pack data", NamedTextColor.RED),
                     )
                     return
                 }
@@ -95,7 +103,7 @@ class PlayerAdminUI(managedPlayer: Entity) : InventoryHolder {
                 val packData = response.body?.string()
                 if (packData == null) {
                     event.whoClicked.sendMessage(
-                        Component.text("Failed to fetch pack data", NamedTextColor.RED)
+                        Component.text("Failed to fetch pack data", NamedTextColor.RED),
                     )
                     return
                 }
@@ -103,7 +111,12 @@ class PlayerAdminUI(managedPlayer: Entity) : InventoryHolder {
                 val gson = Gson()
                 val packInfo = gson.fromJson(packData, PackInfo::class.java)
 
-                event.whoClicked.sendMessage(Component.text(packInfo.packs.find { it.id == "60k"}?.friendlyName ?: "Pack not found", NamedTextColor.RED))
+                event.whoClicked.sendMessage(
+                    Component.text(
+                        packInfo.packs.find { it.id == "60k" }?.friendlyName ?: "Pack not found",
+                        NamedTextColor.RED,
+                    ),
+                )
             }
         }
     }

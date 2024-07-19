@@ -2,12 +2,12 @@ name: Analyze SonarQube
 
 on:
   push:
-    branches:
-      - main
-
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  analyze:
     name: Analyze
     runs-on: ubuntu-latest
     permissions: read-all

@@ -1,0 +1,151 @@
+items:
+  stone_sword:
+    id: stone_sword
+    name: <gray>Stone Sword
+    lore:
+      - <white>A basic, but trustworthy stone sword.
+      - <white>9 out of 10 cavemen recommend it.
+    price: 8
+    slot: 0
+    category: sword
+  iron_sword:
+    id: iron_sword
+    name: <gray>Iron Sword
+    lore:
+      - <white>A sharp and durable iron sword.
+      - <white>10 out of 10 blacksmiths recommend it.
+    price: 12
+    slot: 1
+    category: sword
+  diamond_sword:
+    id: diamond_sword
+    name: <aqua>Diamond Sword
+    lore:
+      - <white>A powerful and enduring diamond sword.
+      - <white>A favorite among treasure hunters.
+    price: 16
+    slot: 2
+    category: sword
+  netherite_sword:
+    id: netherite_sword
+    name: <dark_purple>Netherite Sword
+    lore:
+      - <white>The strongest sword in existence, imbued with ancient power.
+      - <white>Only the bravest wield this mighty blade.
+    price: 20
+    slot: 3
+    category: sword
+  sharpness_i:
+    id: enchanted_book
+    name: <yellow>Sharpness I
+    lore:
+      - <white>Increases your damage by 1
+    price: 10
+    slot: 7
+    category: sharpness
+  sharpness_ii:
+    id: enchanted_book
+    name: <yellow>Sharpness II
+    lore:
+      - <white>Increases your damage by 1.5
+    price: 15
+    slot: 8
+    category: sharpness
+  shield:
+    id: shield
+    name: <gray>Shield
+    lore:
+      - <white>A basic shield.
+      - <white>Good for blocking attacks.
+    price: 5
+    slot: 4
+  golden_apple_1:
+    id: golden_apple
+    name: <gold>Golden Apple
+    lore:
+      - <white>A single golden apple.
+      - <white>It's a delicious treat!
+    price: 5
+    slot: 9
+    category: gap
+  golden_apple_2:
+    id: golden_apple
+    name: <gold>Golden Apple
+    lore:
+      - <white>Two golden apples.
+      - <white>Now we're talking!
+    price: 10
+    slot: 10
+    category: gap
+    amount: 2
+  golden_apple_3:
+    id: golden_apple
+    name: <gold>Golden Apple
+    lore:
+      - <white>Three golden apples.
+      - <white>Enough regen for the whole family!
+    price: 15
+    slot: 11
+    category: gap
+    amount: 3
+  golden_apple_inf:
+    id: enchanted_golden_apple
+    name: <red>In</red><gold>fi</gold><yellow>ni</yellow><green>te</green> <blue>Go</blue><dark_purple>ld</dark_purple><red>e</red><gold>n</gold> <yellow>A</yellow><green>pp</green><blue>l</blue><dark_purple>e</dark_purple>
+    lore:
+      - <white>Infinite golden apples.
+      - <white>Regenerates every 20 seconds!
+    price: 30
+    slot: 12
+    category: gap
+  chainmail_armor:
+    id: chainmail_chestplate
+    name: <gray>Chainmail Armor
+    lore:
+      - <white>A basic chainmail armor.
+      - <white>Good for blocking attacks.
+    price: 10
+    slot: 18
+    category: armor
+  iron_armor:
+    id: iron_chestplate
+    name: <white>Iron Armor
+    lore:
+      - <white>A basic iron armor.
+      - <white>Good for blocking attacks.
+    price: 20
+    slot: 19
+    category: armor
+  diamond_armor:
+    id: diamond_chestplate
+    name: <aqua>Diamond Armor
+    lore:
+      - <white>A basic diamond armor.
+      - <white>Good for blocking attacks.
+    price: 30
+    slot: 20
+    category: armor
+  netherite_armor:
+    id: netherite_chestplate
+    name: <dark_purple>Netherite Armor
+    lore:
+      - <white>The strongest armor in existence, imbued with ancient power.
+      - <white>Only the bravest wield this mighty armor.
+    price: 40
+    slot: 21
+    category: armor
+  protection_i:
+    id: enchanted_book
+    name: <yellow>Protection I
+    lore:
+      - <white>Gives you a 16% damage reduction.
+    price: 20
+    slot: 25
+    category: protection
+  protection_ii:
+    id: enchanted_book
+    name: <yellow>Protection II
+    lore:
+      - <white>Gives you a 32% damage reduction.
+    price: 40
+    slot: 26
+    category: protection

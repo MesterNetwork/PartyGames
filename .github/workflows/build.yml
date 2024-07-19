@@ -24,10 +24,14 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build writeVersion
+
+      - name: Read version from file
+        id: read_version
+        run: echo "VERSION=$(cat build/version.txt)" >> $GITHUB_ENV
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
-          name: blntournament.jar
-          path: build/libs/blntournament-*-all.jar
+          name: blntournament-${{ env.VERSION }}.jar
+          path: build/libs/blntournament-${{ env.VERSION }}.jar

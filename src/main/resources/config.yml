@@ -24,3 +24,11 @@ locations:
       z: 76.5
       yaw: 0.0
       pitch: 0.0
+    health-shop:
+      ==: org.bukkit.Location
+      world: world
+      x: 165.5
+      y: 135.0
+      z: 76.5
+      yaw: 0.0
+      pitch: 0.0

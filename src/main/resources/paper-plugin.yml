@@ -1,5 +1,5 @@
 name: Tournament
-version: '1.0-SNAPSHOT'
+version: 'a1.0'
 main: info.mester.bedless.tournament.Tournament
 api-version: '1.21'
 bootstrapper: info.mester.bedless.tournament.TournamentBootstrap
