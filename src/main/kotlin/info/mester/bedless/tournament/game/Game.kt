@@ -9,7 +9,7 @@ import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.attribute.Attribute
-import org.bukkit.entity.HumanEntity
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
@@ -66,7 +66,7 @@ class Game(
     /**
      * List of Minigame classes that may be used in the game
      */
-    private val minigames = listOf(HealthShopMinigame::class, RunawayMinigame::class, MathMinigame::class)
+    private val minigames = listOf(HealthShopMinigame::class)
 
     /**
      * Shuffled list of constructed Minigame classes, which will be used in the game
@@ -129,17 +129,15 @@ class Game(
         updateVisibilityOfPlayer(player, isAdmin)
     }
 
+    private fun isAdmin(uuid: UUID): Boolean = admins.contains(uuid)
+
     /**
-     * Function to check if a player is an admin
+     * Function to check if an entity (usually a player) is an admin
      *
-     * @param player the UUID of the player to check
-     * @return true if the player is an admin, false otherwise
+     * @param entity the entity to check
+     * @return true if the entity is an admin, false otherwise
      */
-    fun isAdmin(player: UUID): Boolean = admins.contains(player)
-
-    fun isAdmin(player: Player): Boolean = isAdmin(player.uniqueId)
-
-    fun isAdmin(player: HumanEntity): Boolean = isAdmin(player.uniqueId)
+    fun isAdmin(entity: Entity): Boolean = isAdmin(entity.uniqueId)
 
     /**
      * Function to get a player's data
@@ -306,15 +304,18 @@ class Game(
 
     private fun resetPlayers() {
         Audience.audience(Bukkit.getOnlinePlayers()).hideBossBar(remainingBossBar)
+        val scoreboard = Bukkit.getScoreboardManager().mainScoreboard
+        val hideNametags = scoreboard.getTeam("hide-nametag")
         for (player in players()) {
+            player.gameMode = GameMode.SURVIVAL
             // remove all status effects
             for (effect in player.activePotionEffects) {
                 player.removePotionEffect(effect.type)
             }
-
-            player.gameMode = GameMode.SURVIVAL
             // clear inventory
             player.inventory.clear()
+            // show name again
+            hideNametags?.removePlayer(player)
             // heal to full and set food level to 20
             player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.baseValue = 20.0
             player.health = player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.value ?: 20.0
@@ -322,6 +323,7 @@ class Game(
             player.saturation = 5f
             // teleport to lobby
             player.teleport(_plugin.config.getLocation("locations.waiting-lobby")!!)
+            player.allowFlight = false
         }
     }
 

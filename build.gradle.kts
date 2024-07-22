@@ -1,3 +1,6 @@
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+
 plugins {
     kotlin("jvm") version "2.0.20-Beta2"
     id("com.github.johnrengelman.shadow") version "8.1.1"
@@ -18,6 +21,7 @@ repositories {
     maven("https://oss.sonatype.org/content/groups/public/") {
         name = "sonatype"
     }
+    maven("https://maven.enginehub.org/repo/")
 }
 
 dependencies {
@@ -27,6 +31,7 @@ dependencies {
     implementation("net.objecthunter:exp4j:0.4.8")
     paperweight.paperDevBundle("1.21-R0.1-SNAPSHOT")
     ktlint("com.pinterest:ktlint:0.49.0") // Ktlint dependency
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.4")
 }
 val targetJavaVersion = 21
 kotlin {
@@ -47,6 +52,23 @@ tasks {
         filteringCharset = "UTF-8"
         filesMatching("paper-plugin.yml") {
             expand(props)
+        }
+
+        doFirst {
+            val nbtFilesDir = file("src/main/resources/speedbuilders")
+            val zipFile = file("src/main/resources/speedbuilders.zip")
+            // Create a zip file
+            zipFile.outputStream().use { outputStream ->
+                val zipOut = ZipOutputStream(outputStream)
+                nbtFilesDir.walk().filter { it.isFile && it.extension == "nbt" }.forEach { file ->
+                    zipOut.putNextEntry(ZipEntry(file.relativeTo(nbtFilesDir).path))
+                    file.inputStream().use { input ->
+                        input.copyTo(zipOut)
+                    }
+                    zipOut.closeEntry()
+                }
+                zipOut.close()
+            }
         }
     }
 

@@ -1,5 +1,20 @@
-name: Tournament
+name: idk
 version: 'a1.0'
 main: info.mester.bedless.tournament.Tournament
 api-version: '1.21'
 bootstrapper: info.mester.bedless.tournament.TournamentBootstrap
+dependencies:
+  server:
+    WorldEdit:
+      load: BEFORE
+      required: true
+      join-classpath: true
+authors:
+  - Mester
+description: The paper plugin for the Bedless Tournament
+website: https://github.com/MesterMan03/blntournament
+contributors:
+  - Pansexuality (lol)
+  - Lots of coffee
+  - Sleepless nights
+  - Send help please

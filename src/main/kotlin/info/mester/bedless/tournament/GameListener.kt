@@ -5,20 +5,28 @@ import info.mester.bedless.tournament.game.HealthShopMinigame
 import info.mester.bedless.tournament.game.HealthShopMinigameState
 import info.mester.bedless.tournament.game.HealthShopUI
 import info.mester.bedless.tournament.game.MathMinigame
+import info.mester.bedless.tournament.game.RunawayMinigame
+import info.mester.bedless.tournament.game.SpeedBuildersMinigame
+import io.papermc.paper.event.block.BlockBreakProgressUpdateEvent
 import io.papermc.paper.event.player.AsyncChatEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
+import org.bukkit.entity.AbstractArrow
+import org.bukkit.entity.Arrow
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.ArrowBodyCountChangeEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityRegainHealthEvent
+import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.FoodLevelChangeEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryClickEvent
@@ -56,6 +64,12 @@ class GameListener(
 
         if (event.slotType == InventoryType.SlotType.ARMOR) {
             event.isCancelled = true
+            return
+        }
+
+        if (holder is Player && event.slot == 40) {
+            event.isCancelled = true
+            return
         }
 
         if (holder is PlayerAdminUI) {
@@ -96,9 +110,9 @@ class GameListener(
         if (Tournament.game.isAdmin(event.player)) {
             return
         }
-
-        event.isCancelled = true
+        // only cancel the event if we're in a minigame
         val runningMinigame = Tournament.game.runningMinigame ?: return
+        // event.isCancelled = true
         if (runningMinigame is MathMinigame) {
             try {
                 val rawText = PlainTextComponentSerializer.plainText().serialize(event.message())
@@ -111,7 +125,7 @@ class GameListener(
             return
         }
         // send warning message
-        event.player.sendMessage(Component.text("You cannot use the chat during this minigame!", NamedTextColor.RED))
+        // event.player.sendMessage(Component.text("You cannot use the chat during this minigame!", NamedTextColor.RED))
     }
 
     @EventHandler
@@ -147,10 +161,13 @@ class GameListener(
         if (Tournament.game.isAdmin(event.player)) {
             return
         }
-        // don't let players move if they're in the health shop minigame during the shop state
         val runningMinigame = Tournament.game.runningMinigame
+        // don't let players move if they're in the health shop minigame during the shop state
         if (runningMinigame is HealthShopMinigame && runningMinigame.state == HealthShopMinigameState.SHOP) {
             event.isCancelled = true
+        }
+        if (runningMinigame is SpeedBuildersMinigame) {
+            runningMinigame.handlePlayerMove(event)
         }
     }
 
@@ -163,7 +180,7 @@ class GameListener(
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
         // make sure admins are hidden from new players
-        for (admin in Bukkit.getOnlinePlayers().filter { Tournament.game.isAdmin(it.uniqueId) }) {
+        for (admin in Bukkit.getOnlinePlayers().filter { Tournament.game.isAdmin(it) }) {
             event.player.hidePlayer(plugin, admin)
         }
     }
@@ -179,20 +196,15 @@ class GameListener(
 
     @EventHandler
     fun onEntityRegainHealth(event: EntityRegainHealthEvent) {
+        if (Tournament.game.isAdmin(event.entity)) {
+            return
+        }
         if (event.entity.type != EntityType.PLAYER) {
             return
         }
-        val player = event.entity as Player
-        if (Tournament.game.isAdmin(player)) {
-            return
-        }
         val runningMinigame = Tournament.game.runningMinigame
-        // don't let players in the health shop minigame during the shop state regain health via saturation
-        if (runningMinigame is HealthShopMinigame &&
-            runningMinigame.state == HealthShopMinigameState.SHOP &&
-            event.regainReason == EntityRegainHealthEvent.RegainReason.SATIATED
-        ) {
-            event.isCancelled = true
+        if (runningMinigame is HealthShopMinigame) {
+            runningMinigame.handleEntityRegainHealth(event)
         }
     }
 
@@ -205,14 +217,18 @@ class GameListener(
         @Suppress("UnstableApiUsage")
         val damager = event.damageSource.causingEntity
         val runningMinigame = Tournament.game.runningMinigame
-        if (runningMinigame is HealthShopMinigame && runningMinigame.state == HealthShopMinigameState.FIGHT && damager is Player) {
-            runningMinigame.handlePlayerHit(damager, damagee)
+        if (runningMinigame is HealthShopMinigame && damager is Player) {
+            runningMinigame.handlePlayerHit(damager, damagee, event.finalDamage)
         }
     }
 
     @EventHandler
     fun onPlayerDeath(event: PlayerDeathEvent) {
         val runningMinigame = Tournament.game.runningMinigame
+        if (runningMinigame is RunawayMinigame) {
+            event.isCancelled = true
+            return
+        }
         if (runningMinigame is HealthShopMinigame && runningMinigame.state == HealthShopMinigameState.FIGHT) {
             runningMinigame.handlePlayerDeath(event)
         }
@@ -233,5 +249,49 @@ class GameListener(
         }
 
         event.isCancelled = true
+    }
+
+    @EventHandler
+    fun onBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {
+        if (Tournament.game.isAdmin(event.entity)) {
+            return
+        }
+        val runningMinigame = Tournament.game.runningMinigame
+        if (runningMinigame is SpeedBuildersMinigame) {
+            runningMinigame.handleBlockBreakProgressUpdate(event)
+        }
+    }
+
+    @EventHandler
+    fun onBlockPlace(event: BlockPlaceEvent) {
+        if (Tournament.game.isAdmin(event.player)) {
+            return
+        }
+        val runningMinigame = Tournament.game.runningMinigame
+        if (runningMinigame is SpeedBuildersMinigame) {
+            runningMinigame.handleBlockPlace(event)
+        }
+    }
+
+    @EventHandler
+    fun onArrowBodyCountChange(event: ArrowBodyCountChangeEvent) {
+        // players should not have arrows stuck in their butts
+        event.newAmount = 0
+    }
+
+    @EventHandler
+    fun onEntityShootBow(event: EntityShootBowEvent) {
+        if (Tournament.game.isAdmin(event.entity)) {
+            return
+        }
+        // don't allow arrows from being picked up
+        val projectile = event.projectile
+        if (projectile is Arrow) {
+            projectile.pickupStatus = AbstractArrow.PickupStatus.CREATIVE_ONLY
+        }
+        val runningMinigame = Tournament.game.runningMinigame ?: return
+        if (runningMinigame is HealthShopMinigame) {
+            runningMinigame.handleEntityShootBow(event)
+        }
     }
 }

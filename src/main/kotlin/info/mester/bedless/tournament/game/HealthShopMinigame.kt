@@ -1,6 +1,8 @@
 package info.mester.bedless.tournament.game
 
 import info.mester.bedless.tournament.Tournament
+import info.mester.bedless.tournament.admin.SkinType
+import info.mester.bedless.tournament.admin.changePlayerSkin
 import info.mester.bedless.tournament.admin.spreadPlayers
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
@@ -16,7 +18,10 @@ import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.enchantments.Enchantment
+import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
+import org.bukkit.event.entity.EntityRegainHealthEvent
+import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
@@ -26,14 +31,19 @@ import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
+import org.bukkit.inventory.meta.PotionMeta
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
+import org.bukkit.potion.PotionType
+import org.bukkit.scoreboard.Team
 import java.io.File
 import java.util.UUID
 import kotlin.math.floor
+import kotlin.math.max
 
 enum class HealthShopMinigameState {
+    STARTING,
     SHOP,
     FIGHT,
 }
@@ -80,26 +90,45 @@ class HealthShopItem(
             val amount = section.getInt("amount", 1)
             val item = ItemStack.of(material ?: Material.BARRIER, amount)
 
-            item.itemMeta =
-                item.itemMeta.apply {
-                    itemName(MiniMessage.miniMessage().deserialize(section.getString("name")!!))
-                    lore(
-                        (section.getList("lore") as List<*>).map {
-                            MiniMessage.miniMessage().deserialize(it.toString()).decoration(
-                                TextDecoration.ITALIC,
-                                false,
-                            )
-                        },
-                    )
-                    setEnchantmentGlintOverride(false)
-                }
+            item.editMeta { meta ->
+                meta.itemName(MiniMessage.miniMessage().deserialize(section.getString("name")!!))
+                meta.lore(
+                    (section.getList("lore") as List<*>).map {
+                        MiniMessage.miniMessage().deserialize(it.toString()).decoration(
+                            TextDecoration.ITALIC,
+                            false,
+                        )
+                    } +
+                        listOf(
+                            Component.empty(),
+                            Component
+                                .text("Cost: ", NamedTextColor.GRAY)
+                                .append(
+                                    Component.text(
+                                        "${
+                                            String.format(
+                                                "%.1f",
+                                                section.getInt("price") / 2.0,
+                                            )
+                                        } ♥",
+                                        NamedTextColor.RED,
+                                    ),
+                                ),
+                        ),
+                )
+                meta.setEnchantmentGlintOverride(false)
+            }
+            // apply healing potion to item
+            if (key == "splash_healing_i" || key == "splash_healing_ii") {
+                HealthShopUI.setHealthPotion(item, key == "splash_healing_ii")
+            }
 
             return HealthShopItem(
                 item,
                 section.getInt("price"),
                 section.getInt("slot"),
                 key,
-                section.getString("category") ?: "default",
+                section.getString("category") ?: "none",
                 amount,
             )
         }
@@ -111,11 +140,29 @@ class HealthShopUI(
     private val items: List<HealthShopItem>,
     private var money: Double,
 ) : InventoryHolder {
-    private val inventory = Bukkit.createInventory(this, 27, Component.text("Health Shop"))
+    private val inventory = Bukkit.createInventory(this, 4 * 9, Component.text("Health Shop"))
     private val purchasedItems: MutableList<HealthShopItem> = mutableListOf()
     private val player = Bukkit.getPlayer(playerUUID)!!
 
+    companion object {
+        private val maxArrows: MutableMap<UUID, Int> = mutableMapOf()
+
+        fun maxArrows(uuid: UUID): Int = maxArrows[uuid] ?: 0
+
+        fun setHealthPotion(
+            item: ItemStack,
+            strong: Boolean,
+        ) {
+            item.editMeta { meta ->
+                val potionMeta = meta as PotionMeta
+                potionMeta.basePotionType = if (strong) PotionType.STRONG_HEALING else PotionType.HEALING
+            }
+        }
+    }
+
     init {
+        // init maxarrows to 0
+        maxArrows[playerUUID] = 0
         for (item in items) {
             inventory.setItem(item.slot, item.item)
         }
@@ -180,7 +227,7 @@ class HealthShopUI(
         shopItem: HealthShopItem,
         inventoryItem: ItemStack,
     ) {
-        val sameCategory = purchasedItems.filter { it.category == shopItem.category }
+        val sameCategory = purchasedItems.filter { it.category != "none" && it.category == shopItem.category }
         // calculate how much money we'd have if we removed all the items in the same category
         val moneyToAdd = sameCategory.sumOf { it.price }
         // check if we have enough money
@@ -223,16 +270,21 @@ class HealthShopUI(
         // process sword
         val addSword = { material: Material ->
             val sword = ItemStack.of(material)
-            sword.itemMeta =
-                sword.itemMeta.apply {
-                    if (purchasedItems.any { it.key == "sharpness_i" }) {
-                        addEnchant(Enchantment.SHARPNESS, 1, true)
-                    }
-                    if (purchasedItems.any { it.key == "sharpness_ii" }) {
-                        addEnchant(Enchantment.SHARPNESS, 2, true)
-                    }
-                    applyGenericItemMeta(this)
+            sword.editMeta { meta ->
+                if (purchasedItems.any { it.key == "fire_aspect" }) {
+                    meta.addEnchant(Enchantment.FIRE_ASPECT, 1, true)
                 }
+                if (purchasedItems.any { it.key == "sharpness_i" }) {
+                    meta.addEnchant(Enchantment.SHARPNESS, 1, true)
+                }
+                if (purchasedItems.any { it.key == "sharpness_iii" }) {
+                    meta.addEnchant(Enchantment.SHARPNESS, 3, true)
+                }
+                if (purchasedItems.any { it.key == "sharpness_v" }) {
+                    meta.addEnchant(Enchantment.SHARPNESS, 5, true)
+                }
+                applyGenericItemMeta(meta)
+            }
             player.inventory.setItem(0, sword)
         }
         kotlin
@@ -246,10 +298,9 @@ class HealthShopUI(
         // process shield
         if (purchasedItems.any { it.key == "shield" }) {
             val shield = ItemStack.of(Material.SHIELD)
-            shield.itemMeta =
-                shield.itemMeta.apply {
-                    applyGenericItemMeta(this)
-                }
+            shield.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
             player.inventory.setItem(EquipmentSlot.OFF_HAND, shield)
         }
         // process golden apples
@@ -260,16 +311,20 @@ class HealthShopUI(
         // process infinite golden apple
         if (purchasedItems.any { it.key == "golden_apple_inf" }) {
             val apple = ItemStack.of(Material.ENCHANTED_GOLDEN_APPLE)
-            apple.itemMeta =
-                apple.itemMeta.apply {
-                    addItemFlags(ItemFlag.HIDE_ENCHANTS)
-                    persistentDataContainer.set(
-                        NamespacedKey(Tournament.plugin, "golden_apple_inf"),
-                        PersistentDataType.BOOLEAN,
-                        true,
-                    )
-                }
+            apple.editMeta { meta ->
+                meta.persistentDataContainer.set(
+                    NamespacedKey(Tournament.plugin, "golden_apple_inf"),
+                    PersistentDataType.BOOLEAN,
+                    true,
+                )
+            }
             player.inventory.setItem(1, apple)
+        }
+        // process healing potions
+        for (purchasedPotion in purchasedItems.filter { it.key == "splash_healing_i" || it.key == "splash_healing_ii" }) {
+            val potion = ItemStack.of(Material.SPLASH_POTION, purchasedPotion.amount)
+            setHealthPotion(potion, purchasedPotion.key == "splash_healing_ii")
+            player.inventory.addItem(potion)
         }
         // process armor
         val addArmor = { armor: ArmorType ->
@@ -318,16 +373,15 @@ class HealthShopUI(
                         )
                 }
             armorItems.forEach { armorItem ->
-                armorItem.itemMeta =
-                    armorItem.itemMeta.apply {
-                        applyGenericItemMeta(this)
-                        if (purchasedItems.any { it.key == "protection_i" }) {
-                            addEnchant(Enchantment.PROTECTION, 1, true)
-                        }
-                        if (purchasedItems.any { it.key == "protection_ii" }) {
-                            addEnchant(Enchantment.PROTECTION, 2, true)
-                        }
+                armorItem.editMeta { meta ->
+                    applyGenericItemMeta(meta)
+                    if (purchasedItems.any { it.key == "protection_i" }) {
+                        meta.addEnchant(Enchantment.PROTECTION, 1, true)
                     }
+                    if (purchasedItems.any { it.key == "protection_ii" }) {
+                        meta.addEnchant(Enchantment.PROTECTION, 2, true)
+                    }
+                }
             }
             player.inventory.setItem(EquipmentSlot.HEAD, armorItems[0])
             player.inventory.setItem(EquipmentSlot.CHEST, armorItems[1])
@@ -347,16 +401,34 @@ class HealthShopUI(
             }.onFailure {
                 addArmor(ArmorType.LEATHER)
             }
+        // process bow
+        if (purchasedItems.any { it.key == "bow" }) {
+            val bow = ItemStack.of(Material.BOW)
+            bow.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
+            player.inventory.setItem(2, bow)
+            // an arrow is included with the bow
+            maxArrows[player.uniqueId] = 1
+        }
+        // process arrows
+        kotlin
+            .runCatching {
+                purchasedItems.first { it.category == "arrow" }
+            }.onSuccess { shopItem ->
+                maxArrows[player.uniqueId] = maxArrows[player.uniqueId]!! + shopItem.amount
+            }
     }
 }
 
 class HealthShopMinigame : Minigame() {
     private var shopItems: MutableList<HealthShopItem> = mutableListOf()
-    private var _state = HealthShopMinigameState.SHOP
+    private var _state = HealthShopMinigameState.STARTING
     val state: HealthShopMinigameState
         get() = _state
     private var fightStartedTime = 0L
     private val startingHealth = 60.0
+    private val arrowRegenerating = mutableListOf<UUID>()
 
     // a map that links player UUIDs to their last damage source's UUID and a Long representing the time they were damaged
     private val lastDamageTimes: MutableMap<UUID, Pair<UUID, Long>> = mutableMapOf()
@@ -366,54 +438,66 @@ class HealthShopMinigame : Minigame() {
      */
     private val shopUIs: Map<UUID, HealthShopUI>
 
-    init {
-        startPos = game.plugin.config.getLocation("locations.minigames.health-shop")!!
-        // load shop items by obtaining the config and reading every key inside "items" of "health-shop.yml"
-        val config = YamlConfiguration.loadConfiguration(File(game.plugin.dataFolder, "health-shop.yml"))
-        config.getConfigurationSection("items")?.getKeys(false)?.forEach { key ->
-            game.plugin.logger.info("Loading shop item $key")
-            val shopItem = HealthShopItem.loadFromConfig(config.getConfigurationSection("items.$key")!!, key)
-            shopItems.add(shopItem)
+    private fun regenerateArrowTimer(
+        player: Player,
+        startTime: Long,
+    ): Boolean {
+        if (!running) {
+            return false
         }
-        shopUIs = game.players().map { it.uniqueId }.associateWith { HealthShopUI(it, shopItems, startingHealth) }
+        // check if the player is still alive
+        if (!player.isOnline || player.gameMode == GameMode.SPECTATOR) {
+            return false
+        }
+        // calculate the time remaining (3-second delay)
+        val timeRemaining = 3 * 1000 - (System.currentTimeMillis() - startTime)
+        val secondsRemaining = (timeRemaining / 1000).toInt()
+        val totalProgress = timeRemaining / 3000f
+        // update the player's experience level and experience bar
+        player.level = max(0, secondsRemaining)
+        player.exp = max(0f, totalProgress)
+        // check if the countdown is over
+        if (timeRemaining <= 0) {
+            // count the arrows in the player's inventory
+            var needsArrows = !player.inventory.contains(Material.ARROW, HealthShopUI.maxArrows(player.uniqueId))
+            if (!needsArrows) {
+                return false
+            }
+            // give the player an arrow
+            player.inventory.addItem(ItemStack(Material.ARROW, 1))
+            needsArrows = !player.inventory.contains(Material.ARROW, HealthShopUI.maxArrows(player.uniqueId))
+            // if the player still needs more arrows, start the timer again
+            if (needsArrows) {
+                Bukkit.getScheduler().runTaskLater(game.plugin, Runnable { regenerateArrow(player) }, 1)
+            } else {
+                arrowRegenerating.remove(player.uniqueId)
+            }
+            return false
+        }
+        return true
     }
 
-    override fun start() {
-        for (player in game.players()) {
-            // open the shop UI for all players
-            player.openInventory(shopUIs[player.uniqueId]!!.inventory)
-            // update their max health
-            player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.baseValue = startingHealth
-            player.health = startingHealth
-        }
-        // start a 1-minute countdown for the shop state
-        startCountdown(60000) {
-            startFight()
-        }
-
-        super.start()
+    private fun regenerateArrow(player: Player) {
+        val startTime = System.currentTimeMillis()
+        Bukkit
+            .getScheduler()
+            .runTaskTimer(game.plugin, { t -> if (!regenerateArrowTimer(player, startTime)) t.cancel() }, 0, 1)
     }
 
-    private fun startFight() {
-        _state = HealthShopMinigameState.FIGHT
-
-        fightStartedTime = System.currentTimeMillis()
-
-        for (player in game.players()) {
-            // close the shop UI
-            player.closeInventory()
-            // cap the max health at the current health
-            player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.baseValue = player.health
-            // time to give the items! :)
-            shopUIs[player.uniqueId]!!.giveItems()
+    fun handleEntityShootBow(event: EntityShootBowEvent) {
+        if (_state != HealthShopMinigameState.FIGHT) {
+            return
         }
-        // custom spreadplayers implementation: spread the players around start pos
-        // in a 50 block radius
-        spreadPlayers(game.players(), startPos, 50)
-        // start a 5-minute countdown for the fight
-        startCountdown(300000) {
-            end()
+        if (event.entity.type != EntityType.PLAYER) {
+            return
         }
+        val player = event.entity as Player
+        if (arrowRegenerating.contains(player.uniqueId)) {
+            return
+        }
+        // start regenerating arrows
+        arrowRegenerating.add(player.uniqueId)
+        regenerateArrow(player)
     }
 
     /**
@@ -442,11 +526,41 @@ class HealthShopMinigame : Minigame() {
     fun handlePlayerHit(
         damager: Player,
         damagee: Player,
+        damage: Double,
     ) {
+        if (_state != HealthShopMinigameState.FIGHT) {
+            return
+        }
         val damagerUUID = damager.uniqueId
         val damageeUUID = damagee.uniqueId
 
+        if (damagee.isBlocking) {
+            // nuke the shield
+            val shield = damagee.inventory.itemInOffHand.clone()
+            damagee.inventory.setItemInOffHand(ItemStack(Material.AIR))
+            // after 1.5 seconds, give the shield back
+            Bukkit.getScheduler().runTaskLater(
+                game.plugin,
+                Runnable {
+                    if (!running) return@Runnable
+                    damagee.inventory.setItemInOffHand(shield)
+                },
+                (1.5 * 20).toLong(),
+            )
+        }
+
         lastDamageTimes[damagerUUID] = Pair(damageeUUID, System.currentTimeMillis())
+        // show the damager the damagee's name and health in actionbar
+        damager.sendActionBar(
+            MiniMessage.miniMessage().deserialize(
+                "<green><bold>${damagee.name}<reset> <dark_gray>-<reset> <red>${
+                    String.format(
+                        (floor(damagee.health - damage) / 2).toString(),
+                        "%.1f",
+                    )
+                } ♥",
+            ),
+        )
     }
 
     fun handlePlayerDeath(event: PlayerDeathEvent) {
@@ -506,6 +620,19 @@ class HealthShopMinigame : Minigame() {
         }
     }
 
+    fun handleEntityRegainHealth(event: EntityRegainHealthEvent) {
+        if (event.entity.type != EntityType.PLAYER) {
+            return
+        }
+        // don't let players during the shop state regain health via saturation
+        if (state == HealthShopMinigameState.SHOP &&
+            event.regainReason == EntityRegainHealthEvent.RegainReason.SATIATED
+        ) {
+            event.isCancelled = true
+            return
+        }
+    }
+
     fun handlePlayerConsumeItem(event: PlayerItemConsumeEvent) {
         val item = event.item
         // check if the item has a special golden_apple_inf PDC
@@ -538,6 +665,83 @@ class HealthShopMinigame : Minigame() {
                 ),
             )
         }
+    }
+
+    init {
+        _startPos = game.plugin.config.getLocation("locations.minigames.health-shop")!!
+        // load shop items by obtaining the config and reading every key inside "items" of "health-shop.yml"
+        val config = YamlConfiguration.loadConfiguration(File(game.plugin.dataFolder, "health-shop.yml"))
+        config.getConfigurationSection("items")?.getKeys(false)?.forEach { key ->
+            game.plugin.logger.info("Loading shop item $key")
+            val shopItem = HealthShopItem.loadFromConfig(config.getConfigurationSection("items.$key")!!, key)
+            shopItems.add(shopItem)
+        }
+        shopUIs = game.players().map { it.uniqueId }.associateWith { HealthShopUI(it, shopItems, startingHealth) }
+    }
+
+    override fun start() {
+        _state = HealthShopMinigameState.SHOP
+        for (player in game.players()) {
+            // open the shop UI for all players
+            player.openInventory(shopUIs[player.uniqueId]!!.inventory)
+            // update their max health
+            player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.baseValue = startingHealth
+            player.health = startingHealth
+        }
+        // start a 1-minute countdown for the shop state
+        startCountdown(60000) {
+            startFight()
+        }
+
+        super.start()
+    }
+
+    private fun startFight() {
+        _state = HealthShopMinigameState.FIGHT
+
+        fightStartedTime = System.currentTimeMillis()
+
+        for (player in game.players()) {
+            // close the shop UI
+            player.closeInventory()
+            // cap the max health at the current health
+            player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.baseValue = player.health
+            // time to give the items! :)
+            shopUIs[player.uniqueId]!!.giveItems()
+            // give the actual arrow items based on maxArrows
+            val maxArrows = HealthShopUI.maxArrows(player.uniqueId)
+            if (maxArrows > 0) {
+                player.inventory.setItem(8, ItemStack(Material.ARROW, maxArrows))
+            }
+            // hide their nametag
+            val board = Bukkit.getScoreboardManager().mainScoreboard
+            val team = board.getTeam("hide-nametag") ?: board.registerNewTeam("hide-nametag")
+            // admins should still see nametags
+            team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OWN_TEAM)
+            team.addEntity(player)
+            // hide the skins (this is ugly)
+            changePlayerSkin(player, SkinType.STEVE)
+        }
+        // custom spreadplayers implementation: spread the players around start pos
+        // in a 100 block radius
+        // TODO: set radius to 100
+        spreadPlayers(game.players(), startPos, 50)
+        // start a 5-minute countdown for the fight
+        startCountdown(300000) {
+            end()
+        }
+    }
+
+    override fun end(nextGame: Boolean) {
+        // start an async task to reset everyone's skin
+        Bukkit.getAsyncScheduler().runNow(
+            Tournament.plugin,
+        ) {
+            for (player in game.players()) {
+                changePlayerSkin(player, SkinType.OWN)
+            }
+        }
+        super.end(nextGame)
     }
 
     override fun end() {

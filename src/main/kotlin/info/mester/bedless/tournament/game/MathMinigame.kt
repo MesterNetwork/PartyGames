@@ -54,7 +54,7 @@ class MathMinigame : Minigame() {
             .toMutableMap()
 
     init {
-        startPos = game.plugin.config.getLocation("locations.minigames.math")!!
+        _startPos = game.plugin.config.getLocation("locations.minigames.math")!!
     }
 
     override fun start() {

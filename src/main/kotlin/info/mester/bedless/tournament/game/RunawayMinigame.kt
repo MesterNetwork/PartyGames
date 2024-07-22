@@ -9,7 +9,7 @@ import kotlin.math.floor
 
 class RunawayMinigame : Minigame() {
     init {
-        startPos = game.plugin.config.getLocation("locations.minigames.runaway")!!
+        _startPos = game.plugin.config.getLocation("locations.minigames.runaway")!!
     }
 
     override fun start() {

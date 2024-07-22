@@ -11,16 +11,18 @@ import org.bukkit.Location
 abstract class Minigame {
     private val _game = Tournament.game
     private var _running = false
-    private var _startPos: Location? = null
 
-    var startPos: Location
-        get() = _startPos!!.clone()
-        set(value) {
-            if (_startPos != null) {
-                throw IllegalStateException("The start position cannot be changed after it has been set!")
-            }
-            _startPos = value
-        }
+    @Suppress("ktlint:standard:backing-property-naming")
+    protected var _startPos: Location =
+        Location(
+            game.plugin.server.worlds
+                .first(),
+            0.0,
+            0.0,
+            0.0,
+        )
+    val startPos: Location
+        get() = _startPos.clone()
     val running: Boolean
         get() = _running
     val game: Game
@@ -42,17 +44,23 @@ abstract class Minigame {
     /**
      * Function to stop and evaluate the minigame (also set player scores)
      */
-    open fun end() {
+    open fun end(nextGame: Boolean) {
         _running = false
 
-        _game.endMinigame()
+        if (nextGame) {
+            _game.endMinigame()
+        }
+    }
+
+    open fun end() {
+        end(true)
     }
 
     /**
      * Function to terminate the minigame without the underlying game ending
      */
-    fun terminate() {
-        _running = false
+    open fun terminate() {
+        end(false)
     }
 
     private fun updateRemainingTime(
@@ -60,13 +68,11 @@ abstract class Minigame {
         duration: Long,
     ): Boolean {
         val bar = game.remainingBossBar
-
         val remainingTime = startTime + duration - System.currentTimeMillis()
         if (remainingTime < 0) {
             Audience.audience(Bukkit.getOnlinePlayers()).hideBossBar(bar)
             return false
         }
-
         val time = remainingTime / 1000
         val minutes = time / 60
         val seconds = time % 60
@@ -86,10 +92,10 @@ abstract class Minigame {
 
     fun startCountdown(
         duration: Long,
+        showBar: Boolean,
         onEnd: () -> Unit,
     ) {
-        Audience.audience(Bukkit.getOnlinePlayers()).showBossBar(game.remainingBossBar)
-
+        if (showBar) Audience.audience(Bukkit.getOnlinePlayers()).showBossBar(game.remainingBossBar)
         val startTime = System.currentTimeMillis()
         game.plugin.server.scheduler.runTaskTimer(
             game.plugin,
@@ -106,6 +112,13 @@ abstract class Minigame {
             0,
             1,
         )
+    }
+
+    fun startCountdown(
+        duration: Long,
+        onEnd: () -> Unit,
+    ) {
+        startCountdown(duration, true, onEnd)
     }
 
     open val name: Component
