@@ -10,7 +10,7 @@ items:
     category: sword
   iron_sword:
     id: iron_sword
-    name: <gray>Iron Sword
+    name: <white>Iron Sword
     lore:
       - <white>A sharp and durable iron sword.
       - <white>10 out of 10 blacksmiths recommend it.
@@ -114,6 +114,15 @@ items:
     price: 30
     slot: 12
     category: gap
+  regen_potion:
+    id: potion
+    name: <yellow>2x Potion of Regeneration II
+    lore:
+      - <white>Slowly regenerates 9 <red>♥
+      - <white>Basically liquefied golden apples.
+    price: 20
+    slot: 15
+    amount: 2
   splash_healing_i:
     id: splash_potion
     name: <yellow>3x Splash Potion of Healing I
@@ -221,3 +230,69 @@ items:
     slot: 30
     category: arrow
     amount: 3
+  flame:
+    id: enchanted_book
+    name: <yellow>Flame
+    lore:
+      - <white>Didn't they use flaming arrows in the past?
+    price: 7
+    slot: 31
+  power_i:
+    id: enchanted_book
+    name: <yellow>Power I
+    lore:
+      - <white>Increases your damage by 50%, kinda hurts.
+    price: 15
+    slot: 32
+    category: power
+  power_ii:
+    id: enchanted_book
+    name: <yellow>Power II
+    lore:
+      - <white>Increases your damage by 75%.
+      - <white>Use it well, and you can one-shot someone.
+    price: 25
+    slot: 33
+    category: power
+  punch_i:
+    id: enchanted_book
+    name: <yellow>Punch I
+    lore:
+      - <white>Send them flying!
+    price: 10
+    slot: 34
+    category: punch
+  punch_ii:
+    id: enchanted_book
+    name: <yellow>Punch II
+    lore:
+      - <white>Can't touch this!
+    price: 15
+    slot: 35
+    category: punch
+  tracker:
+    id: compass
+    name: <yellow>Tracker
+    lore:
+      - <white>Right click to point to the nearest player.
+      - <white>Has a 5-second cooldown and alerts the tracked player.
+    price: 6
+    slot: 36
+  steal_perk:
+    id: bundle
+    name: <yellow>Steal Perk
+    lore:
+      - <white>You will copy the inventory and health (but not perks) of the players you kill.
+      - <white>The perk is kept after use. Very high risk, high reward.
+    price: 40
+    slot: 37
+    category: perk
+  heal_perk:
+    id: red_dye
+    name: <yellow>Heal Perk
+    lore:
+      - <white>You will heal to full health when you kill a player.
+      - <white>The perk is kept after use.
+    price: 30
+    slot: 38
+    category: perk

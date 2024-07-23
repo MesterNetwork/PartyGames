@@ -2,6 +2,7 @@ package info.mester.bedless.tournament
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
+import info.mester.bedless.tournament.admin.InvseeUI
 import info.mester.bedless.tournament.game.GameState
 import io.papermc.paper.command.brigadier.Commands
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes
@@ -14,6 +15,7 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 
 @Suppress("UnstableApiUsage", "unused")
@@ -60,7 +62,6 @@ class TournamentBootstrap : PluginBootstrap {
                                             ctx
                                                 .getArgument("player", PlayerSelectorArgumentResolver::class.java)
                                                 .resolve(ctx.source)[0]
-
                                         val game = Tournament.game
                                         val admin = game.isAdmin(player)
                                         game.setAdmin(player, !admin)
@@ -87,7 +88,6 @@ class TournamentBootstrap : PluginBootstrap {
                                                             PlayerSelectorArgumentResolver::class.java,
                                                         ).resolve(ctx.source)[0]
                                                 val adminString = StringArgumentType.getString(ctx, "admin")
-
                                                 val admin = adminString == "true"
                                                 Tournament.game.setAdmin(player, admin)
 
@@ -157,6 +157,26 @@ class TournamentBootstrap : PluginBootstrap {
                             },
                     ).build(),
                 "Main function for managing tournaments",
+            )
+
+            commands.register(
+                Commands
+                    .literal("invsee")
+                    .requires {
+                        it.sender.isOp
+                    }.then(
+                        Commands.argument("player", ArgumentTypes.player()).executes { ctx ->
+                            val player =
+                                ctx
+                                    .getArgument("player", PlayerSelectorArgumentResolver::class.java)
+                                    .resolve(ctx.source)[0]
+                            val ui = InvseeUI(player)
+                            val sender = ctx.source.sender as Player
+                            sender.openInventory(ui.getInventory())
+                            Command.SINGLE_SUCCESS
+                        },
+                    ).build(),
+                "Opens an inventory for the given player",
             )
         }
     }

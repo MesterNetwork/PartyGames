@@ -1,5 +1,6 @@
 package info.mester.bedless.tournament
 
+import info.mester.bedless.tournament.admin.InvseeUI
 import info.mester.bedless.tournament.admin.PlayerAdminUI
 import info.mester.bedless.tournament.game.HealthShopMinigame
 import info.mester.bedless.tournament.game.HealthShopMinigameState
@@ -34,6 +35,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
@@ -61,15 +63,12 @@ class GameListener(
     fun onInventoryClick(event: InventoryClickEvent) {
         val clickedInventory = event.clickedInventory ?: return
         val holder = clickedInventory.getHolder(false)
-
-        if (event.slotType == InventoryType.SlotType.ARMOR) {
-            event.isCancelled = true
-            return
-        }
-
-        if (holder is Player && event.slot == 40) {
-            event.isCancelled = true
-            return
+        if (holder is Player) {
+            // don't let players interact with their armor and offhand
+            if (event.slotType == InventoryType.SlotType.ARMOR || event.slot == 40) {
+                event.isCancelled = true
+                return
+            }
         }
 
         if (holder is PlayerAdminUI) {
@@ -80,6 +79,11 @@ class GameListener(
         if (holder is HealthShopUI) {
             event.isCancelled = true
             holder.onInventoryClick(event)
+        }
+
+        if (holder is InvseeUI) {
+            event.isCancelled = true
+            return
         }
     }
 
@@ -237,8 +241,8 @@ class GameListener(
     @EventHandler
     fun onPlayerItemConsume(event: PlayerItemConsumeEvent) {
         val runningMinigame = Tournament.game.runningMinigame
-        if (runningMinigame is HealthShopMinigame && runningMinigame.state == HealthShopMinigameState.FIGHT) {
-            runningMinigame.handlePlayerConsumeItem(event)
+        if (runningMinigame is HealthShopMinigame) {
+            runningMinigame.handlePlayerItemConsume(event)
         }
     }
 
@@ -289,9 +293,20 @@ class GameListener(
         if (projectile is Arrow) {
             projectile.pickupStatus = AbstractArrow.PickupStatus.CREATIVE_ONLY
         }
-        val runningMinigame = Tournament.game.runningMinigame ?: return
+        val runningMinigame = Tournament.game.runningMinigame
         if (runningMinigame is HealthShopMinigame) {
             runningMinigame.handleEntityShootBow(event)
+        }
+    }
+
+    @EventHandler
+    fun onPlayerInteract(event: PlayerInteractEvent) {
+        if (Tournament.game.isAdmin(event.player)) {
+            return
+        }
+        val runningMinigame = Tournament.game.runningMinigame
+        if (runningMinigame is HealthShopMinigame) {
+            runningMinigame.handlePlayerInteract(event)
         }
     }
 }

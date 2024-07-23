@@ -66,7 +66,7 @@ class Game(
     /**
      * List of Minigame classes that may be used in the game
      */
-    private val minigames = listOf(HealthShopMinigame::class)
+    private val minigames = listOf(HealthShopMinigame::class, SpeedBuildersMinigame::class)
 
     /**
      * Shuffled list of constructed Minigame classes, which will be used in the game
@@ -314,6 +314,8 @@ class Game(
             }
             // clear inventory
             player.inventory.clear()
+            // extinguish fire
+            player.fireTicks = 0
             // show name again
             hideNametags?.removePlayer(player)
             // heal to full and set food level to 20
@@ -321,6 +323,9 @@ class Game(
             player.health = player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.value ?: 20.0
             player.foodLevel = 20
             player.saturation = 5f
+            // reset exp
+            player.exp = 0f
+            player.level = 0
             // teleport to lobby
             player.teleport(_plugin.config.getLocation("locations.waiting-lobby")!!)
             player.allowFlight = false

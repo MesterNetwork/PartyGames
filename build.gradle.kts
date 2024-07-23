@@ -8,6 +8,7 @@ plugins {
     id("org.sonarqube") version "4.2.1.3168"
     id("io.papermc.paperweight.userdev") version "1.7.1"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
+    java
 }
 
 group = "info.mester.bedless"
@@ -55,7 +56,7 @@ tasks {
         }
 
         doFirst {
-            val nbtFilesDir = file("src/main/resources/speedbuilders")
+            val nbtFilesDir = file("run/world/generated/minecraft/structures")
             val zipFile = file("src/main/resources/speedbuilders.zip")
             // Create a zip file
             zipFile.outputStream().use { outputStream ->
@@ -102,4 +103,17 @@ sonar {
 ktlint {
     version.set("0.49.1")
     enableExperimentalRules.set(true)
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir("src/main/kotlin")
+        }
+    }
+    test {
+        java {
+            srcDir("src/test/kotlin")
+        }
+    }
 }

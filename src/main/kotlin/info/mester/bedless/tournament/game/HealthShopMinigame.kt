@@ -20,16 +20,19 @@ import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
 import org.bukkit.event.entity.EntityRegainHealthEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.CompassMeta
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.inventory.meta.PotionMeta
 import org.bukkit.persistence.PersistentDataType
@@ -56,7 +59,7 @@ private enum class ArmorType {
     NETHERITTE,
 }
 
-class NotEoughMoneyException(
+class ShopFailedException(
     message: String,
 ) : Exception(message)
 
@@ -117,10 +120,15 @@ class HealthShopItem(
                         ),
                 )
                 meta.setEnchantmentGlintOverride(false)
+                HealthShopUI.applyGenericItemMeta(meta)
             }
             // apply healing potion to item
             if (key == "splash_healing_i" || key == "splash_healing_ii") {
                 HealthShopUI.setHealthPotion(item, key == "splash_healing_ii")
+            }
+            // apply regeneration potion to item
+            if (key == "regen_potion") {
+                HealthShopUI.setRegenPotion(item)
             }
 
             return HealthShopItem(
@@ -140,7 +148,7 @@ class HealthShopUI(
     private val items: List<HealthShopItem>,
     private var money: Double,
 ) : InventoryHolder {
-    private val inventory = Bukkit.createInventory(this, 4 * 9, Component.text("Health Shop"))
+    private val inventory = Bukkit.createInventory(this, 5 * 9, Component.text("Health Shop"))
     private val purchasedItems: MutableList<HealthShopItem> = mutableListOf()
     private val player = Bukkit.getPlayer(playerUUID)!!
 
@@ -156,6 +164,21 @@ class HealthShopUI(
             item.editMeta { meta ->
                 val potionMeta = meta as PotionMeta
                 potionMeta.basePotionType = if (strong) PotionType.STRONG_HEALING else PotionType.HEALING
+            }
+        }
+
+        fun setRegenPotion(item: ItemStack) {
+            item.editMeta { meta ->
+                val potionMeta = meta as PotionMeta
+                potionMeta.basePotionType = PotionType.STRONG_REGENERATION
+            }
+        }
+
+        fun applyGenericItemMeta(itemMeta: ItemMeta) {
+            itemMeta.apply {
+                isUnbreakable = true
+                addItemFlags(ItemFlag.HIDE_UNBREAKABLE)
+                addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
             }
         }
     }
@@ -184,10 +207,16 @@ class HealthShopUI(
         } else {
             try {
                 addItem(shopItem, item)
-            } catch (e: NotEoughMoneyException) {
+            } catch (e: ShopFailedException) {
+                val message =
+                    when (e.message) {
+                        "no_healh" -> "You do not have enough hearts to purchase this item!"
+                        "no_bow" -> "You must first buy a bow before purchasing this item!"
+                        else -> "An error occurred while trying to purchase this item!"
+                    }
                 event.whoClicked.sendMessage(
                     Component.text(
-                        "You do not have enough hearts to purchase this item!",
+                        message,
                         NamedTextColor.RED,
                     ),
                 )
@@ -207,18 +236,24 @@ class HealthShopUI(
         purchasedItems.remove(shopItem)
         money += shopItem.price
 
-        inventoryItem.itemMeta =
-            inventoryItem.itemMeta.apply {
-                // remove the enchantment glint from the item in the ui
-                setEnchantmentGlintOverride(false)
-                // remove underlined and bold from name
-                val decorations =
-                    mapOf(
-                        TextDecoration.UNDERLINED to TextDecoration.State.FALSE,
-                        TextDecoration.BOLD to TextDecoration.State.FALSE,
-                    )
-                itemName(itemName().decorations(decorations))
+        inventoryItem.editMeta { meta ->
+            // remove the enchantment glint from the item in the ui
+            meta.setEnchantmentGlintOverride(false)
+            // remove underlined and bold from name
+            val decorations =
+                mapOf(
+                    TextDecoration.UNDERLINED to TextDecoration.State.FALSE,
+                    TextDecoration.BOLD to TextDecoration.State.FALSE,
+                )
+            meta.itemName(meta.itemName().decorations(decorations))
+        }
+        // special case: if we remove a bow, remove all arrows
+        if (shopItem.key == "bow") {
+            val arrowItem = purchasedItems.firstOrNull { it.category == "arrow" }
+            if (arrowItem != null) {
+                removeItem(arrowItem, inventory.getItem(arrowItem.slot)!!)
             }
+        }
 
         player.health = money
     }
@@ -232,7 +267,14 @@ class HealthShopUI(
         val moneyToAdd = sameCategory.sumOf { it.price }
         // check if we have enough money
         if ((money + moneyToAdd) <= shopItem.price) {
-            throw NotEoughMoneyException("not enough hearts")
+            throw ShopFailedException("not enough hearts")
+        }
+        // check if we're trying to buy an arrow
+        if (shopItem.category == "arrow") {
+            // check if we have a bow
+            if (!purchasedItems.any { it.key == "bow" }) {
+                throw ShopFailedException("no_bow")
+            }
         }
         purchasedItems.add(shopItem)
         money -= shopItem.price
@@ -244,29 +286,87 @@ class HealthShopUI(
         // remove all the items in the same category
         sameCategory.forEach { removeItem(it, inventory.getItem(it.slot)!!) }
 
-        inventoryItem.itemMeta =
-            inventoryItem.itemMeta.apply {
-                // add an enchantment glint to the item in the ui
-                setEnchantmentGlintOverride(true)
-                // make name underlined and bold
-                val decorations =
-                    mapOf(
-                        TextDecoration.UNDERLINED to TextDecoration.State.TRUE,
-                        TextDecoration.BOLD to TextDecoration.State.TRUE,
-                    )
-                itemName(itemName().decorations(decorations))
-            }
+        inventoryItem.editMeta { meta ->
+            // add an enchantment glint to the item in the ui
+            meta.setEnchantmentGlintOverride(true)
+            // make name underlined and bold
+            val decorations =
+                mapOf(
+                    TextDecoration.UNDERLINED to TextDecoration.State.TRUE,
+                    TextDecoration.BOLD to TextDecoration.State.TRUE,
+                )
+            meta.itemName(meta.itemName().decorations(decorations))
+        }
 
         player.health = money
     }
 
-    fun giveItems() {
-        val applyGenericItemMeta = { itemMeta: ItemMeta ->
-            itemMeta.apply {
-                isUnbreakable = true
-                addItemFlags(ItemFlag.HIDE_UNBREAKABLE)
+    private fun addArmor(
+        player: Player,
+        armor: ArmorType,
+    ) {
+        // this ugly shit creates a list of armor items based on the armor type
+        // order: helmet, chestplate, leggings, boots
+        val armorItems =
+            when (armor) {
+                ArmorType.LEATHER ->
+                    listOf(
+                        ItemStack.of(Material.LEATHER_HELMET),
+                        ItemStack.of(Material.LEATHER_CHESTPLATE),
+                        ItemStack.of(Material.LEATHER_LEGGINGS),
+                        ItemStack.of(Material.LEATHER_BOOTS),
+                    )
+
+                ArmorType.CHAINMAIL ->
+                    listOf(
+                        ItemStack.of(Material.CHAINMAIL_HELMET),
+                        ItemStack.of(Material.CHAINMAIL_CHESTPLATE),
+                        ItemStack.of(Material.CHAINMAIL_LEGGINGS),
+                        ItemStack.of(Material.CHAINMAIL_BOOTS),
+                    )
+
+                ArmorType.IRON ->
+                    listOf(
+                        ItemStack.of(Material.IRON_HELMET),
+                        ItemStack.of(Material.IRON_CHESTPLATE),
+                        ItemStack.of(Material.IRON_LEGGINGS),
+                        ItemStack.of(Material.IRON_BOOTS),
+                    )
+
+                ArmorType.DIAMOND ->
+                    listOf(
+                        ItemStack.of(Material.DIAMOND_HELMET),
+                        ItemStack.of(Material.DIAMOND_CHESTPLATE),
+                        ItemStack.of(Material.DIAMOND_LEGGINGS),
+                        ItemStack.of(Material.DIAMOND_BOOTS),
+                    )
+
+                ArmorType.NETHERITTE ->
+                    listOf(
+                        ItemStack.of(Material.NETHERITE_HELMET),
+                        ItemStack.of(Material.NETHERITE_CHESTPLATE),
+                        ItemStack.of(Material.NETHERITE_LEGGINGS),
+                        ItemStack.of(Material.NETHERITE_BOOTS),
+                    )
+            }
+        armorItems.forEach { armorItem ->
+            armorItem.editMeta { meta ->
+                applyGenericItemMeta(meta)
+                if (purchasedItems.any { it.key == "protection_i" }) {
+                    meta.addEnchant(Enchantment.PROTECTION, 1, true)
+                }
+                if (purchasedItems.any { it.key == "protection_ii" }) {
+                    meta.addEnchant(Enchantment.PROTECTION, 2, true)
+                }
             }
         }
+        player.inventory.setItem(EquipmentSlot.HEAD, armorItems[0])
+        player.inventory.setItem(EquipmentSlot.CHEST, armorItems[1])
+        player.inventory.setItem(EquipmentSlot.LEGS, armorItems[2])
+        player.inventory.setItem(EquipmentSlot.FEET, armorItems[3])
+    }
+
+    fun giveItems() {
         // process sword
         val addSword = { material: Material ->
             val sword = ItemStack.of(material)
@@ -320,6 +420,13 @@ class HealthShopUI(
             }
             player.inventory.setItem(1, apple)
         }
+        // process regeneration potion
+        if (purchasedItems.any { it.key == "regen_potion" }) {
+            val potion = ItemStack.of(Material.POTION)
+            setRegenPotion(potion)
+            player.inventory.addItem(potion)
+            player.inventory.addItem(potion)
+        }
         // process healing potions
         for (purchasedPotion in purchasedItems.filter { it.key == "splash_healing_i" || it.key == "splash_healing_ii" }) {
             val potion = ItemStack.of(Material.SPLASH_POTION, purchasedPotion.amount)
@@ -327,87 +434,41 @@ class HealthShopUI(
             player.inventory.addItem(potion)
         }
         // process armor
-        val addArmor = { armor: ArmorType ->
-            // this ugly shit creates a list of armor items based on the armor type
-            // order: helmet, chestplate, leggings, boots
-            val armorItems =
-                when (armor) {
-                    ArmorType.LEATHER ->
-                        listOf(
-                            ItemStack.of(Material.LEATHER_HELMET),
-                            ItemStack.of(Material.LEATHER_CHESTPLATE),
-                            ItemStack.of(Material.LEATHER_LEGGINGS),
-                            ItemStack.of(Material.LEATHER_BOOTS),
-                        )
-
-                    ArmorType.CHAINMAIL ->
-                        listOf(
-                            ItemStack.of(Material.CHAINMAIL_HELMET),
-                            ItemStack.of(Material.CHAINMAIL_CHESTPLATE),
-                            ItemStack.of(Material.CHAINMAIL_LEGGINGS),
-                            ItemStack.of(Material.CHAINMAIL_BOOTS),
-                        )
-
-                    ArmorType.IRON ->
-                        listOf(
-                            ItemStack.of(Material.IRON_HELMET),
-                            ItemStack.of(Material.IRON_CHESTPLATE),
-                            ItemStack.of(Material.IRON_LEGGINGS),
-                            ItemStack.of(Material.IRON_BOOTS),
-                        )
-
-                    ArmorType.DIAMOND ->
-                        listOf(
-                            ItemStack.of(Material.DIAMOND_HELMET),
-                            ItemStack.of(Material.DIAMOND_CHESTPLATE),
-                            ItemStack.of(Material.DIAMOND_LEGGINGS),
-                            ItemStack.of(Material.DIAMOND_BOOTS),
-                        )
-
-                    ArmorType.NETHERITTE ->
-                        listOf(
-                            ItemStack.of(Material.NETHERITE_HELMET),
-                            ItemStack.of(Material.NETHERITE_CHESTPLATE),
-                            ItemStack.of(Material.NETHERITE_LEGGINGS),
-                            ItemStack.of(Material.NETHERITE_BOOTS),
-                        )
-                }
-            armorItems.forEach { armorItem ->
-                armorItem.editMeta { meta ->
-                    applyGenericItemMeta(meta)
-                    if (purchasedItems.any { it.key == "protection_i" }) {
-                        meta.addEnchant(Enchantment.PROTECTION, 1, true)
-                    }
-                    if (purchasedItems.any { it.key == "protection_ii" }) {
-                        meta.addEnchant(Enchantment.PROTECTION, 2, true)
-                    }
-                }
-            }
-            player.inventory.setItem(EquipmentSlot.HEAD, armorItems[0])
-            player.inventory.setItem(EquipmentSlot.CHEST, armorItems[1])
-            player.inventory.setItem(EquipmentSlot.LEGS, armorItems[2])
-            player.inventory.setItem(EquipmentSlot.FEET, armorItems[3])
-        }
         kotlin
             .runCatching {
                 purchasedItems.first { it.category == "armor" }
             }.onSuccess { shopItem ->
                 when (shopItem.key) {
-                    "chainmail_armor" -> addArmor(ArmorType.CHAINMAIL)
-                    "iron_armor" -> addArmor(ArmorType.IRON)
-                    "diamond_armor" -> addArmor(ArmorType.DIAMOND)
-                    "netherite_armor" -> addArmor(ArmorType.NETHERITTE)
+                    "chainmail_armor" -> addArmor(player, ArmorType.CHAINMAIL)
+                    "iron_armor" -> addArmor(player, ArmorType.IRON)
+                    "diamond_armor" -> addArmor(player, ArmorType.DIAMOND)
+                    "netherite_armor" -> addArmor(player, ArmorType.NETHERITTE)
                 }
             }.onFailure {
-                addArmor(ArmorType.LEATHER)
+                addArmor(player, ArmorType.LEATHER)
             }
         // process bow
         if (purchasedItems.any { it.key == "bow" }) {
             val bow = ItemStack.of(Material.BOW)
             bow.editMeta { meta ->
                 applyGenericItemMeta(meta)
+                if (purchasedItems.any { it.key == "flame" }) {
+                    meta.addEnchant(Enchantment.FLAME, 1, true)
+                }
+                if (purchasedItems.any { it.key == "power_i" }) {
+                    meta.addEnchant(Enchantment.POWER, 1, true)
+                }
+                if (purchasedItems.any { it.key == "power_ii" }) {
+                    meta.addEnchant(Enchantment.POWER, 2, true)
+                }
+                if (purchasedItems.any { it.key == "punch_i" }) {
+                    meta.addEnchant(Enchantment.PUNCH, 1, true)
+                }
+                if (purchasedItems.any { it.key == "punch_ii" }) {
+                    meta.addEnchant(Enchantment.PUNCH, 2, true)
+                }
             }
-            player.inventory.setItem(2, bow)
+            player.inventory.addItem(bow)
             // an arrow is included with the bow
             maxArrows[player.uniqueId] = 1
         }
@@ -418,6 +479,30 @@ class HealthShopUI(
             }.onSuccess { shopItem ->
                 maxArrows[player.uniqueId] = maxArrows[player.uniqueId]!! + shopItem.amount
             }
+        // process tracker
+        if (purchasedItems.any { it.key == "tracker" }) {
+            val tracker = ItemStack.of(Material.COMPASS)
+            tracker.editMeta { meta ->
+                meta.setEnchantmentGlintOverride(false)
+            }
+            player.inventory.addItem(tracker)
+        }
+        // process steal perk
+        if (purchasedItems.any { it.key == "steal_perk" }) {
+            player.persistentDataContainer.set(
+                NamespacedKey(Tournament.plugin, "steal_perk"),
+                PersistentDataType.BOOLEAN,
+                true,
+            )
+        }
+        // process heal perk
+        if (purchasedItems.any { it.key == "heal_perk" }) {
+            player.persistentDataContainer.set(
+                NamespacedKey(Tournament.plugin, "heal_perk"),
+                PersistentDataType.BOOLEAN,
+                true,
+            )
+        }
     }
 }
 
@@ -482,6 +567,22 @@ class HealthShopMinigame : Minigame() {
         Bukkit
             .getScheduler()
             .runTaskTimer(game.plugin, { t -> if (!regenerateArrowTimer(player, startTime)) t.cancel() }, 0, 1)
+    }
+
+    private fun giveSurvivePoints(player: Player) {
+        // for every 15th second the player has survived, give them a point
+        val survivedTime = System.currentTimeMillis() - fightStartedTime
+        val survivedSeconds = survivedTime / 1000
+        val survivedPoints = floor((survivedSeconds / 15).toDouble()).toInt()
+        if (survivedPoints > 0) {
+            game.playerData(player.uniqueId)!!.score += survivedPoints
+            player.sendMessage(
+                Component.text(
+                    "You have gained $survivedPoints points for surviving for $survivedSeconds seconds!",
+                    NamedTextColor.GREEN,
+                ),
+            )
+        }
     }
 
     fun handleEntityShootBow(event: EntityShootBowEvent) {
@@ -555,7 +656,7 @@ class HealthShopMinigame : Minigame() {
             MiniMessage.miniMessage().deserialize(
                 "<green><bold>${damagee.name}<reset> <dark_gray>-<reset> <red>${
                     String.format(
-                        (floor(damagee.health - damage) / 2).toString(),
+                        max(0.0, floor(damagee.health - damage) / 2).toString(),
                         "%.1f",
                     )
                 } ♥",
@@ -570,17 +671,17 @@ class HealthShopMinigame : Minigame() {
             Bukkit.broadcast(it)
         }
         // put the player in spectator
-        val player = event.entity
-        player.gameMode = GameMode.SPECTATOR
+        val killedPlayer = event.entity
+        killedPlayer.gameMode = GameMode.SPECTATOR
         // give survive points
         giveSurvivePoints(event.entity)
         // check if the player died from a player damage
         @Suppress("UnstableApiUsage")
-        val causingEntity = event.damageSource.causingEntity
+        val killerPlayer = event.damageSource.causingEntity
         // handle assist
         lastDamageTimes[event.entity.uniqueId]?.let { (lastDamagerUUID, lastDamageTime) ->
             // check if that player was the last damager
-            if (causingEntity != null && lastDamagerUUID == causingEntity.uniqueId) {
+            if (killerPlayer != null && lastDamagerUUID == killerPlayer.uniqueId) {
                 return@let
             }
             // check if 30 seconds have passed since the last damage
@@ -601,18 +702,47 @@ class HealthShopMinigame : Minigame() {
             )
         }
         // handle player kill
-        if (causingEntity is Player) {
-            game.playerData(causingEntity.uniqueId)!!.score += 5
-            causingEntity.sendMessage(
+        if (killerPlayer is Player) {
+            game.playerData(killerPlayer.uniqueId)!!.score += 5
+            killerPlayer.sendMessage(
                 Component.text(
                     "You have gained 5 points for killing ${event.entity.name}!",
                     NamedTextColor.GREEN,
                 ),
             )
-            causingEntity.playSound(
+            killerPlayer.playSound(
                 Sound.sound(Key.key("entity.experience_orb.pickup"), Sound.Source.MASTER, 1.0f, 1.0f),
                 Sound.Emitter.self(),
             )
+            // check if the player has the steal perk
+            if (killerPlayer.persistentDataContainer.get(
+                    NamespacedKey(Tournament.plugin, "steal_perk"),
+                    PersistentDataType.BOOLEAN,
+                ) == true
+            ) {
+                // copy the inventory and health of the killed player
+                killerPlayer.inventory.clear()
+                for (i in 0..40) {
+                    killedPlayer.inventory.getItem(i)?.let { item ->
+                        killerPlayer.inventory.setItem(i, item)
+                    }
+                }
+                killerPlayer.getAttribute(Attribute.GENERIC_MAX_HEALTH)!!.baseValue =
+                    killedPlayer
+                        .getAttribute(
+                            Attribute.GENERIC_MAX_HEALTH,
+                        )!!
+                        .baseValue
+                killerPlayer.health = killerPlayer.getAttribute(Attribute.GENERIC_MAX_HEALTH)!!.baseValue
+            }
+            // check if the player has the heal perk
+            if (killerPlayer.persistentDataContainer.get(
+                    NamespacedKey(Tournament.plugin, "heal_perk"),
+                    PersistentDataType.BOOLEAN,
+                ) == true
+            ) {
+                killerPlayer.health = killerPlayer.getAttribute(Attribute.GENERIC_MAX_HEALTH)!!.baseValue
+            }
         }
         // check if we only have one alive player left
         if (game.players().filter { it.gameMode == GameMode.SURVIVAL }.size <= 1) {
@@ -633,7 +763,10 @@ class HealthShopMinigame : Minigame() {
         }
     }
 
-    fun handlePlayerConsumeItem(event: PlayerItemConsumeEvent) {
+    fun handlePlayerItemConsume(event: PlayerItemConsumeEvent) {
+        if (_state != HealthShopMinigameState.FIGHT) {
+            return
+        }
         val item = event.item
         // check if the item has a special golden_apple_inf PDC
         if (item.itemMeta.persistentDataContainer.get(
@@ -649,21 +782,47 @@ class HealthShopMinigame : Minigame() {
             // add a cooldown to the enchanted golden apple
             event.player.setCooldown(Material.ENCHANTED_GOLDEN_APPLE, 20 * 20)
         }
+        if (item.type == Material.POTION) {
+            event.replacement = ItemStack(Material.AIR)
+        }
     }
 
-    private fun giveSurvivePoints(player: Player) {
-        // for every 15th second the player has survived, give them a point
-        val survivedTime = System.currentTimeMillis() - fightStartedTime
-        val survivedSeconds = survivedTime / 1000
-        val survivedPoints = floor((survivedSeconds / 15).toDouble()).toInt()
-        if (survivedPoints > 0) {
-            game.playerData(player.uniqueId)!!.score += survivedPoints
-            player.sendMessage(
-                Component.text(
-                    "You have gained $survivedPoints points for surviving for $survivedSeconds seconds!",
-                    NamedTextColor.GREEN,
-                ),
-            )
+    fun handlePlayerInteract(event: PlayerInteractEvent) {
+        if (_state != HealthShopMinigameState.FIGHT) {
+            return
+        }
+        // check if item is the tracker
+        val item = event.item
+        if (item?.type == Material.COMPASS) {
+            val player = event.player
+            if (player.hasCooldown(Material.COMPASS)) {
+                return
+            }
+            event.setUseInteractedBlock(Event.Result.DENY)
+            event.setUseItemInHand(Event.Result.DENY)
+            // get the nearest player
+            val nearestPlayer =
+                Bukkit
+                    .getOnlinePlayers()
+                    .filter { it.gameMode == GameMode.SURVIVAL && !Tournament.game.isAdmin(it) && it.uniqueId != player.uniqueId }
+                    .minByOrNull { it.location.distance(player.location) }
+            if (nearestPlayer == null) {
+                player.sendMessage(
+                    Component.text(
+                        "Nobody to track! (this is definitely a bug lol)",
+                        NamedTextColor.RED,
+                    ),
+                )
+                return
+            }
+            player.setCooldown(Material.COMPASS, 5 * 20)
+            nearestPlayer.sendMessage(Component.text("You have been tracked!", NamedTextColor.GREEN))
+            // set the compass' direction to the nearest player's location
+            item.editMeta { meta ->
+                val compassMeta = meta as CompassMeta
+                compassMeta.lodestone = nearestPlayer.location
+                compassMeta.isLodestoneTracked = false
+            }
         }
     }
 
@@ -687,9 +846,20 @@ class HealthShopMinigame : Minigame() {
             // update their max health
             player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.baseValue = startingHealth
             player.health = startingHealth
+            // reset perks
+            player.persistentDataContainer.set(
+                NamespacedKey(Tournament.plugin, "steal_perk"),
+                PersistentDataType.BOOLEAN,
+                false,
+            )
+            player.persistentDataContainer.set(
+                NamespacedKey(Tournament.plugin, "heal_perk"),
+                PersistentDataType.BOOLEAN,
+                false,
+            )
         }
-        // start a 1-minute countdown for the shop state
-        startCountdown(60000) {
+        // start a 45-second countdown for the shop state
+        startCountdown(45000) {
             startFight()
         }
 
@@ -707,6 +877,7 @@ class HealthShopMinigame : Minigame() {
             // cap the max health at the current health
             player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.baseValue = player.health
             // time to give the items! :)
+            player.inventory.clear()
             shopUIs[player.uniqueId]!!.giveItems()
             // give the actual arrow items based on maxArrows
             val maxArrows = HealthShopUI.maxArrows(player.uniqueId)
@@ -749,7 +920,6 @@ class HealthShopMinigame : Minigame() {
         for (player in game.players().filter { it.gameMode == GameMode.SURVIVAL }) {
             giveSurvivePoints(player)
         }
-
         super.end()
     }
 
@@ -758,7 +928,7 @@ class HealthShopMinigame : Minigame() {
     override val description: Component
         get() =
             Component.text(
-                "You have a minute to buy various weapons, armors and upgrades... with your own health!\nMake the decision between having the strongest sword or the best defense.\nAfter the time runs out, you'll use your purchased items to fight in a free for all battleground.",
+                "You have 45 seconds to buy various weapons, armors and upgrades... with your own health!\nMake the decision between having the strongest sword or the best defense.\nAfter the time runs out, you'll use your purchased items to fight in a free for all battleground.",
                 NamedTextColor.AQUA,
             )
 }

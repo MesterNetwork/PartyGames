@@ -1,10 +1,6 @@
-name: Build Gradle
+name: Build Gradle & Check Ktlint
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [ push, pull_request ]
 
 jobs:
   build:
@@ -22,6 +18,16 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Run Ktlint Check
+        run: ./gradlew ktlintCheck
+
+      - name: Upload Ktlint Report
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ktlint-report
+          path: build/reports/ktlint
 
       - name: Build with Gradle
         run: ./gradlew build writeVersion

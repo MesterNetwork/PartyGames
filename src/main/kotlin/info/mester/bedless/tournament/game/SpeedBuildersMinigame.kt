@@ -51,8 +51,14 @@ data class StructureData(
 val structures =
     listOf(
         StructureData("bed", StructureDifficulty.EASY, "bed.nbt"),
+        StructureData("portal", StructureDifficulty.EASY, "portal.nbt"),
     )
 const val PLAYER_AREA_SIZE = 6.0
+
+/**
+ * How much padding should be between the player areas.
+ */
+const val AREA_OFFSET = 5
 
 class SpeedBuildersMinigame : Minigame() {
     private val structureManager = Bukkit.getStructureManager()
@@ -83,12 +89,20 @@ class SpeedBuildersMinigame : Minigame() {
         original: Structure,
         copy: Structure,
     ): Double {
-        val originalBlocks = original.palettes[0].blocks.filter { it.type != Material.AIR }
+        // for original blocks, disregard the very bottom layer (the floor)
+        val originalBlocks =
+            original.palettes[0].blocks.filter { it.type != Material.AIR && it.location.y > 0 }
         val copyBlocks = copy.palettes[0].blocks.filter { it.type != Material.AIR }
         var correctBlocks = 0
         // go through every block in the copy structure
-        for (block in copyBlocks) {
-            val originalBlock = originalBlocks.firstOrNull { it.location == block.location }
+        for (copyBlock in copyBlocks) {
+            val originalBlock =
+                originalBlocks.firstOrNull { originalBlock ->
+                    originalBlock.location
+                        .clone()
+                        .add(0.0, -1.0, 0.0) == copyBlock.location &&
+                        originalBlock.type == copyBlock.type
+                }
             if (originalBlock != null) {
                 correctBlocks++
             }
@@ -98,12 +112,12 @@ class SpeedBuildersMinigame : Minigame() {
 
     private fun calculateAccuracy(
         original: Structure,
-        startPos: Location,
+        location: Location,
     ): Double {
-        // create a strcture based on the play area
-        val endPos = startPos.clone().add(PLAYER_AREA_SIZE, PLAYER_AREA_SIZE, PLAYER_AREA_SIZE)
+        // create a strcture based on the play area (+1 to make sure the edges are included)
+        val endPos = location.clone().add(PLAYER_AREA_SIZE + 1, PLAYER_AREA_SIZE + 1, PLAYER_AREA_SIZE + 1)
         val copy = structureManager.createStructure()
-        copy.fill(startPos, endPos, true)
+        copy.fill(location, endPos, true)
         return calculateAccuracy(original, copy)
     }
 
@@ -111,7 +125,7 @@ class SpeedBuildersMinigame : Minigame() {
         structure: Structure,
         player: Player,
     ) {
-        val items = structure.palettes[0].blocks.filter { it.type != Material.AIR }
+        val items = structure.palettes[0].blocks.filter { it.type != Material.AIR && it.location.y > 0 }
         items.forEach { item ->
             player.inventory.addItem(ItemStack(item.type))
         }
@@ -120,9 +134,10 @@ class SpeedBuildersMinigame : Minigame() {
     private fun clearPlayerArea(
         playerArea: Location,
         editSession: EditSession,
+        withFloor: Boolean,
     ) {
-        // clear a 7*7*7 area around the platform
-        val clear1 = BlockVector3.at(playerArea.x, playerArea.y, playerArea.z)
+        // clear the 7*8*7 area
+        val clear1 = BlockVector3.at(playerArea.x, playerArea.y - if (withFloor) 1 else 0, playerArea.z)
         val clear2 =
             BlockVector3.at(
                 playerArea.x + PLAYER_AREA_SIZE,
@@ -137,7 +152,7 @@ class SpeedBuildersMinigame : Minigame() {
         // clear the player area
         WorldEdit.getInstance().newEditSession(BukkitWorld(_startPos.world)).use { editSession ->
             val playerArea = playerAreas[player.uniqueId] ?: return@use
-            clearPlayerArea(playerArea, editSession)
+            clearPlayerArea(playerArea, editSession, true)
             // clear the platform below too
             val platform1 = BlockVector3.at(playerArea.x, playerArea.y - 1.0, playerArea.z)
             val platform2 =
@@ -155,7 +170,7 @@ class SpeedBuildersMinigame : Minigame() {
             // put into spectator mode
             player.gameMode = GameMode.SPECTATOR
         }
-        Bukkit.broadcast(Component.text("Player ${player.name} has been eliminated!", NamedTextColor.RED))
+        Bukkit.broadcast(Component.text("${player.name} has been eliminated!", NamedTextColor.RED))
     }
 
     fun handleBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {
@@ -241,7 +256,17 @@ class SpeedBuildersMinigame : Minigame() {
         for ((player, playerArea) in playerAreasAsPlayers) {
             player.sendMessage(Component.text("Memorise the structure!", NamedTextColor.GREEN))
             // place down the structure in the play area
-            structure.place(playerArea, true, StructureRotation.NONE, Mirror.NONE, 0, 1f, Random())
+            structure.place(
+                playerArea.clone().add(0.0, -1.0, 0.0),
+                true,
+                StructureRotation.NONE,
+                Mirror.NONE,
+                0,
+                1f,
+                Random(),
+            )
+            // teleport the player to the platform
+            player.teleport(playerArea.clone().add(0.5, 0.0, 0.5))
         }
         startCountdown(10000) {
             startBuild()
@@ -254,12 +279,10 @@ class SpeedBuildersMinigame : Minigame() {
             for ((player, playerArea) in playerAreasAsPlayers) {
                 player.sendMessage(Component.text("Build the structure!", NamedTextColor.GREEN))
                 // clear the player area
-                clearPlayerArea(playerArea, editSession)
+                clearPlayerArea(playerArea, editSession, false)
                 // give items to the player
                 player.inventory.clear()
                 giveItemsFromStructure(getStructure(currentStructureData!!), player)
-                // teleport the player to the platform
-                player.teleport(playerArea.clone().add(0.5, 0.0, 0.5))
             }
         }
         startCountdown(32000) {
@@ -311,13 +334,13 @@ class SpeedBuildersMinigame : Minigame() {
                 return@startCountdown
             }
             // clear every player area
-            for ((_, playerArea) in playerAreas) {
-                WorldEdit.getInstance().newEditSession(BukkitWorld(_startPos.world)).use { editSession ->
-                    clearPlayerArea(playerArea, editSession)
+            WorldEdit.getInstance().newEditSession(BukkitWorld(_startPos.world)).use { editSession ->
+                for ((_, playerArea) in playerAreas) {
+                    clearPlayerArea(playerArea, editSession, false)
                 }
             }
-            // start a 5-second countdown to start the next round
-            startCountdown(5000, false) {
+            // start a 3-second countdown to start the next round
+            startCountdown(3000, false) {
                 startMemorise()
             }
         }
@@ -326,27 +349,17 @@ class SpeedBuildersMinigame : Minigame() {
     override fun start() {
         super.start()
         // set up the player area for every player
-        val we = WorldEdit.getInstance()
-        val world = BukkitWorld(_startPos.world)
-        we.newEditSession(world).use { session ->
-            for ((i, player) in game.players().withIndex()) {
-                val playerArea = startPos.add((i % 7) * 8.0, 0.0, (i / 7) * 8.0)
-                playerAreas[player.uniqueId] = playerArea
-                // create a 7*7 stone platform one block below
-                val platform1 = BlockVector3.at(playerArea.x, playerArea.y - 1.0, playerArea.z)
-                val platform2 =
-                    BlockVector3.at(
-                        playerArea.x + PLAYER_AREA_SIZE,
-                        playerArea.y - 1.0,
-                        playerArea.z + PLAYER_AREA_SIZE,
-                    )
-                val platformRegion = CuboidRegion(platform1, platform2)
-                session.setBlocks(platformRegion, BlockTypes.STONE!!.defaultState)
-                clearPlayerArea(playerArea, session)
-                // teleport the player to the platform
-                player.teleport(playerArea.clone().add(0.5, 0.0, 0.5))
-                player.allowFlight = true
-            }
+        for ((i, player) in game.players().withIndex()) {
+            val playerArea =
+                startPos.add(
+                    (i % 7) * (PLAYER_AREA_SIZE + AREA_OFFSET + 1),
+                    0.0,
+                    (i / 7) * (PLAYER_AREA_SIZE + AREA_OFFSET + 1),
+                )
+            playerAreas[player.uniqueId] = playerArea
+            // teleport the player to the platform
+            player.teleport(playerArea.clone().add(0.5, 0.0, 0.5))
+            player.allowFlight = true
         }
 
         startMemorise()
