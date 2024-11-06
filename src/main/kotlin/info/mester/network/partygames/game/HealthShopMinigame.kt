@@ -1,9 +1,8 @@
-package info.mester.bedless.tournament.game
+package info.mester.network.partygames.game
 
-import info.mester.bedless.tournament.Tournament
-import info.mester.bedless.tournament.admin.SkinType
-import info.mester.bedless.tournament.admin.changePlayerSkin
-import info.mester.bedless.tournament.admin.spreadPlayers
+import info.mester.network.partygames.admin.SkinType
+import info.mester.network.partygames.admin.changePlayerSkin
+import info.mester.network.partygames.util.spreadPlayers
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
@@ -11,6 +10,7 @@ import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
+import org.bukkit.Color
 import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -21,12 +21,14 @@ import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityRegainHealthEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
+import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
@@ -42,6 +44,7 @@ import org.bukkit.potion.PotionType
 import org.bukkit.scoreboard.Team
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlin.math.floor
 import kotlin.math.max
 
@@ -170,7 +173,10 @@ class HealthShopUI(
         fun setRegenPotion(item: ItemStack) {
             item.editMeta { meta ->
                 val potionMeta = meta as PotionMeta
-                potionMeta.basePotionType = PotionType.STRONG_REGENERATION
+                val regenEffect = PotionEffect(PotionEffectType.REGENERATION, 5 * 20, 4, false)
+                potionMeta.addCustomEffect(regenEffect, true)
+                // set color to #CD5CAB
+                potionMeta.color = Color.fromRGB(205, 92, 171)
             }
         }
 
@@ -413,7 +419,10 @@ class HealthShopUI(
             val apple = ItemStack.of(Material.ENCHANTED_GOLDEN_APPLE)
             apple.editMeta { meta ->
                 meta.persistentDataContainer.set(
-                    NamespacedKey(Tournament.plugin, "golden_apple_inf"),
+                    NamespacedKey(
+                        _root_ide_package_.info.mester.network.partygames.PartyGames.plugin,
+                        "golden_apple_inf",
+                    ),
                     PersistentDataType.BOOLEAN,
                     true,
                 )
@@ -490,7 +499,7 @@ class HealthShopUI(
         // process steal perk
         if (purchasedItems.any { it.key == "steal_perk" }) {
             player.persistentDataContainer.set(
-                NamespacedKey(Tournament.plugin, "steal_perk"),
+                NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "steal_perk"),
                 PersistentDataType.BOOLEAN,
                 true,
             )
@@ -498,15 +507,19 @@ class HealthShopUI(
         // process heal perk
         if (purchasedItems.any { it.key == "heal_perk" }) {
             player.persistentDataContainer.set(
-                NamespacedKey(Tournament.plugin, "heal_perk"),
+                NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "heal_perk"),
                 PersistentDataType.BOOLEAN,
                 true,
             )
         }
+        // process oak planks
+        if (purchasedItems.any { it.key == "oak_planks" }) {
+            player.inventory.addItem(ItemStack(Material.OAK_PLANKS, 24))
+        }
     }
 }
 
-class HealthShopMinigame : Minigame() {
+class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
     private var shopItems: MutableList<HealthShopItem> = mutableListOf()
     private var _state = HealthShopMinigameState.STARTING
     val state: HealthShopMinigameState
@@ -664,7 +677,7 @@ class HealthShopMinigame : Minigame() {
         )
     }
 
-    fun handlePlayerDeath(event: PlayerDeathEvent) {
+    override fun handlePlayerDeath(event: PlayerDeathEvent) {
         event.isCancelled = true
 
         event.deathMessage()?.let {
@@ -716,7 +729,7 @@ class HealthShopMinigame : Minigame() {
             )
             // check if the player has the steal perk
             if (killerPlayer.persistentDataContainer.get(
-                    NamespacedKey(Tournament.plugin, "steal_perk"),
+                    NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "steal_perk"),
                     PersistentDataType.BOOLEAN,
                 ) == true
             ) {
@@ -737,7 +750,7 @@ class HealthShopMinigame : Minigame() {
             }
             // check if the player has the heal perk
             if (killerPlayer.persistentDataContainer.get(
-                    NamespacedKey(Tournament.plugin, "heal_perk"),
+                    NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "heal_perk"),
                     PersistentDataType.BOOLEAN,
                 ) == true
             ) {
@@ -754,10 +767,8 @@ class HealthShopMinigame : Minigame() {
         if (event.entity.type != EntityType.PLAYER) {
             return
         }
-        // don't let players during the shop state regain health via saturation
-        if (state == HealthShopMinigameState.SHOP &&
-            event.regainReason == EntityRegainHealthEvent.RegainReason.SATIATED
-        ) {
+        // don't let players during the shop state regain health
+        if (state == HealthShopMinigameState.SHOP) {
             event.isCancelled = true
             return
         }
@@ -770,7 +781,7 @@ class HealthShopMinigame : Minigame() {
         val item = event.item
         // check if the item has a special golden_apple_inf PDC
         if (item.itemMeta.persistentDataContainer.get(
-                NamespacedKey(Tournament.plugin, "golden_apple_inf"),
+                NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "golden_apple_inf"),
                 PersistentDataType.BOOLEAN,
             ) == true
         ) {
@@ -780,14 +791,14 @@ class HealthShopMinigame : Minigame() {
             event.player.addPotionEffect(PotionEffect(PotionEffectType.ABSORPTION, 2 * 60 * 20, 0))
             event.player.addPotionEffect(PotionEffect(PotionEffectType.REGENERATION, 5 * 20, 1))
             // add a cooldown to the enchanted golden apple
-            event.player.setCooldown(Material.ENCHANTED_GOLDEN_APPLE, 20 * 20)
+            event.player.setCooldown(Material.ENCHANTED_GOLDEN_APPLE, 15 * 20)
         }
         if (item.type == Material.POTION) {
             event.replacement = ItemStack(Material.AIR)
         }
     }
 
-    fun handlePlayerInteract(event: PlayerInteractEvent) {
+    override fun handlePlayerInteract(event: PlayerInteractEvent) {
         if (_state != HealthShopMinigameState.FIGHT) {
             return
         }
@@ -804,8 +815,13 @@ class HealthShopMinigame : Minigame() {
             val nearestPlayer =
                 Bukkit
                     .getOnlinePlayers()
-                    .filter { it.gameMode == GameMode.SURVIVAL && !Tournament.game.isAdmin(it) && it.uniqueId != player.uniqueId }
-                    .minByOrNull { it.location.distance(player.location) }
+                    .filter {
+                        it.gameMode == GameMode.SURVIVAL &&
+                            !_root_ide_package_.info.mester.network.partygames.PartyGames.game.isAdmin(
+                                it,
+                            ) &&
+                            it.uniqueId != player.uniqueId
+                    }.minByOrNull { it.location.distance(player.location) }
             if (nearestPlayer == null) {
                 player.sendMessage(
                     Component.text(
@@ -826,8 +842,28 @@ class HealthShopMinigame : Minigame() {
         }
     }
 
+    override fun handlePlayerMove(event: PlayerMoveEvent) {
+        if (_state == HealthShopMinigameState.SHOP) {
+            event.isCancelled = true
+            return
+        }
+        super.handlePlayerMove(event)
+    }
+
+    override fun handleBlockPlace(event: BlockPlaceEvent) {
+        if (event.block.type == Material.OAK_PLANKS) {
+            Bukkit.getScheduler().runTaskLater(
+                game.plugin,
+                Runnable {
+                    event.block.type = Material.AIR
+                    event.player.inventory.addItem(ItemStack.of(Material.OAK_PLANKS))
+                },
+                6 * 20,
+            )
+        }
+    }
+
     init {
-        _startPos = game.plugin.config.getLocation("locations.minigames.health-shop")!!
         // load shop items by obtaining the config and reading every key inside "items" of "health-shop.yml"
         val config = YamlConfiguration.loadConfiguration(File(game.plugin.dataFolder, "health-shop.yml"))
         config.getConfigurationSection("items")?.getKeys(false)?.forEach { key ->
@@ -839,6 +875,14 @@ class HealthShopMinigame : Minigame() {
     }
 
     override fun start() {
+        super.start()
+        val worldBorder = startPos.world.worldBorder
+        worldBorder.size = 121.0
+        worldBorder.center = startPos
+        worldBorder.warningDistance = 5
+        worldBorder.damageBuffer = 1.5
+        worldBorder.damageAmount = 0.5
+
         _state = HealthShopMinigameState.SHOP
         for (player in game.players()) {
             // open the shop UI for all players
@@ -848,22 +892,24 @@ class HealthShopMinigame : Minigame() {
             player.health = startingHealth
             // reset perks
             player.persistentDataContainer.set(
-                NamespacedKey(Tournament.plugin, "steal_perk"),
+                NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "steal_perk"),
                 PersistentDataType.BOOLEAN,
                 false,
             )
             player.persistentDataContainer.set(
-                NamespacedKey(Tournament.plugin, "heal_perk"),
+                NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "heal_perk"),
                 PersistentDataType.BOOLEAN,
                 false,
             )
         }
+        // custom spreadplayers implementation: spread the players around start pos
+        // in a 100 block radius
+        // TODO: make it actually 100 blocks
+        spreadPlayers(game.players(), startPos, 50)
         // start a 45-second countdown for the shop state
         startCountdown(45000) {
             startFight()
         }
-
-        super.start()
     }
 
     private fun startFight() {
@@ -876,6 +922,9 @@ class HealthShopMinigame : Minigame() {
             player.closeInventory()
             // cap the max health at the current health
             player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.baseValue = player.health
+            // reset saturation
+            player.saturation = 0.0f
+            player.sendHealthUpdate()
             // time to give the items! :)
             player.inventory.clear()
             shopUIs[player.uniqueId]!!.giveItems()
@@ -893,34 +942,27 @@ class HealthShopMinigame : Minigame() {
             // hide the skins (this is ugly)
             changePlayerSkin(player, SkinType.STEVE)
         }
-        // custom spreadplayers implementation: spread the players around start pos
-        // in a 100 block radius
-        // TODO: set radius to 100
-        spreadPlayers(game.players(), startPos, 50)
         // start a 5-minute countdown for the fight
         startCountdown(300000) {
             end()
         }
+        // shrink the world border in 4,5 minutes to only 15 blocks wide
+        startPos.world.worldBorder.setSize(15.0, TimeUnit.SECONDS, 450)
     }
 
-    override fun end(nextGame: Boolean) {
+    override fun finish() {
+        // give every alive player survive points
+        for (player in game.players().filter { it.gameMode == GameMode.SURVIVAL }) {
+            giveSurvivePoints(player)
+        }
         // start an async task to reset everyone's skin
         Bukkit.getAsyncScheduler().runNow(
-            Tournament.plugin,
+            _root_ide_package_.info.mester.network.partygames.PartyGames.plugin,
         ) {
             for (player in game.players()) {
                 changePlayerSkin(player, SkinType.OWN)
             }
         }
-        super.end(nextGame)
-    }
-
-    override fun end() {
-        // give every alive player survive points
-        for (player in game.players().filter { it.gameMode == GameMode.SURVIVAL }) {
-            giveSurvivePoints(player)
-        }
-        super.end()
     }
 
     override val name: Component

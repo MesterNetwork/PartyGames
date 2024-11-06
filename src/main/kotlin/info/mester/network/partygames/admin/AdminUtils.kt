@@ -1,8 +1,7 @@
-package info.mester.bedless.tournament.admin
+package info.mester.network.partygames.admin
 
 import com.google.gson.JsonParser
 import com.mojang.authlib.properties.Property
-import info.mester.bedless.tournament.Tournament
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
@@ -20,11 +19,14 @@ fun updateVisibilityOfPlayer(
     for (player in Bukkit
         .getOnlinePlayers()
         .filter { it.uniqueId != playerToChange.uniqueId }
-        .filter { !Tournament.game.isAdmin(it) }) {
+        .filter {
+            !_root_ide_package_.info.mester.network.partygames.PartyGames.game
+                .isAdmin(it)
+        }) {
         if (visible) {
-            player.hidePlayer(Tournament.plugin, playerToChange)
+            player.hidePlayer(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, playerToChange)
         } else {
-            player.showPlayer(Tournament.plugin, playerToChange)
+            player.showPlayer(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, playerToChange)
         }
     }
 }
@@ -38,7 +40,7 @@ fun changePlayerSkin(
     player: Player,
     skinType: SkinType,
 ) {
-    val plugin = Tournament.plugin
+    val plugin = _root_ide_package_.info.mester.network.partygames.PartyGames.plugin
     val entityPlayer = (player as CraftPlayer).handle
     val profile = entityPlayer.gameProfile
     // first we have to decide the skin property
@@ -83,8 +85,12 @@ fun changePlayerSkin(
     Bukkit
         .getOnlinePlayers()
         // admins should still see their skin
-        .filter { it.uniqueId != player.uniqueId && !Tournament.game.isAdmin(it) }
-        .forEach { onlinePlayer ->
+        .filter {
+            it.uniqueId != player.uniqueId &&
+                !_root_ide_package_.info.mester.network.partygames.PartyGames.game.isAdmin(
+                    it,
+                )
+        }.forEach { onlinePlayer ->
             val connection = (onlinePlayer as CraftPlayer).handle.connection
             connection.send(removeInfo)
             connection.send(destroyEntity)

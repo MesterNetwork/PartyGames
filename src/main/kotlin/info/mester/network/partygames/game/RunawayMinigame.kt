@@ -1,27 +1,24 @@
-package info.mester.bedless.tournament.game
+package info.mester.network.partygames.game
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.scheduler.BukkitTask
 import java.util.function.Consumer
 import kotlin.math.floor
 
-class RunawayMinigame : Minigame() {
-    init {
-        _startPos = game.plugin.config.getLocation("locations.minigames.runaway")!!
-    }
-
+class RunawayMinigame : Minigame("locations.minigames.runaway") {
     override fun start() {
         super.start()
-        val plugin = game.plugin
         // start a 30-second countdown for the minigame
         startCountdown(30000) {
             end()
         }
         // start a timer that is constantly updating every player's actionbar with the distance from the start position
-        plugin.server.scheduler.runTaskTimer(
-            plugin,
+        Bukkit.getScheduler().runTaskTimer(
+            game.plugin,
             object : Consumer<BukkitTask> {
                 override fun accept(t: BukkitTask) {
                     if (!running) {
@@ -53,7 +50,7 @@ class RunawayMinigame : Minigame() {
                 .sortedByDescending { it.second }
         }
 
-    override fun end() {
+    override fun finish() {
         val distances = sortedDistances
         // scoring system: +1 point for every 10 blocks away, +5 points for being #1 in the list, +3 points for being #2 or #3 +1 points for being in the top 10
         for (player in game.players()) {
@@ -72,8 +69,11 @@ class RunawayMinigame : Minigame() {
             game.playerData(player.uniqueId)!!.score += score
             player.sendMessage(Component.text("You scored $score points!", NamedTextColor.GREEN))
         }
+    }
 
-        super.end()
+    override fun handlePlayerDeath(event: PlayerDeathEvent) {
+        event.isCancelled = true
+        super.handlePlayerDeath(event)
     }
 
     override val name: Component

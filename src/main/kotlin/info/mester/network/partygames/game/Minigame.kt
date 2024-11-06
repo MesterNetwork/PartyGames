@@ -1,37 +1,44 @@
-package info.mester.bedless.tournament.game
+package info.mester.network.partygames.game
 
-import info.mester.bedless.tournament.Tournament
+import io.papermc.paper.event.entity.EntityMoveEvent
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
+import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockPhysicsEvent
+import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.EntityCombustEvent
+import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerMoveEvent
 
-abstract class Minigame {
-    private val _game = Tournament.game
+abstract class Minigame(
+    startPosPath: String,
+) {
+    private val _game = _root_ide_package_.info.mester.network.partygames.PartyGames.game
     private var _running = false
-
-    @Suppress("ktlint:standard:backing-property-naming")
-    protected var _startPos: Location =
-        Location(
-            game.plugin.server.worlds
-                .first(),
-            0.0,
-            0.0,
-            0.0,
-        )
-    val startPos: Location
-        get() = _startPos.clone()
-    val running: Boolean
-        get() = _running
     val game: Game
         get() = _game
+    val running: Boolean
+        get() = _running
+    var startPos: Location = game.plugin.config.getLocation(startPosPath)!!
+        get() = field.clone()
+        set(value) {
+            if (field.x != value.x || field.y != value.y || field.z != value.z) {
+                throw IllegalArgumentException("The startPos must be the same as the one in the config!")
+            }
+            field = value
+        }
 
     /**
      * Function to start the minigame
      */
     open fun start() {
+        // rewrite location to point to the "active" world
+        startPos.world = Bukkit.getWorld("active")!!
         _running = true
 
         _game.players().forEach { player ->
@@ -42,24 +49,35 @@ abstract class Minigame {
     }
 
     /**
+     * A function to finish the minigame (roll back any changes, handle scores, etc.)
+     * This will always run, regardless if the minigame was gracefully ended or not
+     */
+    open fun finish() {}
+
+    /**
      * Function to stop and evaluate the minigame (also set player scores)
      */
-    open fun end(nextGame: Boolean) {
+    private fun end(nextGame: Boolean) {
         _running = false
+
+        finish()
 
         if (nextGame) {
             _game.endMinigame()
         }
     }
 
-    open fun end() {
+    /**
+     * Function to end the minigame and start the next one
+     */
+    fun end() {
         end(true)
     }
 
     /**
      * Function to terminate the minigame without the underlying game ending
      */
-    open fun terminate() {
+    fun terminate() {
         end(false)
     }
 
@@ -121,8 +139,23 @@ abstract class Minigame {
         startCountdown(duration, true, onEnd)
     }
 
-    open val name: Component
-        get() = Component.text("[DEFAULT MINIGAME NAME]", NamedTextColor.DARK_RED)
-    open val description: Component
-        get() = Component.text("[DEFAULT MINIGAME DESCRIPTION]", NamedTextColor.DARK_RED)
+    // functions for handling events
+    open fun handleEntityMove(event: EntityMoveEvent) {}
+
+    open fun handlePlayerInteract(event: PlayerInteractEvent) {}
+
+    open fun handlePlayerMove(event: PlayerMoveEvent) {}
+
+    open fun handleBlockPhysics(event: BlockPhysicsEvent) {}
+
+    open fun handleEntityCombust(event: EntityCombustEvent) {}
+
+    open fun handlePlayerDeath(event: PlayerDeathEvent) {}
+
+    open fun handleBlockBreak(event: BlockBreakEvent) {}
+
+    open fun handleBlockPlace(event: BlockPlaceEvent) {}
+
+    abstract val name: Component
+    abstract val description: Component
 }

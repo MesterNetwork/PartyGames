@@ -1,4 +1,4 @@
-package info.mester.bedless.tournament.game
+package info.mester.network.partygames.game
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -44,7 +44,7 @@ data class MathQuestion(
     val answer: Int,
 )
 
-class MathMinigame : Minigame() {
+class MathMinigame : Minigame("locations.minigames.math") {
     private val questions = mutableMapOf<UUID, MathQuestion>()
     private val correctAnswers =
         game
@@ -52,10 +52,6 @@ class MathMinigame : Minigame() {
             .map { it.uniqueId }
             .associateWith { 0 }
             .toMutableMap()
-
-    init {
-        _startPos = game.plugin.config.getLocation("locations.minigames.math")!!
-    }
 
     override fun start() {
         super.start()
@@ -93,7 +89,7 @@ class MathMinigame : Minigame() {
         }
     }
 
-    override fun end() {
+    override fun finish() {
         // sort the correct answers by the number of correct answers
         val sortedCorrectAnswers = correctAnswers.toList().sortedByDescending { it.second }
 

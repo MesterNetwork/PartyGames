@@ -1,8 +1,7 @@
-package info.mester.bedless.tournament.admin
+package info.mester.network.partygames.admin
 
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
-import info.mester.bedless.tournament.Tournament
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
@@ -40,8 +39,8 @@ class PlayerAdminUI(
     private val inventory = Bukkit.createInventory(this, 9, Component.text("Admin UI"))
 
     init {
-        Tournament.game.addPlayer(managedPlayer.uniqueId)
-
+        _root_ide_package_.info.mester.network.partygames.PartyGames.game
+            .addPlayer(managedPlayer.uniqueId)
         val openVoiceItem = ItemStack.of(Material.NOTE_BLOCK)
         openVoiceItem.itemMeta =
             openVoiceItem.itemMeta.apply {
@@ -55,11 +54,12 @@ class PlayerAdminUI(
                     ),
                 )
             }
-
         val playerDataItem = ItemStack.of(Material.PAPER)
         playerDataItem.itemMeta =
             playerDataItem.itemMeta.apply {
-                val playerData = Tournament.game.playerData(managedPlayer.uniqueId)
+                val playerData =
+                    _root_ide_package_.info.mester.network.partygames.PartyGames.game
+                        .playerData(managedPlayer.uniqueId)
                 if (playerData == null) {
                     displayName(Component.text("No player data").decoration(TextDecoration.ITALIC, false))
                     return@apply
@@ -92,32 +92,33 @@ class PlayerAdminUI(
                     .url("https://bedless.mester.info/api/packdata")
                     .build()
 
-            Tournament.client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
+            _root_ide_package_.info.mester.network.partygames.PartyGames.client
+                .newCall(request)
+                .execute()
+                .use { response ->
+                    if (!response.isSuccessful) {
+                        event.whoClicked.sendMessage(
+                            Component.text("Failed to fetch pack data", NamedTextColor.RED),
+                        )
+                        return
+                    }
+                    val packData = response.body?.string()
+                    if (packData == null) {
+                        event.whoClicked.sendMessage(
+                            Component.text("Failed to fetch pack data", NamedTextColor.RED),
+                        )
+                        return
+                    }
+                    val gson = Gson()
+                    val packInfo = gson.fromJson(packData, PackInfo::class.java)
+
                     event.whoClicked.sendMessage(
-                        Component.text("Failed to fetch pack data", NamedTextColor.RED),
+                        Component.text(
+                            packInfo.packs.find { it.id == "60k" }?.friendlyName ?: "Pack not found",
+                            NamedTextColor.RED,
+                        ),
                     )
-                    return
                 }
-
-                val packData = response.body?.string()
-                if (packData == null) {
-                    event.whoClicked.sendMessage(
-                        Component.text("Failed to fetch pack data", NamedTextColor.RED),
-                    )
-                    return
-                }
-
-                val gson = Gson()
-                val packInfo = gson.fromJson(packData, PackInfo::class.java)
-
-                event.whoClicked.sendMessage(
-                    Component.text(
-                        packInfo.packs.find { it.id == "60k" }?.friendlyName ?: "Pack not found",
-                        NamedTextColor.RED,
-                    ),
-                )
-            }
         }
     }
 }

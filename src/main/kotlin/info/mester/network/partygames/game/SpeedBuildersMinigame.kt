@@ -1,4 +1,4 @@
-package info.mester.bedless.tournament.game
+package info.mester.network.partygames.game
 
 import com.sk89q.worldedit.EditSession
 import com.sk89q.worldedit.WorldEdit
@@ -60,10 +60,15 @@ const val PLAYER_AREA_SIZE = 6.0
  */
 const val AREA_OFFSET = 5
 
-class SpeedBuildersMinigame : Minigame() {
+class SpeedBuildersMinigame : Minigame("locations.minigames.speed-builders") {
     private val structureManager = Bukkit.getStructureManager()
     private val playerAreas = mutableMapOf<UUID, Location>()
-    private val silkTouchPickaxe: ItemStack
+
+    // create a silk touch netherite pickaxe
+    private val silkTouchPickaxe =
+        ItemStack.of(Material.NETHERITE_PICKAXE).apply {
+            addEnchantment(Enchantment.SILK_TOUCH, 1)
+        }
     private var state = SpeedBuildersState.MEMORISE
     private val playerAreasAsPlayers: Map<Player, Location>
         get() = playerAreas.entries.associate { (key, value) -> Bukkit.getPlayer(key)!! to value }
@@ -150,7 +155,7 @@ class SpeedBuildersMinigame : Minigame() {
 
     private fun eliminatePlayer(player: Player) {
         // clear the player area
-        WorldEdit.getInstance().newEditSession(BukkitWorld(_startPos.world)).use { editSession ->
+        WorldEdit.getInstance().newEditSession(BukkitWorld(startPos.world)).use { editSession ->
             val playerArea = playerAreas[player.uniqueId] ?: return@use
             clearPlayerArea(playerArea, editSession, true)
             // clear the platform below too
@@ -204,7 +209,7 @@ class SpeedBuildersMinigame : Minigame() {
         event.block.type = Material.AIR
     }
 
-    fun handleBlockPlace(event: BlockPlaceEvent) {
+    override fun handleBlockPlace(event: BlockPlaceEvent) {
         if (state != SpeedBuildersState.BUILD) {
             event.isCancelled = true
             return
@@ -226,7 +231,7 @@ class SpeedBuildersMinigame : Minigame() {
         }
     }
 
-    fun handlePlayerMove(event: PlayerMoveEvent) {
+    override fun handlePlayerMove(event: PlayerMoveEvent) {
         val playerArea = playerAreas[event.player.uniqueId] ?: return
         // the player may not leave the player area
         if (event.to.x < playerArea.x ||
@@ -239,13 +244,7 @@ class SpeedBuildersMinigame : Minigame() {
             event.isCancelled = true
             event.player.sendMessage(Component.text("You can only move in your play area!", NamedTextColor.RED))
         }
-    }
-
-    init {
-        _startPos = game.plugin.config.getLocation("locations.minigames.speed-builders")!!
-        // create a silk touch netherite pickaxe
-        silkTouchPickaxe = ItemStack(Material.NETHERITE_PICKAXE)
-        silkTouchPickaxe.addEnchantment(Enchantment.SILK_TOUCH, 1)
+        super.handlePlayerMove(event)
     }
 
     private fun startMemorise() {
@@ -275,7 +274,7 @@ class SpeedBuildersMinigame : Minigame() {
 
     private fun startBuild() {
         state = SpeedBuildersState.BUILD
-        WorldEdit.getInstance().newEditSession(BukkitWorld(_startPos.world)).use { editSession ->
+        WorldEdit.getInstance().newEditSession(BukkitWorld(startPos.world)).use { editSession ->
             for ((player, playerArea) in playerAreasAsPlayers) {
                 player.sendMessage(Component.text("Build the structure!", NamedTextColor.GREEN))
                 // clear the player area
@@ -334,7 +333,7 @@ class SpeedBuildersMinigame : Minigame() {
                 return@startCountdown
             }
             // clear every player area
-            WorldEdit.getInstance().newEditSession(BukkitWorld(_startPos.world)).use { editSession ->
+            WorldEdit.getInstance().newEditSession(BukkitWorld(startPos.world)).use { editSession ->
                 for ((_, playerArea) in playerAreas) {
                     clearPlayerArea(playerArea, editSession, false)
                 }

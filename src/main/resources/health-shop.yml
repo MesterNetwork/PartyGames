@@ -73,8 +73,8 @@ items:
     name: <gray>Shield
     lore:
       - <white>A basic shield, good for blocking attacks.
-      - <white>Has a 1.5 second cooldown when you block an attack.
-    price: 9
+      - <white>Has a 1.5 second cooldown after use.
+    price: 8
     slot: 4
   golden_apple_1:
     id: golden_apple
@@ -82,7 +82,7 @@ items:
     lore:
       - <white>A single golden apple.
       - <white>It's a delicious treat!
-    price: 5
+    price: 2
     slot: 9
     category: gap
   golden_apple_2:
@@ -91,7 +91,7 @@ items:
     lore:
       - <white>Two golden apples.
       - <white>Now we're talking!
-    price: 10
+    price: 4
     slot: 10
     category: gap
     amount: 2
@@ -101,26 +101,26 @@ items:
     lore:
       - <white>Three golden apples.
       - <white>Enough regen for the whole family!
-    price: 15
+    price: 8
     slot: 11
     category: gap
     amount: 3
   golden_apple_inf:
     id: enchanted_golden_apple
-    name: <red>In</red><gold>fi</gold><yellow>ni</yellow><green>te</green> <blue>Go</blue><dark_purple>ld</dark_purple><red>e</red><gold>n</gold> <yellow>A</yellow><green>pp</green><blue>l</blue><dark_purple>e</dark_purple>
+    name: <rainbow>Infinite Golden Apple</rainbow>
     lore:
       - <white>Infinite golden apples.
-      - <white>Regenerates every 20 seconds!
-    price: 30
+      - <white>Regenerates every 15 seconds!
+    price: 16
     slot: 12
     category: gap
   regen_potion:
     id: potion
-    name: <yellow>2x Potion of Regeneration II
+    name: <yellow>2x Potion of Regeneration V
     lore:
-      - <white>Slowly regenerates 9 <red>♥
-      - <white>Basically liquefied golden apples.
-    price: 20
+      - <white>Regenerates 3 <red>♥ <white>per second.
+      - <white>Liquid Enchanted Golden Apples.
+    price: 15
     slot: 15
     amount: 2
   splash_healing_i:
@@ -129,7 +129,7 @@ items:
     lore:
       - <white>Heals you for 2 <red>♥
       - <white>Applies instantly.
-    price: 9
+    price: 5
     slot: 16
     amount: 3
   splash_healing_ii:
@@ -138,7 +138,7 @@ items:
     lore:
       - <white>Heals you for 4 <red>♥
       - <white>Applies instantly.
-    price: 18
+    price: 10
     slot: 17
     amount: 3
   chainmail_armor:
@@ -147,7 +147,7 @@ items:
     lore:
       - <white>A basic chainmail armor.
       - <white>Good for blocking attacks.
-    price: 10
+    price: 8
     slot: 18
     category: armor
   iron_armor:
@@ -156,7 +156,7 @@ items:
     lore:
       - <white>A basic iron armor.
       - <white>Good for blocking attacks.
-    price: 20
+    price: 16
     slot: 19
     category: armor
   diamond_armor:
@@ -165,7 +165,7 @@ items:
     lore:
       - <white>A basic diamond armor.
       - <white>Good for blocking attacks.
-    price: 30
+    price: 24
     slot: 20
     category: armor
   netherite_armor:
@@ -174,7 +174,7 @@ items:
     lore:
       - <white>The strongest armor in existence, imbued with ancient power.
       - <white>Only the bravest wield this mighty armor.
-    price: 35
+    price: 32
     slot: 21
     category: armor
   protection_i:
@@ -182,7 +182,7 @@ items:
     name: <yellow>Protection I
     lore:
       - <white>Gives you a 16% damage reduction.
-    price: 15
+    price: 8
     slot: 25
     category: protection
   protection_ii:
@@ -190,7 +190,7 @@ items:
     name: <yellow>Protection II
     lore:
       - <white>Gives you a 32% damage reduction.
-    price: 30
+    price: 16
     slot: 26
     category: protection
   bow:
@@ -199,7 +199,7 @@ items:
     lore:
       - <white>A bow that shoots arrows.
       - <white>Comes with a regenerating arrow.
-    price: 10
+    price: 8
     slot: 27
   arrow_1:
     id: arrow
@@ -207,7 +207,7 @@ items:
     lore:
       - <white>A basic arrow.
       - <white>Regenerates after 3 seconds.
-    price: 5
+    price: 4
     slot: 28
     category: arrow
   arrow_2:
@@ -216,7 +216,7 @@ items:
     lore:
       - <white>2 arrows.
       - <white>Regenerates after 3 seconds.
-    price: 10
+    price: 8
     slot: 29
     category: arrow
     amount: 2
@@ -226,7 +226,7 @@ items:
     lore:
       - <white>3 arrows.
       - <white>Regenerates after 3 seconds.
-    price: 15
+    price: 12
     slot: 30
     category: arrow
     amount: 3
@@ -235,14 +235,14 @@ items:
     name: <yellow>Flame
     lore:
       - <white>Didn't they use flaming arrows in the past?
-    price: 7
+    price: 12
     slot: 31
   power_i:
     id: enchanted_book
     name: <yellow>Power I
     lore:
       - <white>Increases your damage by 50%, kinda hurts.
-    price: 15
+    price: 8
     slot: 32
     category: power
   power_ii:
@@ -251,7 +251,7 @@ items:
     lore:
       - <white>Increases your damage by 75%.
       - <white>Use it well, and you can one-shot someone.
-    price: 25
+    price: 16
     slot: 33
     category: power
   punch_i:
@@ -259,7 +259,7 @@ items:
     name: <yellow>Punch I
     lore:
       - <white>Send them flying!
-    price: 10
+    price: 7
     slot: 34
     category: punch
   punch_ii:
@@ -267,7 +267,7 @@ items:
     name: <yellow>Punch II
     lore:
       - <white>Can't touch this!
-    price: 15
+    price: 14
     slot: 35
     category: punch
   tracker:
@@ -284,7 +284,7 @@ items:
     lore:
       - <white>You will copy the inventory and health (but not perks) of the players you kill.
       - <white>The perk is kept after use. Very high risk, high reward.
-    price: 40
+    price: 12
     slot: 37
     category: perk
   heal_perk:
@@ -293,6 +293,15 @@ items:
     lore:
       - <white>You will heal to full health when you kill a player.
       - <white>The perk is kept after use.
-    price: 30
+    price: 8
     slot: 38
     category: perk
+  oak_planks:
+    id: oak_planks
+    name: <gray>Oak Planks
+    lore:
+      - <white>A basic oak plank.
+      - <white>Good for building.
+    price: 4
+    slot: 44
+    amount: 24

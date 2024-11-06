@@ -1,8 +1,10 @@
-name: idk
-version: 'a1.0'
-main: info.mester.bedless.tournament.Tournament
+name: BedlessTournament
+version: '1.0-SNAPSHOT'
+main: info.mester.network.partygames.PartyGames
 api-version: '1.21'
-bootstrapper: info.mester.bedless.tournament.TournamentBootstrap
+bootstrapper: info.mester.network.partygames.Bootstrap
+loader: info.mester.network.partygames.Loader
+load: STARTUP
 dependencies:
   server:
     WorldEdit:

@@ -1,7 +1,9 @@
-package info.mester.bedless.tournament.game
+package info.mester.network.partygames.game
 
-import info.mester.bedless.tournament.Tournament
-import info.mester.bedless.tournament.admin.updateVisibilityOfPlayer
+import com.infernalsuite.aswm.api.AdvancedSlimePaperAPI
+import com.infernalsuite.aswm.api.world.SlimeWorld
+import info.mester.network.partygames.PartyGames
+import info.mester.network.partygames.admin.updateVisibilityOfPlayer
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.bossbar.BossBar
 import net.kyori.adventure.text.Component
@@ -51,7 +53,7 @@ enum class GameState {
 }
 
 class Game(
-    private val _plugin: Tournament,
+    private val _plugin: PartyGames,
 ) {
     /**
      * List of UUIDs of players who are admins
@@ -66,7 +68,7 @@ class Game(
     /**
      * List of Minigame classes that may be used in the game
      */
-    private val minigames = listOf(HealthShopMinigame::class, SpeedBuildersMinigame::class)
+    private val minigames = listOf(HealthShopMinigame::class)
 
     /**
      * Shuffled list of constructed Minigame classes, which will be used in the game
@@ -86,7 +88,7 @@ class Game(
     private var _state = GameState.STOPPED
     val state: GameState
         get() = _state
-    val plugin: Tournament
+    val plugin: PartyGames
         get() = _plugin
 
     /**
@@ -103,6 +105,9 @@ class Game(
     val remainingBossBar: BossBar
         get() = _remainingBossBar
 
+    // AdvancedSlimePaper API
+    private val slimeAPI = AdvancedSlimePaperAPI.instance()
+
     /**
      * Function to set a player's admin status
      *
@@ -116,13 +121,19 @@ class Game(
         if (isAdmin) {
             // make sure the player can see the admins
             for (admin in admins) {
-                player.showPlayer(Tournament.plugin, Bukkit.getPlayer(admin)!!)
+                player.showPlayer(
+                    PartyGames.plugin,
+                    Bukkit.getPlayer(admin)!!,
+                )
             }
             admins.add(player.uniqueId)
         } else {
             // make sure the player can't see the admin
             for (admin in admins) {
-                player.hidePlayer(Tournament.plugin, Bukkit.getPlayer(admin)!!)
+                player.hidePlayer(
+                    PartyGames.plugin,
+                    Bukkit.getPlayer(admin)!!,
+                )
             }
             admins.remove(player.uniqueId)
         }
@@ -146,6 +157,8 @@ class Game(
      * @return the player's data, or null if the player is not in the game
      */
     fun playerData(player: UUID): PlayerData? = players[player]
+
+    fun playerData(player: Player): PlayerData? = players[player.uniqueId]
 
     /**
      * Function to add a player to the game
@@ -173,11 +186,12 @@ class Game(
         players.clear()
     }
 
-    fun players(): List<Player> = players.keys.map { _plugin.server.getPlayer(it)!! }
+    fun players(): List<Player> = players.keys.map { Bukkit.getPlayer(it)!! }
 
     fun start() {
         // reset current game state
         reset()
+        unloadWorld()
 
         _state = GameState.STARTING
         // add all online players who are not admins
@@ -208,13 +222,40 @@ class Game(
             player.gameMode = GameMode.SPECTATOR
         }
 
+        Bukkit.broadcast(Component.text("Loading world...", NamedTextColor.GREEN))
+        // start an async task to load the world
+        Bukkit.getAsyncScheduler().runNow(plugin) {
+            val slimeWorld = slimeAPI.getLoadedWorld(_runningMinigame!!.startPos.world.name)
+            val copy = slimeWorld.clone("active")
+            // now switch to sync mode
+            Bukkit.getScheduler().runTask(
+                plugin,
+                Runnable {
+                    startIntroduction(copy)
+                },
+            )
+        }
+    }
+
+    private fun startIntroduction(slimeWorld: SlimeWorld) {
+        unloadWorld()
+        val mirror = slimeAPI.loadWorld(slimeWorld, true)
+        val bukkitWorld = Bukkit.getWorld(mirror.name)!!
+        val minigame = _runningMinigame as Minigame
+        minigame.startPos =
+            minigame.startPos.clone().apply {
+                world = bukkitWorld
+            }
+
         Bukkit.broadcast(
             Component
                 .text("Welcome to the ", NamedTextColor.GREEN)
-                .append(_runningMinigame!!.name)
+                .append(minigame.name)
                 .append(Component.text(" minigame!", NamedTextColor.GREEN))
-                .append(Component.text("\n\n").append(_runningMinigame!!.description)),
+                .append(Component.text("\n\n").append(minigame.description)),
         )
+        // teleport everyone to the start pos
+        Bukkit.getOnlinePlayers().forEach { it.teleportAsync(minigame.startPos) }
 
         _plugin.server.scheduler.runTaskTimer(
             _plugin,
@@ -235,7 +276,7 @@ class Game(
                         rotation = 0.0
                     }
                     val playerList = players().map { it.uniqueId }
-                    for (player in players()) {
+                    for (player in players().filter { it.world.name == minigame.startPos.world.name }) {
                         // we want to "spread" the players out along the circle, which we can do by
                         // manipulating the degree before calculating the hit position
                         // basically, offset the degree by the player's index in the list
@@ -247,7 +288,7 @@ class Game(
                         val hitZ = 15.0 * sin(radians)
                         // to construct the final location for all players, take the x and z coordinates and set y to startPos.y + 15
                         val finalPos =
-                            _runningMinigame!!.startPos.apply {
+                            minigame.startPos.apply {
                                 val finalX = x + hitX
                                 val finalY = y + 15.0
                                 val finalZ = z + hitZ
@@ -264,7 +305,7 @@ class Game(
                                 y = finalY
                             }
 
-                        player.teleport(finalPos)
+                        player.teleportAsync(finalPos)
                     }
                 }
             },
@@ -294,7 +335,7 @@ class Game(
     fun endMinigame() {
         _state = GameState.POST_GAME
 
-        resetPlayers()
+        resetToLobby()
 
         _runningMinigame = null
         if (readyMinigames.isEmpty()) {
@@ -302,10 +343,16 @@ class Game(
         }
     }
 
-    private fun resetPlayers() {
+    private fun resetToLobby() {
         Audience.audience(Bukkit.getOnlinePlayers()).hideBossBar(remainingBossBar)
         val scoreboard = Bukkit.getScoreboardManager().mainScoreboard
         val hideNametags = scoreboard.getTeam("hide-nametag")
+        // reset waiting lobby
+        val waitingLobby = plugin.config.getLocation("locations.waiting-lobby")!!
+        val worldBorder = waitingLobby.world.worldBorder
+        worldBorder.size = 21.0
+        worldBorder.center = waitingLobby
+        worldBorder.warningDistance = 0
         for (player in players()) {
             player.gameMode = GameMode.SURVIVAL
             // remove all status effects
@@ -327,15 +374,24 @@ class Game(
             player.exp = 0f
             player.level = 0
             // teleport to lobby
-            player.teleport(_plugin.config.getLocation("locations.waiting-lobby")!!)
+            player.teleportAsync(waitingLobby)
             player.allowFlight = false
         }
+        // don't forget about admins!!
+        for (admin in admins) {
+            Bukkit.getPlayer(admin)!!.teleportAsync(waitingLobby)
+        }
+    }
+
+    private fun unloadWorld() {
+        Bukkit.unloadWorld("active", false)
     }
 
     fun end() {
         _state = GameState.STOPPED
 
-        resetPlayers()
+        resetToLobby()
+        unloadWorld()
         // this could be the case if we forcefully end the tournament with the command
         if (_runningMinigame != null) {
             _runningMinigame!!.terminate()

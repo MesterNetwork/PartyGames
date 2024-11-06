@@ -1,9 +1,9 @@
-package info.mester.bedless.tournament
+package info.mester.network.partygames
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
-import info.mester.bedless.tournament.admin.InvseeUI
-import info.mester.bedless.tournament.game.GameState
+import info.mester.network.partygames.admin.InvseeUI
+import info.mester.network.partygames.game.GameState
 import io.papermc.paper.command.brigadier.Commands
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver
@@ -19,19 +19,19 @@ import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 
 @Suppress("UnstableApiUsage", "unused")
-class TournamentBootstrap : PluginBootstrap {
+class Bootstrap : PluginBootstrap {
     override fun bootstrap(context: BootstrapContext) {
         val manager: LifecycleEventManager<BootstrapContext> = context.lifecycleManager
         manager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
             val commands = event.registrar()
-
+            // /tournament plugin
             commands.register(
                 Commands
                     .literal("tournament")
                     .requires {
                         it.sender.isOp
                     }
-                    // add start subcommand
+                    // start
                     .then(
                         Commands
                             .literal("start")
@@ -42,7 +42,8 @@ class TournamentBootstrap : PluginBootstrap {
                                         NamedTextColor.GREEN,
                                     ),
                                 )
-                                Tournament.game.start()
+                                _root_ide_package_.info.mester.network.partygames.PartyGames.game
+                                    .start()
                                 Command.SINGLE_SUCCESS
                             },
                     )
@@ -62,7 +63,7 @@ class TournamentBootstrap : PluginBootstrap {
                                             ctx
                                                 .getArgument("player", PlayerSelectorArgumentResolver::class.java)
                                                 .resolve(ctx.source)[0]
-                                        val game = Tournament.game
+                                        val game = _root_ide_package_.info.mester.network.partygames.PartyGames.game
                                         val admin = game.isAdmin(player)
                                         game.setAdmin(player, !admin)
 
@@ -89,7 +90,10 @@ class TournamentBootstrap : PluginBootstrap {
                                                         ).resolve(ctx.source)[0]
                                                 val adminString = StringArgumentType.getString(ctx, "admin")
                                                 val admin = adminString == "true"
-                                                Tournament.game.setAdmin(player, admin)
+                                                _root_ide_package_.info.mester.network.partygames.PartyGames.game.setAdmin(
+                                                    player,
+                                                    admin,
+                                                )
 
                                                 ctx.source.sender.sendMessage(
                                                     Component.text(
@@ -107,7 +111,7 @@ class TournamentBootstrap : PluginBootstrap {
                         Commands
                             .literal("begin")
                             .executes { ctx ->
-                                if (Tournament.game.state != GameState.LOADING) {
+                                if (PartyGames.game.state != GameState.LOADING) {
                                     ctx.source.sender.sendMessage(
                                         Component.text(
                                             "You can only begin the game when it is loading!",
@@ -116,7 +120,8 @@ class TournamentBootstrap : PluginBootstrap {
                                     )
                                     return@executes 0
                                 }
-                                Tournament.game.begin()
+                                PartyGames.game
+                                    .begin()
                                 Command.SINGLE_SUCCESS
                             },
                     )
@@ -125,7 +130,7 @@ class TournamentBootstrap : PluginBootstrap {
                         Commands
                             .literal("next")
                             .executes { ctx ->
-                                if (Tournament.game.state != GameState.POST_GAME) {
+                                if (_root_ide_package_.info.mester.network.partygames.PartyGames.game.state != GameState.POST_GAME) {
                                     ctx.source.sender.sendMessage(
                                         Component.text(
                                             "You can only start the next minigame when the current one has ended!",
@@ -134,7 +139,8 @@ class TournamentBootstrap : PluginBootstrap {
                                     )
                                     return@executes 0
                                 }
-                                Tournament.game.nextMinigame()
+                                _root_ide_package_.info.mester.network.partygames.PartyGames.game
+                                    .nextMinigame()
                                 Command.SINGLE_SUCCESS
                             },
                     )
@@ -143,7 +149,7 @@ class TournamentBootstrap : PluginBootstrap {
                         Commands
                             .literal("end")
                             .executes { ctx ->
-                                if (Tournament.game.state == GameState.STOPPED) {
+                                if (_root_ide_package_.info.mester.network.partygames.PartyGames.game.state == GameState.STOPPED) {
                                     ctx.source.sender.sendMessage(
                                         Component.text(
                                             "You cannot end the tournament when it is already stopped!",
@@ -152,7 +158,8 @@ class TournamentBootstrap : PluginBootstrap {
                                     )
                                     return@executes 0
                                 }
-                                Tournament.game.end()
+                                _root_ide_package_.info.mester.network.partygames.PartyGames.game
+                                    .end()
                                 Command.SINGLE_SUCCESS
                             },
                     ).build(),
@@ -181,5 +188,6 @@ class TournamentBootstrap : PluginBootstrap {
         }
     }
 
-    override fun createPlugin(context: PluginProviderContext): JavaPlugin = Tournament.plugin
+    override fun createPlugin(context: PluginProviderContext): JavaPlugin =
+        _root_ide_package_.info.mester.network.partygames.PartyGames.plugin
 }

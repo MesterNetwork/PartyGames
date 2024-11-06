@@ -1,4 +1,4 @@
-package info.mester.bedless.tournament.admin
+package info.mester.network.partygames.admin
 
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit

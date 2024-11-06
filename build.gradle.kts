@@ -6,12 +6,12 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("xyz.jpenilla.run-paper") version "2.3.0"
     id("org.sonarqube") version "4.2.1.3168"
-    id("io.papermc.paperweight.userdev") version "1.7.1"
+    id("io.papermc.paperweight.userdev") version "1.7.4"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
     java
 }
 
-group = "info.mester.bedless"
+group = "info.mester.network.partygames"
 version = "a1.0"
 
 repositories {
@@ -23,16 +23,24 @@ repositories {
         name = "sonatype"
     }
     maven("https://maven.enginehub.org/repo/")
+    maven("https://repo.rapture.pw/repository/maven-releases/")
+    maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
 }
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation(kotlin("reflect"))
-    implementation("net.objecthunter:exp4j:0.4.8")
-    paperweight.paperDevBundle("1.21-R0.1-SNAPSHOT")
-    ktlint("com.pinterest:ktlint:0.49.0") // Ktlint dependency
+    // set up paper
+    paperweight.paperDevBundle("1.21.1-R0.1-SNAPSHOT")
+
+    compileOnly("com.squareup.okhttp3:okhttp:4.12.0")
+    compileOnly("net.objecthunter:exp4j:0.4.8")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.4")
+    compileOnly("com.infernalsuite.aswm:api:3.0.0-SNAPSHOT")
+    compileOnly("com.infernalsuite.aswm:loaders:3.0.0-SNAPSHOT")
+    ktlint("com.pinterest:ktlint:0.49.0") // Ktlint dependency
+    testImplementation("com.github.seeseemelk:MockBukkit-v1.21:3.95.1")
+    testImplementation(kotlin("test"))
 }
 val targetJavaVersion = 21
 kotlin {
@@ -44,7 +52,7 @@ tasks {
         // Configure the Minecraft version for our task.
         // This is the only required configuration besides applying the plugin.
         // Your plugin's jar (or shadowJar if present) will be used automatically.
-        minecraftVersion("1.21")
+        minecraftVersion("1.21.1")
     }
 
     processResources {
@@ -77,10 +85,6 @@ tasks {
         dependsOn("shadowJar")
     }
 
-    assemble {
-        dependsOn("reobfJar")
-    }
-
     register("writeVersion") {
         doLast {
             val versionFile =
@@ -90,6 +94,10 @@ tasks {
                     .asFile
             versionFile.writeText(project.version.toString())
         }
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
 

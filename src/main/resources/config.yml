@@ -1,43 +1,51 @@
 locations:
   waiting-lobby:
     ==: org.bukkit.Location
-    world: world
-    x: 165.5
-    y: 135.0
-    z: 76.5
+    world: mg-waiting
+    x: 0.5
+    y: 63.0
+    z: 0.5
     yaw: 0.0
     pitch: 0.0
   minigames:
     runaway:
       ==: org.bukkit.Location
-      world: world
-      x: 165.5
-      y: 135.0
-      z: 76.5
+      world: mg-runaway
+      x: 0.5
+      y: 63.0
+      z: 0.5
       yaw: 0.0
       pitch: 0.0
     math:
       ==: org.bukkit.Location
-      world: world
-      x: 165.5
-      y: 135.0
-      z: 76.5
+      world: mg-math
+      x: 0.5
+      y: 63.0
+      z: 0.5
       yaw: 0.0
       pitch: 0.0
     health-shop:
       ==: org.bukkit.Location
-      world: world
-      x: 165.5
-      y: 135.0
-      z: 76.5
+      world: mg-healthshop
+      x: 0.5
+      y: 63.0
+      z: 0.5
       yaw: 0.0
       pitch: 0.0
     speed-builders:
       ==: org.bukkit.Location
-      world: world
-      x: 100.0
-      y: 203.0
-      z: 100.0
+      world: mg-speedbuilders
+      x: 0.5
+      y: 63.0
+      z: 0.5
+      yaw: 0.0
+      pitch: 0.0
+    gardening:
+      ==: org.bukkit.Location
+      world: mg-gardening
+      x: 0.5
+      y: 65.0
+      z: 0.5
       yaw: 0.0
       pitch: 0.0
 steve-skin:
