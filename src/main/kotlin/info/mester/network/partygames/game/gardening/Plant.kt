@@ -1,6 +1,6 @@
 package info.mester.network.partygames.game.gardening
 
-import info.mester.bedless.tournament.game.Game
+import info.mester.network.partygames.game.Game
 import info.mester.network.partygames.roundTo
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -16,18 +16,20 @@ import org.bukkit.util.Vector
 import java.util.UUID
 
 abstract class Plant(
-    private val _location: Location,
-    private val game: Game = _root_ide_package_.info.mester.network.partygames.PartyGames.game,
+    location: Location,
+    private val game: Game,
 ) {
     protected var level = 0
     private var progress = 0.0
     private val contributors = mutableMapOf<UUID, Double>()
     protected val location: Location
-        get() = _location.clone()
+        get() = field.clone()
     private val infoDisplay: TextDisplay
     private var active = true
 
     init {
+        this.location = location
+
         infoDisplay =
             location.world.spawn(location.clone().add(0.5, 1.0, 0.5), TextDisplay::class.java) { entity ->
                 entity.viewRange = 0.1f

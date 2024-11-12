@@ -1,6 +1,8 @@
 package info.mester.network.partygames.game
 
+import info.mester.network.partygames.PartyGames
 import io.papermc.paper.event.entity.EntityMoveEvent
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -12,36 +14,40 @@ import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityCombustEvent
 import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
 
 abstract class Minigame(
+    protected val game: Game,
     startPosPath: String,
 ) {
-    private val _game = _root_ide_package_.info.mester.network.partygames.PartyGames.game
+    protected val plugin = PartyGames.plugin
+    protected val audience = Audience.audience(game.getPlayers())
     private var _running = false
-    val game: Game
-        get() = _game
     val running: Boolean
         get() = _running
-    var startPos: Location = game.plugin.config.getLocation(startPosPath)!!
-        get() = field.clone()
-        set(value) {
-            if (field.x != value.x || field.y != value.y || field.z != value.z) {
-                throw IllegalArgumentException("The startPos must be the same as the one in the config!")
-            }
-            field = value
+    val startPos: Location
+        get() {
+            val pos = field.clone()
+            pos.world = Bukkit.getWorld(game.worldName)!!
+            return pos
         }
+    val worldName: String
+
+    init {
+        val pos = plugin.config.getLocation(startPosPath)!!
+        worldName = pos.world.name
+        startPos = pos
+    }
 
     /**
      * Function to start the minigame
      */
     open fun start() {
-        // rewrite location to point to the "active" world
-        startPos.world = Bukkit.getWorld("active")!!
         _running = true
 
-        _game.players().forEach { player ->
+        game.getPlayers().forEach { player ->
             player.teleport(startPos)
             player.isFlying = false
             player.gameMode = GameMode.SURVIVAL
@@ -55,7 +61,7 @@ abstract class Minigame(
     open fun finish() {}
 
     /**
-     * Function to stop and evaluate the minigame (also set player scores)
+     * Function to stop the minigame (score calculation happens in [finish]
      */
     private fun end(nextGame: Boolean) {
         _running = false
@@ -63,7 +69,7 @@ abstract class Minigame(
         finish()
 
         if (nextGame) {
-            _game.endMinigame()
+            game.endMinigame()
         }
     }
 
@@ -75,7 +81,7 @@ abstract class Minigame(
     }
 
     /**
-     * Function to terminate the minigame without the underlying game ending
+     * Function to terminate the minigame without the underlying game ending logic
      */
     fun terminate() {
         end(false)
@@ -88,7 +94,7 @@ abstract class Minigame(
         val bar = game.remainingBossBar
         val remainingTime = startTime + duration - System.currentTimeMillis()
         if (remainingTime < 0) {
-            Audience.audience(Bukkit.getOnlinePlayers()).hideBossBar(bar)
+            audience.hideBossBar(bar)
             return false
         }
         val time = remainingTime / 1000
@@ -113,10 +119,10 @@ abstract class Minigame(
         showBar: Boolean,
         onEnd: () -> Unit,
     ) {
-        if (showBar) Audience.audience(Bukkit.getOnlinePlayers()).showBossBar(game.remainingBossBar)
+        if (showBar) audience.showBossBar(game.remainingBossBar)
         val startTime = System.currentTimeMillis()
-        game.plugin.server.scheduler.runTaskTimer(
-            game.plugin,
+        plugin.server.scheduler.runTaskTimer(
+            plugin,
             { t ->
                 if (!running) {
                     t.cancel()
@@ -155,6 +161,10 @@ abstract class Minigame(
     open fun handleBlockBreak(event: BlockBreakEvent) {}
 
     open fun handleBlockPlace(event: BlockPlaceEvent) {}
+
+    open fun handlePrePlayerAttack(event: PrePlayerAttackEntityEvent) {}
+
+    open fun handleInventoryClose(event: InventoryCloseEvent) {}
 
     abstract val name: Component
     abstract val description: Component

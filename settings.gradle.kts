@@ -1,1 +1,1 @@
-rootProject.name = "blntournament"
+rootProject.name = "partygames"

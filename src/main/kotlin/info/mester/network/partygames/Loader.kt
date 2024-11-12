@@ -29,7 +29,6 @@ class Loader : PluginLoader {
         )
         resolver.addDependency(Dependency(DefaultArtifact("com.squareup.okhttp3:okhttp:4.12.0"), null))
         resolver.addDependency(Dependency(DefaultArtifact("net.objecthunter:exp4j:0.4.8"), null))
-        resolver.addDependency(Dependency(DefaultArtifact("com.infernalsuite.aswm:loaders:3.0.0-SNAPSHOT"), null))
         classpathBuilder.addLibrary(resolver)
     }
 }

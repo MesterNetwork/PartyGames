@@ -1,5 +1,6 @@
 package info.mester.network.partygames.game.gardening
 
+import info.mester.network.partygames.game.Game
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
@@ -15,7 +16,8 @@ import org.joml.Vector3f
 
 class ZombieWeed(
     location: Location,
-) : Weed(location) {
+    game: Game,
+) : Weed(location, game) {
     override fun spawn() {
         super.spawn()
         if (level == 1) {

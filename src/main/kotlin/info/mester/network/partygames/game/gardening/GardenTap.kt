@@ -11,10 +11,10 @@ import org.bukkit.entity.TextDisplay
 const val MAX_WATER_LEVEL = 750
 
 class GardenTap(
-    private val _location: Location,
+    location: Location,
 ) {
     val location: Location
-        get() = _location.clone()
+        get() = field.clone()
     private var waterLevel = MAX_WATER_LEVEL
     private val infoDisplay: TextDisplay =
         location.world.spawn(location.clone().add(0.5, 1.0, 0.5), TextDisplay::class.java) { entity ->
@@ -24,6 +24,7 @@ class GardenTap(
         }
 
     init {
+        this.location = location
         updateInfoDisplay()
         spawn()
     }
@@ -45,7 +46,7 @@ class GardenTap(
     }
 
     fun spawn() {
-        _location.block.type = Material.IRON_BARS
+        location.block.type = Material.IRON_BARS
     }
 
     fun takeWater(): Boolean {

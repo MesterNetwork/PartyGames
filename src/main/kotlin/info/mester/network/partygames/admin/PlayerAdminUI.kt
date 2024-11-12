@@ -2,13 +2,15 @@ package info.mester.network.partygames.admin
 
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import info.mester.network.partygames.PartyGames
+import info.mester.network.partygames.game.Game
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import okhttp3.Request
 import org.bukkit.Bukkit
 import org.bukkit.Material
-import org.bukkit.entity.Entity
+import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
@@ -34,47 +36,42 @@ data class Downloads(
 )
 
 class PlayerAdminUI(
-    managedPlayer: Entity,
+    private val game: Game,
+    private val managedPlayer: Player,
 ) : InventoryHolder {
     private val inventory = Bukkit.createInventory(this, 9, Component.text("Admin UI"))
 
     init {
-        _root_ide_package_.info.mester.network.partygames.PartyGames.game
-            .addPlayer(managedPlayer.uniqueId)
         val openVoiceItem = ItemStack.of(Material.NOTE_BLOCK)
-        openVoiceItem.itemMeta =
-            openVoiceItem.itemMeta.apply {
-                displayName(Component.text("Open Voice Chat").decoration(TextDecoration.ITALIC, false))
-                lore(
-                    listOf(
-                        Component
-                            .text("Moves the selected player into the Discord stage")
-                            .color(NamedTextColor.GRAY)
-                            .decoration(TextDecoration.ITALIC, false),
-                    ),
-                )
-            }
+        openVoiceItem.editMeta { meta ->
+            meta.displayName(Component.text("Open Voice Chat").decoration(TextDecoration.ITALIC, false))
+            meta.lore(
+                listOf(
+                    Component
+                        .text("Moves the selected player into the Discord stage")
+                        .color(NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                ),
+            )
+        }
         val playerDataItem = ItemStack.of(Material.PAPER)
-        playerDataItem.itemMeta =
-            playerDataItem.itemMeta.apply {
-                val playerData =
-                    _root_ide_package_.info.mester.network.partygames.PartyGames.game
-                        .playerData(managedPlayer.uniqueId)
-                if (playerData == null) {
-                    displayName(Component.text("No player data").decoration(TextDecoration.ITALIC, false))
-                    return@apply
-                }
-
-                displayName(Component.text("Player Data").decoration(TextDecoration.ITALIC, false))
-                lore(
-                    listOf(
-                        Component
-                            .text("Score: ${playerData.score}")
-                            .color(NamedTextColor.GRAY)
-                            .decoration(TextDecoration.ITALIC, false),
-                    ),
-                )
+        playerDataItem.editMeta { meta ->
+            val playerData = game.playerData(managedPlayer)
+            if (playerData == null) {
+                meta.displayName(Component.text("No player data").decoration(TextDecoration.ITALIC, false))
+                return@editMeta
             }
+
+            meta.displayName(Component.text("Player Data").decoration(TextDecoration.ITALIC, false))
+            meta.lore(
+                listOf(
+                    Component
+                        .text("Score: ${playerData.score}")
+                        .color(NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                ),
+            )
+        }
         inventory.apply {
             setItem(0, openVoiceItem)
             setItem(1, playerDataItem)
@@ -92,7 +89,7 @@ class PlayerAdminUI(
                     .url("https://bedless.mester.info/api/packdata")
                     .build()
 
-            _root_ide_package_.info.mester.network.partygames.PartyGames.client
+            PartyGames.httpClient
                 .newCall(request)
                 .execute()
                 .use { response ->

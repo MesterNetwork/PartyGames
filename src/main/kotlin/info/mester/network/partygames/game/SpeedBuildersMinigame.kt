@@ -60,7 +60,9 @@ const val PLAYER_AREA_SIZE = 6.0
  */
 const val AREA_OFFSET = 5
 
-class SpeedBuildersMinigame : Minigame("locations.minigames.speed-builders") {
+class SpeedBuildersMinigame(
+    game: Game,
+) : Minigame(game, "locations.minigames.speed-builders") {
     private val structureManager = Bukkit.getStructureManager()
     private val playerAreas = mutableMapOf<UUID, Location>()
 
@@ -78,7 +80,7 @@ class SpeedBuildersMinigame : Minigame("locations.minigames.speed-builders") {
     private fun getStructure(structureData: StructureData): Structure {
         // load structure from plugin.dataFolder/speedbuilders/structureData.fileName
         val structureFile = structureData.fileName
-        val structure = structureManager.loadStructure(File(game.plugin.dataFolder, "speedbuilders/$structureFile"))
+        val structure = structureManager.loadStructure(File(plugin.dataFolder, "speedbuilders/$structureFile"))
         return structure
     }
 
@@ -311,7 +313,7 @@ class SpeedBuildersMinigame : Minigame("locations.minigames.speed-builders") {
             if (!running) return@startCountdown
             // we may only eliminate max 1/5th of the playing players
             // a player is considered playing if they are in the playerAreas map
-            val alivePlayers = game.players().filter { player -> playerAreas.containsKey(player.uniqueId) }
+            val alivePlayers = game.getPlayers().filter { player -> playerAreas.containsKey(player.uniqueId) }
             val playersToEliminate = max(5, alivePlayers.size) / 5
             // create a worstPlayers list which is based on the first playerToEliminate
             // elements of the ascending sorted list of accuracies (excluding perfect matches)
@@ -327,7 +329,7 @@ class SpeedBuildersMinigame : Minigame("locations.minigames.speed-builders") {
             }
             if (alivePlayers.size - worstPlayers.size == 1) {
                 // we have a winner!
-                val winner = game.players().first { player -> playerAreas.containsKey(player.uniqueId) }
+                val winner = game.getPlayers().first { player -> playerAreas.containsKey(player.uniqueId) }
                 Bukkit.broadcast(Component.text("The winner is ${winner.name}!", NamedTextColor.GREEN))
                 end()
                 return@startCountdown
@@ -348,7 +350,7 @@ class SpeedBuildersMinigame : Minigame("locations.minigames.speed-builders") {
     override fun start() {
         super.start()
         // set up the player area for every player
-        for ((i, player) in game.players().withIndex()) {
+        for ((i, player) in game.getPlayers().withIndex()) {
             val playerArea =
                 startPos.add(
                     (i % 7) * (PLAYER_AREA_SIZE + AREA_OFFSET + 1),

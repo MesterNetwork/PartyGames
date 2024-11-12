@@ -59,7 +59,9 @@ private enum class ObjectType {
     LILAC,
 }
 
-class GardeningMinigame : Minigame("locations.minigames.gardening") {
+class GardeningMinigame(
+    game: Game,
+) : Minigame(game, "locations.minigames.gardening") {
     private val grassBlocks = mutableListOf<Location>()
     private val plants = mutableMapOf<Location, Plant>()
     private val hoses = mutableMapOf<UUID, MutableList<Rabbit>>()
@@ -99,16 +101,16 @@ class GardeningMinigame : Minigame("locations.minigames.gardening") {
             // set velocity
             entity.velocity = direction
             // save player's UUID in pbc
-            entity.persistentDataContainer.set(NamespacedKey(game.plugin, "player"), UUIDDataType(), player.uniqueId)
+            entity.persistentDataContainer.set(NamespacedKey(plugin, "player"), UUIDDataType(), player.uniqueId)
             // save the power of the hose in pbc
             entity.persistentDataContainer.set(
-                NamespacedKey(game.plugin, "hosePower"),
+                NamespacedKey(plugin, "hosePower"),
                 PersistentDataType.INTEGER,
                 hosePowers[player.uniqueId]!!,
             )
             // hide the armor stand from every online player
             Bukkit.getOnlinePlayers().forEach { player ->
-                player.hideEntity(game.plugin, entity)
+                player.hideEntity(plugin, entity)
             }
         }
     }
@@ -168,7 +170,7 @@ class GardeningMinigame : Minigame("locations.minigames.gardening") {
         // removing 1 from the y coordinate to make sure the water lands on the block's top surface
         val delay = ((location.y - highestBlockLoc.y - 1) / 0.3).coerceAtLeast(0.0).toLong()
         Bukkit.getScheduler().runTaskLater(
-            game.plugin,
+            plugin,
             Runnable {
                 if (!running || !player.isOnline) {
                     return@Runnable
@@ -248,7 +250,7 @@ class GardeningMinigame : Minigame("locations.minigames.gardening") {
         ]
     }
 
-    private fun getPlayersFromTap(tap: GardenTap): List<Player> = game.players().filter { getTap(it) == tap }
+    private fun getPlayersFromTap(tap: GardenTap): List<Player> = game.getPlayers().filter { getTap(it) == tap }
 
     override fun start() {
         super.start()
@@ -258,12 +260,12 @@ class GardeningMinigame : Minigame("locations.minigames.gardening") {
         worldBorder.size = 2 * MAP_RADIUS + 1.0
         worldBorder.warningDistance = 0
         // start a timer that triggers the hose shooting
-        Bukkit.getScheduler().runTaskTimer(game.plugin, { t ->
+        Bukkit.getScheduler().runTaskTimer(plugin, { t ->
             if (!running) {
                 t.cancel()
                 return@runTaskTimer
             }
-            for (player in game.players().filter { it.isSneaking && hoses[it.uniqueId]?.isNotEmpty() == true }) {
+            for (player in game.getPlayers().filter { it.isSneaking && hoses[it.uniqueId]?.isNotEmpty() == true }) {
                 shootWater(player)
             }
         }, 0, 1)
@@ -273,7 +275,7 @@ class GardeningMinigame : Minigame("locations.minigames.gardening") {
             taps[location] = GardenTap(location)
         }
         // start a timer that spawns an object every 2 ticks
-        Bukkit.getScheduler().runTaskTimer(game.plugin, { t ->
+        Bukkit.getScheduler().runTaskTimer(plugin, { t ->
             if (!running) {
                 t.cancel()
                 return@runTaskTimer
@@ -307,21 +309,21 @@ class GardeningMinigame : Minigame("locations.minigames.gardening") {
                 )
             val plant =
                 when (spawnedObject) {
-                    ObjectType.RAINBOW_FLOWER -> RainbowFlower(location)
-                    ObjectType.OAK_TREE -> OakTree(location)
-                    ObjectType.SUNFLOWER -> Sunflower(location)
-                    ObjectType.CACTUS -> Cactus(location)
-                    ObjectType.WEED -> Weed(location)
-                    ObjectType.ZOMBIE_WEED -> ZombieWeed(location)
-                    ObjectType.ROSE -> Rose(location)
-                    ObjectType.PEONY -> Peony(location)
-                    ObjectType.LILAC -> Lilac(location)
+                    ObjectType.RAINBOW_FLOWER -> RainbowFlower(location, game)
+                    ObjectType.OAK_TREE -> OakTree(location, game)
+                    ObjectType.SUNFLOWER -> Sunflower(location, game)
+                    ObjectType.CACTUS -> Cactus(location, game)
+                    ObjectType.WEED -> Weed(location, game)
+                    ObjectType.ZOMBIE_WEED -> ZombieWeed(location, game)
+                    ObjectType.ROSE -> Rose(location, game)
+                    ObjectType.PEONY -> Peony(location, game)
+                    ObjectType.LILAC -> Lilac(location, game)
                 }
             plant.spawn()
             plants[location] = plant
         }, 0, 2)
         // start a timer that increases the water level of the taps every 5 ticks
-        Bukkit.getScheduler().runTaskTimer(game.plugin, { t ->
+        Bukkit.getScheduler().runTaskTimer(plugin, { t ->
             if (!running) {
                 t.cancel()
                 return@runTaskTimer
@@ -338,7 +340,7 @@ class GardeningMinigame : Minigame("locations.minigames.gardening") {
             end()
         }
         // reset players
-        for (player in game.players()) {
+        for (player in game.getPlayers()) {
             player.inventory.clear()
             // add a lead to the player's inventory
             val hose = ItemStack.of(Material.LEAD)
@@ -427,11 +429,11 @@ class GardeningMinigame : Minigame("locations.minigames.gardening") {
                 entity.remove()
             }
             val playerUUID =
-                entity.persistentDataContainer.get(NamespacedKey(game.plugin, "player"), UUIDDataType()) ?: return
+                entity.persistentDataContainer.get(NamespacedKey(plugin, "player"), UUIDDataType()) ?: return
             val player = Bukkit.getPlayer(playerUUID) ?: return
             val power =
                 entity.persistentDataContainer.get(
-                    NamespacedKey(game.plugin, "hosePower"),
+                    NamespacedKey(plugin, "hosePower"),
                     PersistentDataType.INTEGER,
                 ) ?: return
             // to prevent detection issues due to the game's tick rate, calculate all the unique blocks that the armor stand touched

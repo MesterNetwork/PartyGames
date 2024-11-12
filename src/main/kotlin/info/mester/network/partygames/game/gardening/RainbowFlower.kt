@@ -1,5 +1,6 @@
 package info.mester.network.partygames.game.gardening
 
+import info.mester.network.partygames.game.Game
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.util.Vector
@@ -7,7 +8,8 @@ import kotlin.math.pow
 
 class RainbowFlower(
     location: Location,
-) : Plant(location) {
+    game: Game,
+) : Plant(location, game) {
     override fun spawn() {
         val flower =
             when (level) {

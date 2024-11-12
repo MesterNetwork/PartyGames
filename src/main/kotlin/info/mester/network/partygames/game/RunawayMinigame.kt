@@ -9,7 +9,9 @@ import org.bukkit.scheduler.BukkitTask
 import java.util.function.Consumer
 import kotlin.math.floor
 
-class RunawayMinigame : Minigame("locations.minigames.runaway") {
+class RunawayMinigame(
+    game: Game,
+) : Minigame(game, "locations.minigames.runaway") {
     override fun start() {
         super.start()
         // start a 30-second countdown for the minigame
@@ -18,7 +20,7 @@ class RunawayMinigame : Minigame("locations.minigames.runaway") {
         }
         // start a timer that is constantly updating every player's actionbar with the distance from the start position
         Bukkit.getScheduler().runTaskTimer(
-            game.plugin,
+            plugin,
             object : Consumer<BukkitTask> {
                 override fun accept(t: BukkitTask) {
                     if (!running) {
@@ -27,7 +29,7 @@ class RunawayMinigame : Minigame("locations.minigames.runaway") {
                     }
                     val distances = sortedDistances
 
-                    for (player in game.players()) {
+                    for (player in game.getPlayers()) {
                         val distance = distances.find { it.first.uniqueId == player.uniqueId }!!.second
                         // show message in player's actionbar
                         player.sendActionBar(Component.text("Distance from start: $distance blocks"))
@@ -43,7 +45,7 @@ class RunawayMinigame : Minigame("locations.minigames.runaway") {
         get() {
             // calculate the distance between all players and the start position as HashMap
             return game
-                .players()
+                .getPlayers()
                 .associateWith { String.format("%.2f", startPos.distance(it.location)).toDouble() }
                 // sort by descending distance
                 .toList()
@@ -53,7 +55,7 @@ class RunawayMinigame : Minigame("locations.minigames.runaway") {
     override fun finish() {
         val distances = sortedDistances
         // scoring system: +1 point for every 10 blocks away, +5 points for being #1 in the list, +3 points for being #2 or #3 +1 points for being in the top 10
-        for (player in game.players()) {
+        for (player in game.getPlayers()) {
             val distanceScore = floor(distances.find { it.first.uniqueId == player.uniqueId }!!.second / 10).toInt()
             // get the position of the player in the list
             val position = distances.indexOfFirst { it.first.uniqueId == player.uniqueId }

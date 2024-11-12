@@ -1,8 +1,8 @@
-name: BedlessTournament
-version: '1.0-SNAPSHOT'
+name: PartyGames
+version: 'a1.0'
 main: info.mester.network.partygames.PartyGames
 api-version: '1.21'
-bootstrapper: info.mester.network.partygames.Bootstrap
+bootstrapper: info.mester.network.partygames.Bootstrapper
 loader: info.mester.network.partygames.Loader
 load: STARTUP
 dependencies:
@@ -11,10 +11,14 @@ dependencies:
       load: BEFORE
       required: true
       join-classpath: true
+    ViaVersion:
+      load: BEFORE
+      required: true
+      join-classpath: true
 authors:
   - Mester
-description: The paper plugin for the Bedless Tournament
-website: https://github.com/MesterMan03/blntournament
+description: The paper plugin for MesterNetwork's Party Games
+website: https://github.com/MesterNetwork/PartyGames
 contributors:
   - Pansexuality (lol)
   - Lots of coffee

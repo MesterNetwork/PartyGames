@@ -13,12 +13,12 @@ fun getRandomInt(
     max: Int,
 ): Int = Random.nextInt(min, max + 1)
 
-fun getRandomOperator(): String {
+private fun getRandomOperator(): String {
     val operators = listOf("+", "-", "*")
     return operators[Random.nextInt(operators.size)]
 }
 
-fun generateExpression(): String {
+private fun generateExpression(): String {
     val numTerms = getRandomInt(2, 4)
     val expressionBuilder = StringBuilder()
 
@@ -32,7 +32,7 @@ fun generateExpression(): String {
     return expressionBuilder.toString()
 }
 
-fun generateMathQuestion(): MathQuestion {
+private fun generateMathQuestion(): MathQuestion {
     val question = generateExpression()
     val expression = ExpressionBuilder(question).build()
     val result = expression.evaluate().toInt()
@@ -44,11 +44,13 @@ data class MathQuestion(
     val answer: Int,
 )
 
-class MathMinigame : Minigame("locations.minigames.math") {
+class MathMinigame(
+    game: Game,
+) : Minigame(game, "locations.minigames.math") {
     private val questions = mutableMapOf<UUID, MathQuestion>()
     private val correctAnswers =
         game
-            .players()
+            .getPlayers()
             .map { it.uniqueId }
             .associateWith { 0 }
             .toMutableMap()
@@ -56,7 +58,7 @@ class MathMinigame : Minigame("locations.minigames.math") {
     override fun start() {
         super.start()
 
-        game.players().forEach { player ->
+        game.getPlayers().forEach { player ->
             val question = generateMathQuestion()
             questions[player.uniqueId] = question
             player.sendMessage(Component.text("Question: ${question.question} = ?", NamedTextColor.GREEN))
@@ -93,7 +95,7 @@ class MathMinigame : Minigame("locations.minigames.math") {
         // sort the correct answers by the number of correct answers
         val sortedCorrectAnswers = correctAnswers.toList().sortedByDescending { it.second }
 
-        game.players().forEach { player ->
+        game.getPlayers().forEach { player ->
             player.sendMessage(
                 Component.text(
                     "Correct answers: ${correctAnswers[player.uniqueId]}",

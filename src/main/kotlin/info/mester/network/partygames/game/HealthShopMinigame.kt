@@ -1,8 +1,10 @@
 package info.mester.network.partygames.game
 
+import info.mester.network.partygames.PartyGames
 import info.mester.network.partygames.admin.SkinType
 import info.mester.network.partygames.admin.changePlayerSkin
 import info.mester.network.partygames.util.spreadPlayers
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
@@ -26,6 +28,7 @@ import org.bukkit.event.entity.EntityRegainHealthEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerMoveEvent
@@ -67,26 +70,13 @@ class ShopFailedException(
 ) : Exception(message)
 
 class HealthShopItem(
-    private val _item: ItemStack,
-    private val _price: Int,
-    private val _slot: Int,
-    private val _key: String,
-    private val _category: String,
-    private val _amount: Int = 1,
+    val item: ItemStack,
+    val price: Int,
+    val slot: Int,
+    val key: String,
+    val category: String,
+    val amount: Int = 1,
 ) {
-    val item: ItemStack
-        get() = _item
-    val price: Int
-        get() = _price
-    val slot: Int
-        get() = _slot
-    val key: String
-        get() = _key
-    val category: String
-        get() = _category
-    val amount: Int
-        get() = _amount
-
     companion object {
         fun loadFromConfig(
             section: ConfigurationSection,
@@ -420,7 +410,7 @@ class HealthShopUI(
             apple.editMeta { meta ->
                 meta.persistentDataContainer.set(
                     NamespacedKey(
-                        _root_ide_package_.info.mester.network.partygames.PartyGames.plugin,
+                        PartyGames.plugin,
                         "golden_apple_inf",
                     ),
                     PersistentDataType.BOOLEAN,
@@ -499,7 +489,7 @@ class HealthShopUI(
         // process steal perk
         if (purchasedItems.any { it.key == "steal_perk" }) {
             player.persistentDataContainer.set(
-                NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "steal_perk"),
+                NamespacedKey(PartyGames.plugin, "steal_perk"),
                 PersistentDataType.BOOLEAN,
                 true,
             )
@@ -507,7 +497,7 @@ class HealthShopUI(
         // process heal perk
         if (purchasedItems.any { it.key == "heal_perk" }) {
             player.persistentDataContainer.set(
-                NamespacedKey(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, "heal_perk"),
+                NamespacedKey(PartyGames.plugin, "heal_perk"),
                 PersistentDataType.BOOLEAN,
                 true,
             )
@@ -519,11 +509,11 @@ class HealthShopUI(
     }
 }
 
-class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
+class HealthShopMinigame(
+    game: Game,
+) : Minigame(game, "locations.minigames.health-shop") {
     private var shopItems: MutableList<HealthShopItem> = mutableListOf()
-    private var _state = HealthShopMinigameState.STARTING
-    val state: HealthShopMinigameState
-        get() = _state
+    private var state = HealthShopMinigameState.STARTING
     private var fightStartedTime = 0L
     private val startingHealth = 60.0
     private val arrowRegenerating = mutableListOf<UUID>()
@@ -566,7 +556,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
             needsArrows = !player.inventory.contains(Material.ARROW, HealthShopUI.maxArrows(player.uniqueId))
             // if the player still needs more arrows, start the timer again
             if (needsArrows) {
-                Bukkit.getScheduler().runTaskLater(game.plugin, Runnable { regenerateArrow(player) }, 1)
+                Bukkit.getScheduler().runTaskLater(plugin, Runnable { regenerateArrow(player) }, 1)
             } else {
                 arrowRegenerating.remove(player.uniqueId)
             }
@@ -579,7 +569,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
         val startTime = System.currentTimeMillis()
         Bukkit
             .getScheduler()
-            .runTaskTimer(game.plugin, { t -> if (!regenerateArrowTimer(player, startTime)) t.cancel() }, 0, 1)
+            .runTaskTimer(plugin, { t -> if (!regenerateArrowTimer(player, startTime)) t.cancel() }, 0, 1)
     }
 
     private fun giveSurvivePoints(player: Player) {
@@ -599,7 +589,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
     }
 
     fun handleEntityShootBow(event: EntityShootBowEvent) {
-        if (_state != HealthShopMinigameState.FIGHT) {
+        if (state != HealthShopMinigameState.FIGHT) {
             return
         }
         if (event.entity.type != EntityType.PLAYER) {
@@ -617,21 +607,24 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
     /**
      * Ran when a player closes the shop UI
      */
-    fun handlePlayerCloseUI(uuid: UUID) {
+    override fun handleInventoryClose(event: InventoryCloseEvent) {
+        if (state != HealthShopMinigameState.SHOP) {
+            return
+        }
         // wait a tick since this always comes from InventoryCloseEvent
-        game.plugin.server.scheduler.runTaskLater(
-            game.plugin,
+        plugin.server.scheduler.runTaskLater(
+            plugin,
             Runnable {
                 if (state != HealthShopMinigameState.SHOP) {
                     return@Runnable
                 }
                 // check if player is online
-                val player = Bukkit.getPlayer(uuid) ?: return@Runnable
+                val player = Bukkit.getPlayer(event.player.uniqueId) ?: return@Runnable
                 if (!player.isOnline) {
                     return@Runnable
                 }
                 // open the shop UI
-                player.openInventory(shopUIs[uuid]!!.inventory)
+                player.openInventory(shopUIs[player.uniqueId]!!.inventory)
             },
             1,
         )
@@ -642,7 +635,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
         damagee: Player,
         damage: Double,
     ) {
-        if (_state != HealthShopMinigameState.FIGHT) {
+        if (state != HealthShopMinigameState.FIGHT) {
             return
         }
         val damagerUUID = damager.uniqueId
@@ -654,7 +647,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
             damagee.inventory.setItemInOffHand(ItemStack(Material.AIR))
             // after 1.5 seconds, give the shield back
             Bukkit.getScheduler().runTaskLater(
-                game.plugin,
+                plugin,
                 Runnable {
                     if (!running) return@Runnable
                     damagee.inventory.setItemInOffHand(shield)
@@ -758,7 +751,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
             }
         }
         // check if we only have one alive player left
-        if (game.players().filter { it.gameMode == GameMode.SURVIVAL }.size <= 1) {
+        if (game.getPlayers().filter { it.gameMode == GameMode.SURVIVAL }.size <= 1) {
             end()
         }
     }
@@ -775,7 +768,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
     }
 
     fun handlePlayerItemConsume(event: PlayerItemConsumeEvent) {
-        if (_state != HealthShopMinigameState.FIGHT) {
+        if (state != HealthShopMinigameState.FIGHT) {
             return
         }
         val item = event.item
@@ -799,7 +792,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
     }
 
     override fun handlePlayerInteract(event: PlayerInteractEvent) {
-        if (_state != HealthShopMinigameState.FIGHT) {
+        if (state != HealthShopMinigameState.FIGHT) {
             return
         }
         // check if item is the tracker
@@ -816,11 +809,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
                 Bukkit
                     .getOnlinePlayers()
                     .filter {
-                        it.gameMode == GameMode.SURVIVAL &&
-                            !_root_ide_package_.info.mester.network.partygames.PartyGames.game.isAdmin(
-                                it,
-                            ) &&
-                            it.uniqueId != player.uniqueId
+                        it.gameMode == GameMode.SURVIVAL && !PartyGames.plugin.isAdmin(it) && it.uniqueId != player.uniqueId
                     }.minByOrNull { it.location.distance(player.location) }
             if (nearestPlayer == null) {
                 player.sendMessage(
@@ -843,7 +832,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
     }
 
     override fun handlePlayerMove(event: PlayerMoveEvent) {
-        if (_state == HealthShopMinigameState.SHOP) {
+        if (state == HealthShopMinigameState.SHOP) {
             event.isCancelled = true
             return
         }
@@ -853,7 +842,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
     override fun handleBlockPlace(event: BlockPlaceEvent) {
         if (event.block.type == Material.OAK_PLANKS) {
             Bukkit.getScheduler().runTaskLater(
-                game.plugin,
+                plugin,
                 Runnable {
                     event.block.type = Material.AIR
                     event.player.inventory.addItem(ItemStack.of(Material.OAK_PLANKS))
@@ -863,15 +852,21 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
         }
     }
 
+    override fun handlePrePlayerAttack(event: PrePlayerAttackEntityEvent) {
+        if (state == HealthShopMinigameState.FIGHT) {
+            event.isCancelled = false
+        }
+    }
+
     init {
         // load shop items by obtaining the config and reading every key inside "items" of "health-shop.yml"
-        val config = YamlConfiguration.loadConfiguration(File(game.plugin.dataFolder, "health-shop.yml"))
+        val config = YamlConfiguration.loadConfiguration(File(plugin.dataFolder, "health-shop.yml"))
         config.getConfigurationSection("items")?.getKeys(false)?.forEach { key ->
-            game.plugin.logger.info("Loading shop item $key")
+            plugin.logger.info("Loading shop item $key")
             val shopItem = HealthShopItem.loadFromConfig(config.getConfigurationSection("items.$key")!!, key)
             shopItems.add(shopItem)
         }
-        shopUIs = game.players().map { it.uniqueId }.associateWith { HealthShopUI(it, shopItems, startingHealth) }
+        shopUIs = game.getPlayers().map { it.uniqueId }.associateWith { HealthShopUI(it, shopItems, startingHealth) }
     }
 
     override fun start() {
@@ -883,8 +878,8 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
         worldBorder.damageBuffer = 1.5
         worldBorder.damageAmount = 0.5
 
-        _state = HealthShopMinigameState.SHOP
-        for (player in game.players()) {
+        state = HealthShopMinigameState.SHOP
+        for (player in game.getPlayers()) {
             // open the shop UI for all players
             player.openInventory(shopUIs[player.uniqueId]!!.inventory)
             // update their max health
@@ -905,7 +900,7 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
         // custom spreadplayers implementation: spread the players around start pos
         // in a 100 block radius
         // TODO: make it actually 100 blocks
-        spreadPlayers(game.players(), startPos, 50)
+        spreadPlayers(game.getPlayers(), startPos, 50)
         // start a 45-second countdown for the shop state
         startCountdown(45000) {
             startFight()
@@ -913,11 +908,11 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
     }
 
     private fun startFight() {
-        _state = HealthShopMinigameState.FIGHT
+        state = HealthShopMinigameState.FIGHT
 
         fightStartedTime = System.currentTimeMillis()
 
-        for (player in game.players()) {
+        for (player in game.getPlayers()) {
             // close the shop UI
             player.closeInventory()
             // cap the max health at the current health
@@ -952,14 +947,14 @@ class HealthShopMinigame : Minigame("locations.minigames.health-shop") {
 
     override fun finish() {
         // give every alive player survive points
-        for (player in game.players().filter { it.gameMode == GameMode.SURVIVAL }) {
+        for (player in game.getPlayers().filter { it.gameMode == GameMode.SURVIVAL }) {
             giveSurvivePoints(player)
         }
         // start an async task to reset everyone's skin
         Bukkit.getAsyncScheduler().runNow(
             _root_ide_package_.info.mester.network.partygames.PartyGames.plugin,
         ) {
-            for (player in game.players()) {
+            for (player in game.getPlayers()) {
                 changePlayerSkin(player, SkinType.OWN)
             }
         }

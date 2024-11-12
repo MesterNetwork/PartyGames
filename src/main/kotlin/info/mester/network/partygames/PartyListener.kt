@@ -1,12 +1,12 @@
 package info.mester.network.partygames
 
-import info.mester.bedless.tournament.admin.InvseeUI
-import info.mester.bedless.tournament.admin.PlayerAdminUI
-import info.mester.bedless.tournament.game.HealthShopMinigame
-import info.mester.bedless.tournament.game.HealthShopMinigameState
-import info.mester.bedless.tournament.game.HealthShopUI
-import info.mester.bedless.tournament.game.MathMinigame
-import info.mester.bedless.tournament.game.SpeedBuildersMinigame
+import info.mester.network.partygames.admin.InvseeUI
+import info.mester.network.partygames.admin.PlayerAdminUI
+import info.mester.network.partygames.game.GameState
+import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.game.HealthShopUI
+import info.mester.network.partygames.game.MathMinigame
+import info.mester.network.partygames.game.SpeedBuildersMinigame
 import io.papermc.paper.event.block.BlockBreakProgressUpdateEvent
 import io.papermc.paper.event.entity.EntityMoveEvent
 import io.papermc.paper.event.player.AsyncChatEvent
@@ -16,6 +16,7 @@ import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.GameRule
+import org.bukkit.World
 import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.Arrow
 import org.bukkit.entity.EntityType
@@ -47,21 +48,26 @@ import org.bukkit.event.world.WorldLoadEvent
 import org.bukkit.inventory.EquipmentSlot
 
 class PartyListener(
-    private val plugin: _root_ide_package_.info.mester.network.partygames.PartyGames,
+    private val plugin: PartyGames,
 ) : Listener {
+    private val gameManager = plugin.gameManager
+
+    private fun getMinigameFromWorld(world: World) = gameManager.getGameByWorld(world)?.runningMinigame
+
     @EventHandler
     fun onPlayerInteractEntity(event: PlayerInteractEntityEvent) {
         if (event.hand == EquipmentSlot.OFF_HAND) {
             return
         }
-
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player) &&
-            event.rightClicked is Player
+        // check if the player is an admin and if they right-clicked a player while in a game
+        val game = gameManager.getGameByWorld(event.player.world)
+        if (PartyGames.plugin.isAdmin(event.player) &&
+            event.rightClicked is Player &&
+            game != null
         ) {
             event.isCancelled = true
             // setup admin ui
-            val playerAdminUI = PlayerAdminUI(event.rightClicked)
+            val playerAdminUI = PlayerAdminUI(game, event.rightClicked as Player)
             event.player.openInventory(playerAdminUI.inventory)
         }
     }
@@ -96,12 +102,10 @@ class PartyListener(
 
     @EventHandler
     fun onEntityDamage(event: EntityDamageEvent) {
-        if (event.entity.type == EntityType.PLAYER) {
-            // cancel fall damage
-            if (event.cause == EntityDamageEvent.DamageCause.FALL) {
-                event.isCancelled = true
-                return
-            }
+        // cancel fall damage
+        if (event.entity.type == EntityType.PLAYER && event.cause == EntityDamageEvent.DamageCause.FALL) {
+            event.isCancelled = true
+            return
         }
     }
 
@@ -109,36 +113,31 @@ class PartyListener(
     fun onFoodLevelChange(event: FoodLevelChangeEvent) {
         if (event.entity.type == EntityType.PLAYER) {
             event.isCancelled = true
-            val player = Bukkit.getPlayer(event.entity.uniqueId)!!
+            val player = event.entity as Player
             player.foodLevel = 20
-            player.saturation = 20f
-            // normally, saturation should be full, but during the fight state in the health shop minigame
-            // we want to avoid the fast regeneration, so set saturation to 0
-            _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame?.let { minigame ->
-                if (minigame is HealthShopMinigame) {
-                    player.saturation = 0f
-                }
-            }
+            player.saturation = 0f
             player.sendHealthUpdate()
         }
     }
 
     @EventHandler
     fun onAsyncChat(event: AsyncChatEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player)
+        if (PartyGames.plugin.isAdmin(event.player)
         ) {
             return
         }
-        // only cancel the event if we're in a minigame
-        val runningMinigame =
-            _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame ?: return
-        // event.isCancelled = true
-        if (runningMinigame is MathMinigame) {
+        val game = gameManager.getGameByWorld(event.player.world) ?: return
+        // chat is never allowed during the playing state
+        if (game.state != GameState.PLAYING) {
+            return
+        }
+        event.isCancelled = true
+        val minigame = game.runningMinigame ?: return
+        if (minigame is MathMinigame) {
             try {
                 val rawText = PlainTextComponentSerializer.plainText().serialize(event.message())
                 val intText = rawText.toInt()
-                runningMinigame.validateAnswer(event.player, intText)
+                minigame.validateAnswer(event.player, intText)
             } catch (e: NumberFormatException) {
                 event.player.sendMessage(Component.text("Please enter a number!", NamedTextColor.RED))
             }
@@ -146,97 +145,75 @@ class PartyListener(
             return
         }
         // send warning message
-        // event.player.sendMessage(Component.text("You cannot use the chat during this minigame!", NamedTextColor.RED))
+        event.player.sendMessage(Component.text("You cannot use the chat during a minigame!", NamedTextColor.RED))
     }
 
     @EventHandler
     fun onPrePlayerAttack(event: PrePlayerAttackEntityEvent) {
         // by default disable the event for every non-admin player
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player)
+        if (plugin.isAdmin(event.player)
         ) {
             return
         }
-        // however, if we're in the health shop minigame DURING the fight, we can allow the event
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        if (runningMinigame is HealthShopMinigame && runningMinigame.state == HealthShopMinigameState.FIGHT) {
-            return
-        }
-
         event.isCancelled = true
+        // however, the minigame may override the cancellation, allowing the event
+        val minigame = getMinigameFromWorld(event.player.world) ?: return
+        minigame.handlePrePlayerAttack(event)
     }
 
     @EventHandler
     fun onInventoryClose(event: InventoryCloseEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player)
-        ) {
+        if (plugin.isAdmin(event.player)) {
             return
         }
         // disable the event if we're in the health shop minigame during the shop state
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        if (runningMinigame is HealthShopMinigame && runningMinigame.state == HealthShopMinigameState.SHOP) {
-            // we cannot cancel the event, so run onPlayerCloseUI manually
-            runningMinigame.handlePlayerCloseUI(event.player.uniqueId)
-        }
+        val minigame = getMinigameFromWorld(event.player.world)
+        minigame?.handleInventoryClose(event)
     }
 
     @EventHandler
     fun onPlayerMove(event: PlayerMoveEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player)
-        ) {
+        if (plugin.isAdmin(event.player)) {
             return
         }
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        runningMinigame?.handlePlayerMove(event)
+        val minigame = getMinigameFromWorld(event.player.world)
+        minigame?.handlePlayerMove(event)
     }
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
-        _root_ide_package_.info.mester.network.partygames.PartyGames.game
-            .setAdmin(event.player, false)
-        _root_ide_package_.info.mester.network.partygames.PartyGames.game
-            .removePlayer(event.player.uniqueId)
+        plugin.setAdmin(event.player, false)
+        gameManager.removePlayerFromQueue(event.player)
     }
 
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
         // make sure admins are hidden from new players
-        for (admin in Bukkit
-            .getOnlinePlayers()
-            .filter {
-                _root_ide_package_.info.mester.network.partygames.PartyGames.game
-                    .isAdmin(it)
-            }) {
+        for (admin in Bukkit.getOnlinePlayers().filter { plugin.isAdmin(it) }) {
             event.player.hidePlayer(plugin, admin)
         }
     }
 
     @EventHandler
     fun onBlockBreak(event: BlockBreakEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player)
-        ) {
+        if (plugin.isAdmin(event.player)) {
             return
         }
 
         event.isCancelled = true
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        runningMinigame?.handleBlockBreak(event)
+        val minigame = getMinigameFromWorld(event.player.world)
+        minigame?.handleBlockBreak(event)
     }
 
     @EventHandler
     fun onEntityRegainHealth(event: EntityRegainHealthEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.entity)
-        ) {
+        if (plugin.isAdmin(event.entity)) {
             return
         }
-        if (event.entity.type != EntityType.PLAYER) {
+        if (event.entityType != EntityType.PLAYER) {
             return
         }
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
+        val runningMinigame = getMinigameFromWorld(event.entity.world)
         if (runningMinigame is HealthShopMinigame) {
             runningMinigame.handleEntityRegainHealth(event)
         }
@@ -250,31 +227,29 @@ class PartyListener(
         }
         @Suppress("UnstableApiUsage")
         val damager = event.damageSource.causingEntity
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        if (runningMinigame is HealthShopMinigame && damager is Player) {
-            runningMinigame.handlePlayerHit(damager, damagee, event.finalDamage)
+        val minigame = getMinigameFromWorld(damagee.world)
+        if (minigame is HealthShopMinigame && damager is Player) {
+            minigame.handlePlayerHit(damager, damagee, event.finalDamage)
         }
     }
 
     @EventHandler
     fun onPlayerDeath(event: PlayerDeathEvent) {
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        runningMinigame?.handlePlayerDeath(event)
+        val minigame = getMinigameFromWorld(event.entity.world)
+        minigame?.handlePlayerDeath(event)
     }
 
     @EventHandler
     fun onPlayerItemConsume(event: PlayerItemConsumeEvent) {
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        if (runningMinigame is HealthShopMinigame) {
-            runningMinigame.handlePlayerItemConsume(event)
+        val minigame = getMinigameFromWorld(event.player.world)
+        if (minigame is HealthShopMinigame) {
+            minigame.handlePlayerItemConsume(event)
         }
     }
 
     @EventHandler
     fun onPlayerDropItem(event: PlayerDropItemEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player)
-        ) {
+        if (plugin.isAdmin(event.player)) {
             return
         }
 
@@ -283,26 +258,22 @@ class PartyListener(
 
     @EventHandler
     fun onBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.entity)
-        ) {
+        if (plugin.isAdmin(event.entity)) {
             return
         }
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        if (runningMinigame is SpeedBuildersMinigame) {
-            runningMinigame.handleBlockBreakProgressUpdate(event)
+        val minigame = getMinigameFromWorld(event.entity.world)
+        if (minigame is SpeedBuildersMinigame) {
+            minigame.handleBlockBreakProgressUpdate(event)
         }
     }
 
     @EventHandler
     fun onBlockPlace(event: BlockPlaceEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player)
-        ) {
+        if (plugin.isAdmin(event.player)) {
             return
         }
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        runningMinigame?.handleBlockPlace(event)
+        val minigame = getMinigameFromWorld(event.player.world)
+        minigame?.handleBlockPlace(event)
     }
 
     @EventHandler
@@ -313,9 +284,7 @@ class PartyListener(
 
     @EventHandler
     fun onEntityShootBow(event: EntityShootBowEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.entity)
-        ) {
+        if (plugin.isAdmin(event.entity)) {
             return
         }
         // don't allow arrows from being picked up
@@ -323,39 +292,38 @@ class PartyListener(
         if (projectile is Arrow) {
             projectile.pickupStatus = AbstractArrow.PickupStatus.CREATIVE_ONLY
         }
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        if (runningMinigame is HealthShopMinigame) {
-            runningMinigame.handleEntityShootBow(event)
+        val minigame = getMinigameFromWorld(event.entity.world)
+        if (minigame is HealthShopMinigame) {
+            minigame.handleEntityShootBow(event)
         }
     }
 
     @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {
-        if (_root_ide_package_.info.mester.network.partygames.PartyGames.game
-                .isAdmin(event.player)
+        if (PartyGames.plugin.isAdmin(event.player)
         ) {
             return
         }
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
+        val runningMinigame = getMinigameFromWorld(event.player.world)
         runningMinigame?.handlePlayerInteract(event)
     }
 
     @EventHandler
     fun onEntityMove(event: EntityMoveEvent) {
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
+        val runningMinigame = getMinigameFromWorld(event.entity.world)
         runningMinigame?.handleEntityMove(event)
     }
 
     @EventHandler
     fun onBlockPhysics(event: BlockPhysicsEvent) {
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
+        val runningMinigame = getMinigameFromWorld(event.block.world)
         runningMinigame?.handleBlockPhysics(event)
     }
 
     @EventHandler
     fun onEntityCombust(event: EntityCombustEvent) {
-        val runningMinigame = _root_ide_package_.info.mester.network.partygames.PartyGames.game.runningMinigame
-        runningMinigame?.handleEntityCombust(event)
+        val minigame = getMinigameFromWorld(event.entity.world)
+        minigame?.handleEntityCombust(event)
     }
 
     @EventHandler
@@ -371,5 +339,9 @@ class PartyListener(
         world.setGameRule(GameRule.NATURAL_REGENERATION, true)
         world.setGameRule(GameRule.RANDOM_TICK_SPEED, 0)
         world.time = 6000
+
+        if (world.name == "limbo") {
+            world.time = 18000
+        }
     }
 }

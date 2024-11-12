@@ -3,23 +3,26 @@ package info.mester.network.partygames.game
 import com.infernalsuite.aswm.api.AdvancedSlimePaperAPI
 import com.infernalsuite.aswm.api.world.SlimeWorld
 import info.mester.network.partygames.PartyGames
-import info.mester.network.partygames.admin.updateVisibilityOfPlayer
+import info.mester.network.partygames.shorten
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.bossbar.BossBar
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.attribute.Attribute
-import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
+import java.util.logging.Level
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.reflect.KClass
 
 data class PlayerData(
     var score: Int,
@@ -29,7 +32,7 @@ enum class GameState {
     /**
      * The game is in the loading state, where the players fly around the starting position and the game is explained
      */
-    LOADING,
+    PRE_GAME,
 
     /**
      * A minigame is currently running
@@ -47,28 +50,116 @@ enum class GameState {
     STOPPED,
 
     /**
-     * The game has just started, ready to load the next minigame
+     * The game has just started, ready to load the first minigame
      */
     STARTING,
 }
 
+private class IntroductionTimer(
+    private val game: Game,
+) : Consumer<BukkitTask> {
+    private val players = game.getPlayers()
+    private var rotation = 0.0
+    private var lastTime = System.currentTimeMillis()
+    private var remainingTime = 10 * 20 // the game will auto-start in 10 seconds
+
+    private fun generateProgressBar(): String {
+        val percentage = (1 - (remainingTime.toDouble() / 200)) * 100
+        val filledSquares = ((percentage + 4) / 10).toInt().coerceIn(0, 10)
+
+        return buildString {
+            if (filledSquares > 0) {
+                append("<green>")
+                append("■".repeat(filledSquares))
+                append("</green>")
+            }
+            if (filledSquares < 10) {
+                append("<gray>")
+                append("■".repeat(10 - filledSquares))
+                append("<gray>")
+            }
+        }
+    }
+
+    override fun accept(t: BukkitTask) {
+        val minigame = game.runningMinigame
+        if (game.state != GameState.PRE_GAME || minigame == null) {
+            t.cancel()
+            return
+        }
+        val deltaTime = System.currentTimeMillis() - lastTime
+        lastTime = System.currentTimeMillis()
+        // rotate so that a full revolution takes 20 seconds
+        rotation += deltaTime * 360.0 / 20000.0
+        if (rotation > 360.0) {
+            rotation = 0.0
+        }
+        for (player in players) {
+            // we want to "spread" the players out along the circle, which we can do by
+            // manipulating the degree before calculating the hit position
+            // basically, offset the degree by the player's index in the list
+            val offset = players.indexOf(player) * 360.0 / players.size
+            val playerRotation = (rotation + offset) % 360.0
+            // shoot a line from startpos with the angle and store the hit position
+            val radians = Math.toRadians(playerRotation)
+            val hitX = 15.0 * cos(radians)
+            val hitZ = 15.0 * sin(radians)
+            // to construct the final location for all players, take the x and z coordinates and set y to startPos.y + 15
+            val finalPos =
+                minigame.startPos.apply {
+                    val finalX = x + hitX
+                    val finalY = y + 15.0
+                    val finalZ = z + hitZ
+                    // calculate the yaw and pitch from the final coordinates to the startpos
+                    val dx = x - finalX
+                    val dy = y - (finalY + player.eyeHeight)
+                    val dz = z - finalZ
+                    val distanceXZ = sqrt(dx * dx + dz * dz)
+                    yaw = Math.toDegrees(atan2(dz, dx)).toFloat() - 90
+                    pitch = -Math.toDegrees(atan2(dy, distanceXZ)).toFloat()
+
+                    x = finalX
+                    z = finalZ
+                    y = finalY
+                }
+
+            player.teleportAsync(finalPos)
+        }
+        val actionBar = "<green>Starting in <yellow>${
+            String.format(
+                "%.2f",
+                remainingTime / 20.0,
+            )
+        }</yellow> seconds</green> <dark_gray>[${generateProgressBar()}]"
+        Audience.audience(players).sendActionBar(MiniMessage.miniMessage().deserialize(actionBar))
+        remainingTime--
+        if (remainingTime <= 0) {
+            game.begin()
+        }
+    }
+}
+
 class Game(
-    private val _plugin: PartyGames,
+    private val plugin: PartyGames,
+    minigames: List<KClass<out Minigame>>,
+    players: List<Player>,
 ) {
+    private val slimeAPI = AdvancedSlimePaperAPI.instance()
+
     /**
-     * List of UUIDs of players who are admins
+     * The unique ID of the game
      */
-    private val admins = mutableListOf<UUID>()
+    val id: UUID = UUID.randomUUID()
+
+    /**
+     * The name of the world used by the game
+     */
+    val worldName = "game-${id.shorten()}"
 
     /**
      * Map of UUIDs to player data
      */
-    private val players = mutableMapOf<UUID, PlayerData>()
-
-    /**
-     * List of Minigame classes that may be used in the game
-     */
-    private val minigames = listOf(HealthShopMinigame::class)
+    private val playerDatas = mutableMapOf<Player, PlayerData>()
 
     /**
      * Shuffled list of constructed Minigame classes, which will be used in the game
@@ -79,22 +170,18 @@ class Game(
      * Currently running Minigame, or null if no Minigame is running
      */
     private var _runningMinigame: Minigame? = null
-    val runningMinigame: Minigame?
-        get() = _runningMinigame
+    val runningMinigame get() = _runningMinigame
 
     /**
      * Current state of the game
      */
-    private var _state = GameState.STOPPED
-    val state: GameState
-        get() = _state
-    val plugin: PartyGames
-        get() = _plugin
+    private var _state = GameState.STARTING
+    val state get() = _state
 
     /**
      * The boss bar to be used for the remaining time
      */
-    private val _remainingBossBar =
+    val remainingBossBar =
         BossBar.bossBar(
             Component.text("Remaining time", NamedTextColor.GREEN),
             1.0F,
@@ -102,74 +189,44 @@ class Game(
                 .GREEN,
             BossBar.Overlay.PROGRESS,
         )
-    val remainingBossBar: BossBar
-        get() = _remainingBossBar
+    private val audience = Audience.audience(players)
 
-    // AdvancedSlimePaper API
-    private val slimeAPI = AdvancedSlimePaperAPI.instance()
-
-    /**
-     * Function to set a player's admin status
-     *
-     * @param player the player to manage
-     * @param isAdmin true if the player should be an admin, false otherwise
-     */
-    fun setAdmin(
-        player: Player,
-        isAdmin: Boolean,
-    ) {
-        if (isAdmin) {
-            // make sure the player can see the admins
-            for (admin in admins) {
-                player.showPlayer(
-                    PartyGames.plugin,
-                    Bukkit.getPlayer(admin)!!,
-                )
-            }
-            admins.add(player.uniqueId)
-        } else {
-            // make sure the player can't see the admin
-            for (admin in admins) {
-                player.hidePlayer(
-                    PartyGames.plugin,
-                    Bukkit.getPlayer(admin)!!,
-                )
-            }
-            admins.remove(player.uniqueId)
+    init {
+        // add all players to the game
+        players.forEach { addPlayer(it) }
+        // start the game
+        audience.sendMessage(Component.text("Setting up the game...", NamedTextColor.GREEN))
+        readyMinigames = minigames.shuffled().map { it.constructors.first().call(this) }.toMutableList()
+        try {
+            loadNextMinigame()
+        } catch (err: IllegalStateException) {
+            // uh-oh!
+            plugin.logger.log(Level.SEVERE, "An error occurred while setting up the game!", err)
+            audience.sendMessage(Component.text("An error occurred while setting up the game!", NamedTextColor.RED))
+            end() // terminate the game
         }
-        updateVisibilityOfPlayer(player, isAdmin)
     }
-
-    private fun isAdmin(uuid: UUID): Boolean = admins.contains(uuid)
-
-    /**
-     * Function to check if an entity (usually a player) is an admin
-     *
-     * @param entity the entity to check
-     * @return true if the entity is an admin, false otherwise
-     */
-    fun isAdmin(entity: Entity): Boolean = isAdmin(entity.uniqueId)
 
     /**
      * Function to get a player's data
      *
-     * @param player the UUID of the player to get
+     * @param playerUUID the UUID of the player to get
      * @return the player's data, or null if the player is not in the game
      */
-    fun playerData(player: UUID): PlayerData? = players[player]
+    fun playerData(playerUUID: UUID): PlayerData? = playerData(Bukkit.getPlayer(playerUUID)!!)
 
-    fun playerData(player: Player): PlayerData? = players[player.uniqueId]
+    fun playerData(player: Player): PlayerData? = playerDatas[player]
 
     /**
      * Function to add a player to the game
      *
      * @param player the player to add
      */
-    fun addPlayer(player: UUID) {
-        if (players.containsKey(player)) {
+    private fun addPlayer(player: Player) {
+        if (playerDatas.containsKey(player)) {
             return
         }
-        players[player] = PlayerData(0)
+        playerDatas[player] = PlayerData(0)
     }
 
     /**
@@ -177,31 +234,13 @@ class Game(
      *
      * @param player the player to remove
      */
-    fun removePlayer(player: UUID) {
-        players.remove(player)
+    fun removePlayer(player: Player) {
+        playerDatas.remove(player)
     }
 
-    private fun reset() {
-        // remove all player data
-        players.clear()
-    }
+    fun getPlayers() = playerDatas.keys.toList()
 
-    fun players(): List<Player> = players.keys.map { Bukkit.getPlayer(it)!! }
-
-    fun start() {
-        // reset current game state
-        reset()
-        unloadWorld()
-
-        _state = GameState.STARTING
-        // add all online players who are not admins
-        for (player in Bukkit.getOnlinePlayers().filter { !isAdmin(it) }) {
-            addPlayer(player.uniqueId)
-        }
-
-        readyMinigames = minigames.shuffled().map { it.constructors.first().call() }.toMutableList()
-        loadNextMinigame()
-    }
+    fun hasPlayer(player: Player) = playerDatas.contains(player)
 
     private fun loadNextMinigame() {
         if (readyMinigames.isEmpty()) {
@@ -213,105 +252,40 @@ class Game(
             // throw an exception
             throw IllegalStateException("The game is not in the starting or post game state!")
         }
-
-        _state = GameState.LOADING
         // load the next minigame
+        _state = GameState.PRE_GAME
         _runningMinigame = readyMinigames.removeAt(0)
-        // put every player in spectator mode
-        for (player in players().toList()) {
-            player.gameMode = GameMode.SPECTATOR
-        }
-
-        Bukkit.broadcast(Component.text("Loading world...", NamedTextColor.GREEN))
+        unloadWorld()
         // start an async task to load the world
-        Bukkit.getAsyncScheduler().runNow(plugin) {
-            val slimeWorld = slimeAPI.getLoadedWorld(_runningMinigame!!.startPos.world.name)
-            val copy = slimeWorld.clone("active")
+        Bukkit.getAsyncScheduler().runDelayed(plugin, {
+            // clone the minigame's world into the game's world
+            val minigameWorld = slimeAPI.getLoadedWorld(_runningMinigame!!.worldName)
+            val gameWorld = minigameWorld.clone(worldName)
             // now switch to sync mode
             Bukkit.getScheduler().runTask(
                 plugin,
                 Runnable {
-                    startIntroduction(copy)
+                    startIntroduction(gameWorld)
                 },
             )
-        }
+        }, 1, TimeUnit.SECONDS)
     }
 
-    private fun startIntroduction(slimeWorld: SlimeWorld) {
-        unloadWorld()
-        val mirror = slimeAPI.loadWorld(slimeWorld, true)
-        val bukkitWorld = Bukkit.getWorld(mirror.name)!!
+    private fun startIntroduction(gameWorld: SlimeWorld) {
+        slimeAPI.loadWorld(gameWorld, true)
         val minigame = _runningMinigame as Minigame
-        minigame.startPos =
-            minigame.startPos.clone().apply {
-                world = bukkitWorld
-            }
 
-        Bukkit.broadcast(
+        audience.sendMessage(
             Component
-                .text("Welcome to the ", NamedTextColor.GREEN)
+                .text("Welcome to ", NamedTextColor.GREEN)
                 .append(minigame.name)
-                .append(Component.text(" minigame!", NamedTextColor.GREEN))
                 .append(Component.text("\n\n").append(minigame.description)),
         )
-        // teleport everyone to the start pos
-        Bukkit.getOnlinePlayers().forEach { it.teleportAsync(minigame.startPos) }
-
-        _plugin.server.scheduler.runTaskTimer(
-            _plugin,
-            object : Consumer<BukkitTask> {
-                private var rotation = 0.0
-                private var lastTime = System.currentTimeMillis()
-
-                override fun accept(t: BukkitTask) {
-                    if (_state != GameState.LOADING) {
-                        t.cancel()
-                        return
-                    }
-                    val deltaTime = System.currentTimeMillis() - lastTime
-                    lastTime = System.currentTimeMillis()
-                    // rotate so that a full revolution takes 20 seconds
-                    rotation += deltaTime * 360.0 / 20000.0
-                    if (rotation > 360.0) {
-                        rotation = 0.0
-                    }
-                    val playerList = players().map { it.uniqueId }
-                    for (player in players().filter { it.world.name == minigame.startPos.world.name }) {
-                        // we want to "spread" the players out along the circle, which we can do by
-                        // manipulating the degree before calculating the hit position
-                        // basically, offset the degree by the player's index in the list
-                        val offset = playerList.indexOf(player.uniqueId) * 360.0 / playerList.size
-                        val playerRotation = (rotation + offset) % 360.0
-                        // shoot a line from startpos with the angle and store the hit position
-                        val radians = Math.toRadians(playerRotation)
-                        val hitX = 15.0 * cos(radians)
-                        val hitZ = 15.0 * sin(radians)
-                        // to construct the final location for all players, take the x and z coordinates and set y to startPos.y + 15
-                        val finalPos =
-                            minigame.startPos.apply {
-                                val finalX = x + hitX
-                                val finalY = y + 15.0
-                                val finalZ = z + hitZ
-                                // calculate the yaw and pitch from the final coordinates to the startpos
-                                val dx = x - finalX
-                                val dy = y - (finalY + player.eyeHeight)
-                                val dz = z - finalZ
-                                val distanceXZ = sqrt(dx * dx + dz * dz)
-                                yaw = Math.toDegrees(atan2(dz, dx)).toFloat() - 90
-                                pitch = -Math.toDegrees(atan2(dy, distanceXZ)).toFloat()
-
-                                x = finalX
-                                z = finalZ
-                                y = finalY
-                            }
-
-                        player.teleportAsync(finalPos)
-                    }
-                }
-            },
-            0,
-            1,
-        )
+        for (player in getPlayers()) {
+            player.teleport(minigame.startPos)
+        }
+        // start a timer that rotates the players around the start pos
+        Bukkit.getScheduler().runTaskTimer(plugin, IntroductionTimer(this), 0, 1)
     }
 
     fun nextMinigame(): Boolean {
@@ -334,26 +308,30 @@ class Game(
 
     fun endMinigame() {
         _state = GameState.POST_GAME
-
-        resetToLobby()
-
-        _runningMinigame = null
-        if (readyMinigames.isEmpty()) {
-            end()
+        getPlayers().forEach { player ->
+            player.gameMode = GameMode.SPECTATOR
         }
+        // wait for 5 seconds and load the new minigame
+        Bukkit.getScheduler().runTaskLater(
+            plugin,
+            Runnable {
+                _runningMinigame = null
+                if (readyMinigames.isEmpty()) {
+                    end()
+                } else {
+                    loadNextMinigame()
+                }
+            },
+            5 * 20,
+        )
     }
 
-    private fun resetToLobby() {
-        Audience.audience(Bukkit.getOnlinePlayers()).hideBossBar(remainingBossBar)
+    private fun sendToLimbo() {
+        Audience.audience(playerDatas.keys).hideBossBar(this.remainingBossBar)
         val scoreboard = Bukkit.getScoreboardManager().mainScoreboard
         val hideNametags = scoreboard.getTeam("hide-nametag")
-        // reset waiting lobby
-        val waitingLobby = plugin.config.getLocation("locations.waiting-lobby")!!
-        val worldBorder = waitingLobby.world.worldBorder
-        worldBorder.size = 21.0
-        worldBorder.center = waitingLobby
-        worldBorder.warningDistance = 0
-        for (player in players()) {
+        val limboWorld = Bukkit.getWorld("limbo")!!
+        for (player in playerDatas.keys) {
             player.gameMode = GameMode.SURVIVAL
             // remove all status effects
             for (effect in player.activePotionEffects) {
@@ -373,38 +351,50 @@ class Game(
             // reset exp
             player.exp = 0f
             player.level = 0
-            // teleport to lobby
-            player.teleportAsync(waitingLobby)
+            // teleport to limo
+            player.teleportAsync(limboWorld.spawnLocation)
             player.allowFlight = false
-        }
-        // don't forget about admins!!
-        for (admin in admins) {
-            Bukkit.getPlayer(admin)!!.teleportAsync(waitingLobby)
         }
     }
 
     private fun unloadWorld() {
-        Bukkit.unloadWorld("active", false)
+        sendToLimbo()
+        Bukkit.unloadWorld(worldName, false)
     }
 
-    fun end() {
+    /**
+     * Gracefully shut down the game (used when the game has to be ended without announcing the winners)
+     */
+    fun terminate() {
         _state = GameState.STOPPED
 
-        resetToLobby()
         unloadWorld()
         // this could be the case if we forcefully end the tournament with the command
         if (_runningMinigame != null) {
             _runningMinigame!!.terminate()
             _runningMinigame = null
         }
+        // send everyone to the lobby world
+        val lobbyWorld = Bukkit.getWorld("world")!!
+        getPlayers().forEach { it.teleport(lobbyWorld.spawnLocation) }
+    }
 
-        Bukkit.broadcast(Component.text("The tournament has ended!", NamedTextColor.GREEN))
+    /**
+     * End the game and announce the winners
+     */
+    private fun end() {
+        Bukkit.broadcast(Component.text("The game has ended!", NamedTextColor.GREEN))
         // create a sorted list of player data based on their score
         val sortedPlayerData =
-            players().associateWith { playerData(it.uniqueId)!!.score }.toList().sortedByDescending { it.second }
+            playerDatas.keys
+                .associateWith { playerData(it.uniqueId)!!.score }
+                .toList()
+                .sortedByDescending { it.second }
         // display the top 3 players
         for ((player, score) in sortedPlayerData.take(3)) {
             Bukkit.broadcast(Component.text("${player.name} has scored $score points!", NamedTextColor.GOLD))
         }
+        // TODO: add a nice place where people can see the winners as player NPCs, then teleport everyone back in about 10 seconds
+        terminate()
     }
 }
