@@ -33,8 +33,8 @@ class ZombieWeed(
             entity.isSilent = true
             entity.isInvulnerable = true
             entity.addPotionEffect(PotionEffect(PotionEffectType.INVISIBILITY, -1, 255, false, false, false))
-            entity.getAttribute(Attribute.GENERIC_FOLLOW_RANGE)?.baseValue = 64.0
-            entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)?.baseValue = 1.0
+            entity.getAttribute(Attribute.FOLLOW_RANGE)?.baseValue = 64.0
+            entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = 1.0
             // spawn a block display to act as the weed
             location.world.spawn(location, BlockDisplay::class.java) { blockDisplay ->
                 blockDisplay.block = Material.DEAD_BUSH.createBlockData()

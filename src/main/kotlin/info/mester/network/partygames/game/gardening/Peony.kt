@@ -29,5 +29,5 @@ class Peony(
         }
     }
 
-    override fun getTotalScore() = 3
+    override fun getTotalScore() = 1
 }

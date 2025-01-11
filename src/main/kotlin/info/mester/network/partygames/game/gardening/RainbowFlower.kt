@@ -1,10 +1,10 @@
 package info.mester.network.partygames.game.gardening
 
 import info.mester.network.partygames.game.Game
+import info.mester.network.partygames.pow
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.util.Vector
-import kotlin.math.pow
 
 class RainbowFlower(
     location: Location,
@@ -32,8 +32,8 @@ class RainbowFlower(
         }
     }
 
-    // score formula: 0.4 * level**2 + 10
-    override fun getTotalScore() = (0.4 * level.toDouble().pow(2.0) + 10).toInt()
+    // score formula: 0.2 * level**2 + 10
+    override fun getTotalScore() = (0.2 * level.pow(2) + 10).toInt()
 
     override fun getProgressScale() = -0.09 * level + 1
 }

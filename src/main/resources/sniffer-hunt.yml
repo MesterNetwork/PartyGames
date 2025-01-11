@@ -1,0 +1,96 @@
+rarityChances:
+  COMMON: 0.3
+  UNCOMMON: 0.7
+  RARE: 0.85
+  EPIC: 0.95
+  LEGENDARY: 1.0
+treasures:
+  # COMMON
+  - item: DIRT
+    maxAmount: 32
+    amountScaleFactor: 1
+    rarity: COMMON
+  - item: COBBLESTONE
+    maxAmount: 24
+    amountScaleFactor: 1
+    rarity: COMMON
+  - item: WHEAT_SEEDS
+    maxAmount: 16
+    amountScaleFactor: 1
+    rarity: COMMON
+  - item: STICK
+    maxAmount: 10
+    amountScaleFactor: 1
+    rarity: COMMON
+
+  # UNCOMMON
+  - item: IRON_NUGGET
+    maxAmount: 12
+    amountScaleFactor: 1
+    rarity: UNCOMMON
+  - item: SUGAR_CANE
+    maxAmount: 10
+    amountScaleFactor: 1
+    rarity: UNCOMMON
+  - item: FEATHER
+    maxAmount: 8
+    amountScaleFactor: 1
+    rarity: UNCOMMON
+  - item: BEE_NEST
+    maxAmount: 4
+    amountScaleFactor: 1
+    rarity: UNCOMMON
+
+  # RARE
+  - item: DIAMOND
+    maxAmount: 4
+    amountScaleFactor: 1
+    rarity: RARE
+  - item: ANCIENT_DEBRIS
+    maxAmount: 2
+    amountScaleFactor: 1
+    rarity: RARE
+  - item: ENCHANTED_BOOK
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: RARE
+  - item: AMETHYST_SHARD
+    maxAmount: 6
+    amountScaleFactor: 1
+    rarity: RARE
+
+  # EPIC
+  - item: NETHER_STAR
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: EPIC
+  - item: DRAGON_EGG
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: EPIC
+  - item: TRIDENT
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: EPIC
+  - item: ELYTRA
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: EPIC
+
+  # LEGENDARY
+  - item: HEART_OF_THE_SEA
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: LEGENDARY
+  - item: ENCHANTED_GOLDEN_APPLE
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: LEGENDARY
+  - item: WITHER_SKELETON_SKULL
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: LEGENDARY
+  - item: BEACON
+    maxAmount: 1
+    amountScaleFactor: 1
+    rarity: LEGENDARY

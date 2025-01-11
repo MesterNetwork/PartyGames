@@ -3,7 +3,6 @@ package info.mester.network.partygames.game.gardening
 import info.mester.network.partygames.game.Game
 import info.mester.network.partygames.roundTo
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
 import org.bukkit.Bukkit
 import org.bukkit.Location
@@ -63,16 +62,7 @@ abstract class Plant(
                 continue
             }
             // give points to player
-            game.playerData(uuid)?.let { playerData ->
-                playerData.score += score
-                val player = Bukkit.getPlayer(uuid) ?: return@let
-                player.sendMessage(
-                    Component.text(
-                        "You received $score points for watering $contribution% of this plant!",
-                        if (score > 0) NamedTextColor.GREEN else NamedTextColor.RED,
-                    ),
-                )
-            }
+            game.addScore(Bukkit.getPlayer(uuid)!!, score, "Watering $contribution% of this plant")
         }
         contributors.clear()
     }
@@ -133,22 +123,11 @@ abstract class Plant(
         val score = getWeedKillScore()
         if (score == 0) {
             // punish the player with -10 points for killing a non-weed
-            game.playerData(player)?.let { playerData ->
-                playerData.score -= 10
-                player.sendMessage(
-                    Component.text(
-                        "You received -10 points for killing a non-weed!",
-                        NamedTextColor.RED,
-                    ),
-                )
-            }
+            game.addScore(player, -10, "Killed non-weed")
             return false
         }
         // give points to player
-        game.playerData(player)?.let { playerData ->
-            playerData.score += score
-            player.sendMessage(Component.text("You received $score points for killing a weed!", NamedTextColor.GREEN))
-        }
+        game.addScore(player, score, "Killed a weed")
         deactivate()
         location.block.type = Material.AIR
         return true

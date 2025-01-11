@@ -1,11 +1,17 @@
 package info.mester.network.partygames.util
 
 import org.bukkit.FluidCollisionMode
+import org.bukkit.HeightMap
 import org.bukkit.Location
+import org.bukkit.Material
+import org.bukkit.entity.Player
 import org.bukkit.util.Vector
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
+import kotlin.math.sin
+import kotlin.random.Random
 
 /**
  * Kindla like [org.bukkit.World.getHighestBlockAt] but it returns the highest block below the given location.
@@ -72,4 +78,38 @@ fun getPointsAlongSegment(
     }
 
     return points
+}
+
+private val disallowedBlocks = listOf(Material.MAGMA_BLOCK, Material.NETHER_WART_BLOCK, Material.WARPED_WART_BLOCK)
+
+fun spreadPlayers(
+    players: List<Player>,
+    center: Location,
+    radius: Int,
+) {
+    val random = Random(System.currentTimeMillis())
+    for (player in players) {
+        var attempts = 5
+        var success = false
+        while (attempts > 0) {
+            // first generate a random angle between 0 and 360 degrees
+            val angle = random.nextDouble() * 2 * Math.PI
+            // distance should be between 0 and radius
+            val distance = random.nextDouble() * radius
+            val x = center.x + distance * cos(angle)
+            val z = center.z + distance * sin(angle)
+            center.world.getHighestBlockAt(x.toInt(), z.toInt(), HeightMap.WORLD_SURFACE).let {
+                // check if the block is solid (not a fluid)
+                if (it.type.isSolid && !disallowedBlocks.contains(it.type)) {
+                    player.teleport(it.location.clone().add(0.5, 1.0, 0.5))
+                    success = true
+                    attempts = 0
+                }
+            }
+            attempts--
+        }
+        if (!success) {
+            player.teleport(center.clone().add(0.5, 1.0, 0.5))
+        }
+    }
 }

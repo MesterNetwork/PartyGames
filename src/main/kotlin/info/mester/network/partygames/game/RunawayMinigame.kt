@@ -11,7 +11,7 @@ import kotlin.math.floor
 
 class RunawayMinigame(
     game: Game,
-) : Minigame(game, "locations.minigames.runaway") {
+) : Minigame(game, "runaway") {
     override fun start() {
         super.start()
         // start a 30-second countdown for the minigame
@@ -29,7 +29,7 @@ class RunawayMinigame(
                     }
                     val distances = sortedDistances
 
-                    for (player in game.getPlayers()) {
+                    for (player in game.onlinePlayers) {
                         val distance = distances.find { it.first.uniqueId == player.uniqueId }!!.second
                         // show message in player's actionbar
                         player.sendActionBar(Component.text("Distance from start: $distance blocks"))
@@ -45,7 +45,7 @@ class RunawayMinigame(
         get() {
             // calculate the distance between all players and the start position as HashMap
             return game
-                .getPlayers()
+                .onlinePlayers
                 .associateWith { String.format("%.2f", startPos.distance(it.location)).toDouble() }
                 // sort by descending distance
                 .toList()
@@ -55,21 +55,22 @@ class RunawayMinigame(
     override fun finish() {
         val distances = sortedDistances
         // scoring system: +1 point for every 10 blocks away, +5 points for being #1 in the list, +3 points for being #2 or #3 +1 points for being in the top 10
-        for (player in game.getPlayers()) {
+        for (player in game.onlinePlayers) {
             val distanceScore = floor(distances.find { it.first.uniqueId == player.uniqueId }!!.second / 10).toInt()
             // get the position of the player in the list
             val position = distances.indexOfFirst { it.first.uniqueId == player.uniqueId }
-            val score =
-                distanceScore +
-                    when (position) {
-                        0 -> 5
-                        1, 2 -> 3
-                        in 3..9 -> 1
-                        else -> 0
-                    }
+            val leaderboardScore =
+                when (position) {
+                    0 -> 5
+                    1, 2 -> 3
+                    in 3..9 -> 1
+                    else -> 0
+                }
 
-            game.playerData(player.uniqueId)!!.score += score
-            player.sendMessage(Component.text("You scored $score points!", NamedTextColor.GREEN))
+            game.addScore(player, distanceScore, "Distance to start")
+            if (leaderboardScore != 0) {
+                game.addScore(player, leaderboardScore, "Leaderboard position")
+            }
         }
     }
 

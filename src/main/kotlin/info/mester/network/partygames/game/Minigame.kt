@@ -2,43 +2,63 @@ package info.mester.network.partygames.game
 
 import info.mester.network.partygames.PartyGames
 import io.papermc.paper.event.entity.EntityMoveEvent
+import io.papermc.paper.event.player.AsyncChatEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
+import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityCombustEvent
+import org.bukkit.event.entity.EntityDismountEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.inventory.InventoryOpenEvent
+import org.bukkit.event.player.PlayerDropItemEvent
+import org.bukkit.event.player.PlayerInteractAtEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.event.player.PlayerToggleFlightEvent
+import org.bukkit.scheduler.BukkitTask
+import java.util.UUID
+import java.util.function.Consumer
+import kotlin.random.Random
 
 abstract class Minigame(
     protected val game: Game,
     startPosPath: String,
 ) {
-    protected val plugin = PartyGames.plugin
-    protected val audience = Audience.audience(game.getPlayers())
     private var _running = false
-    val running: Boolean
-        get() = _running
+    private var countdownUUID = UUID.randomUUID()
+    protected val plugin = PartyGames.plugin
+    protected val audience get() = Audience.audience(game.onlinePlayers + game.world.players.filter { plugin.isAdmin(it) })
+    protected val onlinePlayers get() = game.onlinePlayers
+    val running get() = _running
     val startPos: Location
         get() {
             val pos = field.clone()
             pos.world = Bukkit.getWorld(game.worldName)!!
             return pos
         }
-    val worldName: String
+    val rootWorldName: String
+    val worldIndex: Int
 
     init {
-        val pos = plugin.config.getLocation(startPosPath)!!
-        worldName = pos.world.name
-        startPos = pos
+        val startPosConfig = plugin.config.getConfigurationSection("locations.minigames.$startPosPath")!!
+        val worlds = startPosConfig.getStringList("worlds")
+        // choose a random world from the list
+        worldIndex = Random.nextInt(0, worlds.size)
+        rootWorldName = worlds[worldIndex]
+        val x = startPosConfig.getDouble("x", 0.0)
+        val y = startPosConfig.getDouble("y", 0.0)
+        val z = startPosConfig.getDouble("z", 0.0)
+        startPos = Location(Bukkit.getWorld(rootWorldName)!!, x, y, z)
     }
 
     /**
@@ -47,7 +67,7 @@ abstract class Minigame(
     open fun start() {
         _running = true
 
-        game.getPlayers().forEach { player ->
+        game.onlinePlayers.forEach { player ->
             player.teleport(startPos)
             player.isFlying = false
             player.gameMode = GameMode.SURVIVAL
@@ -66,6 +86,7 @@ abstract class Minigame(
     private fun end(nextGame: Boolean) {
         _running = false
 
+        audience.hideBossBar(game.remainingBossBar)
         finish()
 
         if (nextGame) {
@@ -100,15 +121,10 @@ abstract class Minigame(
         val time = remainingTime / 1000
         val minutes = time / 60
         val seconds = time % 60
+        val name =
+            "<green>Time remaining: <red>$minutes<gray>:</gray>${seconds.toString().padStart(2, '0')}"
 
-        bar.name(
-            Component.text("Time remaining: ", NamedTextColor.GREEN).append(
-                Component
-                    .text(minutes.toString(), NamedTextColor.RED)
-                    .append(Component.text(":", NamedTextColor.GRAY))
-                    .append(Component.text(seconds.toString(), NamedTextColor.RED)),
-            ),
-        )
+        bar.name(MiniMessage.miniMessage().deserialize(name))
         bar.progress(remainingTime.toFloat() / duration.toFloat())
 
         return true
@@ -119,18 +135,25 @@ abstract class Minigame(
         showBar: Boolean,
         onEnd: () -> Unit,
     ) {
-        if (showBar) audience.showBossBar(game.remainingBossBar)
+        if (showBar) {
+            audience.showBossBar(game.remainingBossBar)
+        }
+        countdownUUID = UUID.randomUUID()
         val startTime = System.currentTimeMillis()
-        plugin.server.scheduler.runTaskTimer(
+        Bukkit.getScheduler().runTaskTimer(
             plugin,
-            { t ->
-                if (!running) {
-                    t.cancel()
-                    return@runTaskTimer
-                }
-                if (!updateRemainingTime(startTime, duration)) {
-                    t.cancel()
-                    onEnd()
+            object : Consumer<BukkitTask> {
+                private val uuid = countdownUUID
+
+                override fun accept(t: BukkitTask) {
+                    if (!running || this.uuid != countdownUUID) {
+                        t.cancel()
+                        return
+                    }
+                    if (!updateRemainingTime(startTime, duration)) {
+                        t.cancel()
+                        onEnd()
+                    }
                 }
             },
             0,
@@ -165,6 +188,27 @@ abstract class Minigame(
     open fun handlePrePlayerAttack(event: PrePlayerAttackEntityEvent) {}
 
     open fun handleInventoryClose(event: InventoryCloseEvent) {}
+
+    open fun handlePlayerDropItem(event: PlayerDropItemEvent) {}
+
+    open fun handleEntityChangeBlock(event: EntityChangeBlockEvent) {}
+
+    open fun handleInventoryOpen(event: InventoryOpenEvent) {}
+
+    open fun handlePlayerToggleFlight(event: PlayerToggleFlightEvent) {}
+
+    open fun handlePlayerInteractAtEntity(event: PlayerInteractAtEntityEvent) {}
+
+    open fun handleEntityDismount(event: EntityDismountEvent) {}
+
+    open fun handleDisconnect(
+        player: Player,
+        didLeave: Boolean,
+    ) {
+    }
+
+    open fun handleRejoin(player: Player) {}
+    open fun handlePlayerChat(event: AsyncChatEvent) {}
 
     abstract val name: Component
     abstract val description: Component

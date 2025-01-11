@@ -19,25 +19,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run Ktlint Check
-        run: ./gradlew ktlintCheck
-
-      - name: Upload Ktlint Report
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: ktlint-report
-          path: build/reports/ktlint
-
       - name: Build with Gradle
-        run: ./gradlew build writeVersion
-
-      - name: Read version from file
-        id: read_version
-        run: echo "VERSION=$(cat build/version.txt)" >> $GITHUB_ENV
+        run: ./gradlew build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
-          name: blntournament-${{ env.VERSION }}.jar
-          path: build/libs/blntournament-${{ env.VERSION }}.jar
+          name: partygames.jar
+          path: build/libs/partygames-*-dev-all.jar

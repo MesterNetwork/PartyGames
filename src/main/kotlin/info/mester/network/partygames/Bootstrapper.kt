@@ -2,8 +2,12 @@ package info.mester.network.partygames
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
+import info.mester.network.partygames.admin.GamesUI
 import info.mester.network.partygames.admin.InvseeUI
 import info.mester.network.partygames.game.GameType
+import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.game.SnifferHuntMinigame
+import info.mester.network.partygames.game.SpeedBuildersMinigame
 import io.papermc.paper.command.brigadier.Commands
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver
@@ -12,158 +16,93 @@ import io.papermc.paper.plugin.bootstrap.PluginBootstrap
 import io.papermc.paper.plugin.bootstrap.PluginProviderContext
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
+import java.util.UUID
 
 @Suppress("UnstableApiUsage", "unused")
 class Bootstrapper : PluginBootstrap {
+    val gameLeaveAttempts = mutableMapOf<UUID, Long>()
+
     override fun bootstrap(context: BootstrapContext) {
         val manager: LifecycleEventManager<BootstrapContext> = context.lifecycleManager
         manager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
             val commands = event.registrar()
-            // /tournament plugin
-//            commands.register(
-//                Commands
-//                    .literal("tournament")
-//                    .requires {
-//                        it.sender.isOp
-//                    }
-//                    // start
-//                    .then(
-//                        Commands
-//                            .literal("start")
-//                            .executes { ctx ->
-//                                ctx.source.sender.sendMessage(
-//                                    Component.text(
-//                                        "Starting tournament...",
-//                                        NamedTextColor.GREEN,
-//                                    ),
-//                                )
-//                                _root_ide_package_.info.mester.network.partygames.PartyGames.game
-//                                    .start()
-//                                Command.SINGLE_SUCCESS
-//                            },
-//                    )
-//                    // admin <player>
-//                    .then(
-//                        Commands
-//                            .literal("admin")
-//                            .then(
-//                                Commands
-//                                    .argument("player", ArgumentTypes.player())
-//                                    .suggests { _, builder ->
-//                                        // suggest all online player
-//                                        Bukkit.getOnlinePlayers().map { it.name }.forEach(builder::suggest)
-//                                        builder.buildFuture()
-//                                    }.executes { ctx ->
-//                                        val player =
-//                                            ctx
-//                                                .getArgument("player", PlayerSelectorArgumentResolver::class.java)
-//                                                .resolve(ctx.source)[0]
-//                                        val game = _root_ide_package_.info.mester.network.partygames.PartyGames.game
-//                                        val admin = game.isAdmin(player)
-//                                        game.setAdmin(player, !admin)
-//
-//                                        ctx.source.sender.sendMessage(
-//                                            Component.text(
-//                                                "Admin mode for ${player.name} is now ${!admin}",
-//                                                NamedTextColor.GREEN,
-//                                            ),
-//                                        )
-//                                        Command.SINGLE_SUCCESS
-//                                    }
-//                                    // admin <player> <true/false>
-//                                    .then(
-//                                        Commands
-//                                            .argument("admin", StringArgumentType.word())
-//                                            .suggests { _, builder ->
-//                                                builder.suggest("true").suggest("false").buildFuture()
-//                                            }.executes { ctx ->
-//                                                val player =
-//                                                    ctx
-//                                                        .getArgument(
-//                                                            "player",
-//                                                            PlayerSelectorArgumentResolver::class.java,
-//                                                        ).resolve(ctx.source)[0]
-//                                                val adminString = StringArgumentType.getString(ctx, "admin")
-//                                                val admin = adminString == "true"
-//                                                _root_ide_package_.info.mester.network.partygames.PartyGames.game.setAdmin(
-//                                                    player,
-//                                                    admin,
-//                                                )
-//
-//                                                ctx.source.sender.sendMessage(
-//                                                    Component.text(
-//                                                        "Admin mode for ${player.name} is now $admin",
-//                                                        NamedTextColor.GREEN,
-//                                                    ),
-//                                                )
-//                                                Command.SINGLE_SUCCESS
-//                                            },
-//                                    ),
-//                            ),
-//                    )
-//                    // begin
-//                    .then(
-//                        Commands
-//                            .literal("begin")
-//                            .executes { ctx ->
-//                                if (PartyGames.game.state != GameState.LOADING) {
-//                                    ctx.source.sender.sendMessage(
-//                                        Component.text(
-//                                            "You can only begin the game when it is loading!",
-//                                            NamedTextColor.RED,
-//                                        ),
-//                                    )
-//                                    return@executes 0
-//                                }
-//                                PartyGames.game
-//                                    .begin()
-//                                Command.SINGLE_SUCCESS
-//                            },
-//                    )
-//                    // next
-//                    .then(
-//                        Commands
-//                            .literal("next")
-//                            .executes { ctx ->
-//                                if (_root_ide_package_.info.mester.network.partygames.PartyGames.game.state != GameState.POST_GAME) {
-//                                    ctx.source.sender.sendMessage(
-//                                        Component.text(
-//                                            "You can only start the next minigame when the current one has ended!",
-//                                            NamedTextColor.RED,
-//                                        ),
-//                                    )
-//                                    return@executes 0
-//                                }
-//                                _root_ide_package_.info.mester.network.partygames.PartyGames.game
-//                                    .nextMinigame()
-//                                Command.SINGLE_SUCCESS
-//                            },
-//                    )
-//                    // end
-//                    .then(
-//                        Commands
-//                            .literal("end")
-//                            .executes { ctx ->
-//                                if (_root_ide_package_.info.mester.network.partygames.PartyGames.game.state == GameState.STOPPED) {
-//                                    ctx.source.sender.sendMessage(
-//                                        Component.text(
-//                                            "You cannot end the tournament when it is already stopped!",
-//                                            NamedTextColor.RED,
-//                                        ),
-//                                    )
-//                                    return@executes 0
-//                                }
-//                                _root_ide_package_.info.mester.network.partygames.PartyGames.game
-//                                    .end()
-//                                Command.SINGLE_SUCCESS
-//                            },
-//                    ).build(),
-//                "Main function for managing tournaments",
-//            )
-//
+            // /admin
+            commands.register(
+                // toggle admin mode
+                Commands
+                    .literal("admin")
+                    .requires {
+                        it.sender.hasPermission("partygames.admin")
+                    }.executes { ctx ->
+                        val sender = ctx.source.sender
+                        if (sender !is Player) {
+                            return@executes 1
+                        }
+                        val plugin = PartyGames.plugin
+                        val admin = plugin.isAdmin(sender)
+                        plugin.setAdmin(sender, !admin)
+
+                        sender.sendMessage(
+                            MiniMessage
+                                .miniMessage()
+                                .deserialize(
+                                    "<gold>Admin mode has been ${if (admin) "<red>disabled</red>" else "<green>enabled</green>"}!",
+                                ),
+                        )
+                        Command.SINGLE_SUCCESS
+                    }.then(
+                        // games
+                        Commands
+                            .literal("games")
+                            .executes { ctx ->
+                                val sender = ctx.source.sender
+                                if (sender !is Player) {
+                                    return@executes 1
+                                }
+                                val ui = GamesUI()
+                                sender.openInventory(ui.getInventory())
+                                Command.SINGLE_SUCCESS
+                            },
+                    ).then(
+                        // reload
+                        Commands
+                            .literal("reload")
+                            .executes { ctx ->
+                                val sender = ctx.source.sender
+                                HealthShopMinigame.reload()
+                                SpeedBuildersMinigame.reload()
+                                SnifferHuntMinigame.reload()
+                                PartyGames.plugin.reload()
+                                sender.sendMessage(Component.text("Reloaded the configuration!", NamedTextColor.GREEN))
+                                Command.SINGLE_SUCCESS
+                            },
+                    ).then(
+                        // end
+                        Commands
+                            .literal("end")
+                            .executes { ctx ->
+                                val sender = ctx.source.sender
+                                if (sender !is Player) {
+                                    return@executes 1
+                                }
+                                val plugin = PartyGames.plugin
+                                val game = plugin.gameManager.getGameByWorld(sender.world)
+                                if (game == null) {
+                                    sender.sendMessage(Component.text("You are not in a game!", NamedTextColor.RED))
+                                    return@executes 1
+                                }
+                                game.terminate()
+                                Command.SINGLE_SUCCESS
+                            },
+                    ).build(),
+                "Main function for managing tournaments",
+            )
+            // /invsee <player>
             commands.register(
                 Commands
                     .literal("invsee")
@@ -190,10 +129,18 @@ class Bootstrapper : PluginBootstrap {
                     .then(
                         Commands
                             .argument("game", StringArgumentType.word())
-                            .suggests { _, builder ->
-                                for (game in GameType.entries) {
-                                    builder.suggest(game.name)
-                                }
+                            .suggests { ctx, builder ->
+                                kotlin
+                                    .runCatching {
+                                        val type = StringArgumentType.getString(ctx, "game").uppercase()
+                                        for (game in GameType.entries.filter { it.name.uppercase().startsWith(type) }) {
+                                            builder.suggest(game.name.lowercase())
+                                        }
+                                    }.onFailure {
+                                        for (game in GameType.entries) {
+                                            builder.suggest(game.name.lowercase())
+                                        }
+                                    }
                                 builder.buildFuture()
                             }.executes { ctx ->
                                 val sender = ctx.source.sender
@@ -205,11 +152,21 @@ class Bootstrapper : PluginBootstrap {
                                     )
                                     return@executes 1
                                 }
-                                val typeRaw = StringArgumentType.getString(ctx, "game")
-                                if (!GameType.entries.any { it.name == typeRaw }) {
+                                val typeRaw = StringArgumentType.getString(ctx, "game").uppercase()
+                                if (!GameType.entries.any { it.name.uppercase() == typeRaw }) {
                                     return@executes 1
                                 }
                                 val type = GameType.valueOf(typeRaw)
+                                val currentQueue = PartyGames.plugin.gameManager.getQueueOf(sender)
+                                if (currentQueue != null && currentQueue.type == type) {
+                                    sender.sendMessage(
+                                        Component.text(
+                                            "You are already in a queue for this game!",
+                                            NamedTextColor.RED,
+                                        ),
+                                    )
+                                    return@executes 1
+                                }
                                 PartyGames.plugin.gameManager.joinQueue(type, listOf(sender))
                                 Command.SINGLE_SUCCESS
                             },
@@ -229,7 +186,31 @@ class Bootstrapper : PluginBootstrap {
                             )
                             return@executes 1
                         }
-                        PartyGames.plugin.gameManager.removePlayerFromQueue(sender)
+                        val gameManager = PartyGames.plugin.gameManager
+                        if (gameManager.getQueueOf(sender) != null) {
+                            gameManager.removePlayerFromQueue(sender)
+                            return@executes Command.SINGLE_SUCCESS
+                        }
+                        if (gameManager.getGameOf(sender) != null) {
+                            val lastLeaveAttempt = gameLeaveAttempts[sender.uniqueId]
+                            if (lastLeaveAttempt != null && System.currentTimeMillis() - lastLeaveAttempt < 5000) {
+                                // leave the game
+                                gameManager.getGameOf(sender)!!.removePlayer(sender)
+                                return@executes Command.SINGLE_SUCCESS
+                            }
+                            gameLeaveAttempts[sender.uniqueId] = System.currentTimeMillis()
+                            sender.sendMessage(
+                                MiniMessage
+                                    .miniMessage()
+                                    .deserialize(
+                                        "<red>You are attempting to leave the game! Run /leave again within 5 seconds to confirm.",
+                                    ),
+                            )
+                            return@executes Command.SINGLE_SUCCESS
+                        }
+                        sender.sendMessage(
+                            MiniMessage.miniMessage().deserialize("<red>You are not in a game or a queue!"),
+                        )
                         Command.SINGLE_SUCCESS
                     }.build(),
             )

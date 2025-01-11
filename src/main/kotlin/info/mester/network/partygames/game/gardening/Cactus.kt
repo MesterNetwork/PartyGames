@@ -31,5 +31,5 @@ class Cactus(
         }
     }
 
-    override fun getTotalScore() = level * 3 + 3
+    override fun getTotalScore() = level * 2 + 3
 }

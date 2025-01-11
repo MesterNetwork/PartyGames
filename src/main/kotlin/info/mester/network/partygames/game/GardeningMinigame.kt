@@ -36,6 +36,7 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.entity.EntityCombustEvent
 import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.inventory.EquipmentSlot
@@ -61,7 +62,7 @@ private enum class ObjectType {
 
 class GardeningMinigame(
     game: Game,
-) : Minigame(game, "locations.minigames.gardening") {
+) : Minigame(game, "gardening") {
     private val grassBlocks = mutableListOf<Location>()
     private val plants = mutableMapOf<Location, Plant>()
     private val hoses = mutableMapOf<UUID, MutableList<Rabbit>>()
@@ -97,7 +98,7 @@ class GardeningMinigame(
             entity.isSilent = true
             entity.isSmall = true
             entity.isInvulnerable = true
-            entity.getAttribute(Attribute.GENERIC_SCALE)?.baseValue = 0.06125
+            entity.getAttribute(Attribute.SCALE)?.baseValue = 0.06125
             // set velocity
             entity.velocity = direction
             // save player's UUID in pbc
@@ -202,7 +203,7 @@ class GardeningMinigame(
             entity.isSilent = true
             entity.setGravity(false)
             entity.setAI(false)
-            entity.getAttribute(Attribute.GENERIC_SCALE)?.baseValue = 0.06125
+            entity.getAttribute(Attribute.SCALE)?.baseValue = 0.06125
             playerHoses.add(entity)
         }
         // now we need to reset the leash holder of all the hoses
@@ -250,7 +251,7 @@ class GardeningMinigame(
         ]
     }
 
-    private fun getPlayersFromTap(tap: GardenTap): List<Player> = game.getPlayers().filter { getTap(it) == tap }
+    private fun getPlayersFromTap(tap: GardenTap): List<Player> = game.onlinePlayers.filter { getTap(it) == tap }
 
     override fun start() {
         super.start()
@@ -265,16 +266,24 @@ class GardeningMinigame(
                 t.cancel()
                 return@runTaskTimer
             }
-            for (player in game.getPlayers().filter { it.isSneaking && hoses[it.uniqueId]?.isNotEmpty() == true }) {
+            for (player in game.onlinePlayers.filter { it.isSneaking && hoses[it.uniqueId]?.isNotEmpty() == true }) {
                 shootWater(player)
             }
         }, 0, 1)
-        // spawn 150 garden taps
-        for (i in 0 until 150) {
-            val location = getFreeGrassBlock() ?: continue
+        // spawn 150 garden taps with a timer to prevent lag
+        Bukkit.getScheduler().runTaskTimer(plugin, { t ->
+            if (!running) {
+                t.cancel()
+                return@runTaskTimer
+            }
+            val location = getFreeGrassBlock()
+            if (location == null) {
+                t.cancel()
+                return@runTaskTimer
+            }
             taps[location] = GardenTap(location)
-        }
-        // start a timer that spawns an object every 2 ticks
+        }, 0, 1)
+        // start a timer that spawns an object every 5 ticks
         Bukkit.getScheduler().runTaskTimer(plugin, { t ->
             if (!running) {
                 t.cancel()
@@ -294,19 +303,17 @@ class GardeningMinigame(
             }
             // decide what to spawn
             val spawnedObject =
-                selectWeightedRandom(
-                    listOf(
-                        WeightedItem(ObjectType.WEED, 25),
-                        WeightedItem(ObjectType.ZOMBIE_WEED, 2),
-                        WeightedItem(ObjectType.RAINBOW_FLOWER, 5),
-                        WeightedItem(ObjectType.OAK_TREE, 15),
-                        WeightedItem(ObjectType.CACTUS, 35),
-                        WeightedItem(ObjectType.SUNFLOWER, 80),
-                        WeightedItem(ObjectType.ROSE, 80),
-                        WeightedItem(ObjectType.PEONY, 80),
-                        WeightedItem(ObjectType.LILAC, 80),
-                    ),
-                )
+                listOf(
+                    WeightedItem(ObjectType.WEED, 25),
+                    WeightedItem(ObjectType.ZOMBIE_WEED, 2),
+                    WeightedItem(ObjectType.RAINBOW_FLOWER, 5),
+                    WeightedItem(ObjectType.OAK_TREE, 15),
+                    WeightedItem(ObjectType.CACTUS, 35),
+                    WeightedItem(ObjectType.SUNFLOWER, 80),
+                    WeightedItem(ObjectType.ROSE, 80),
+                    WeightedItem(ObjectType.PEONY, 80),
+                    WeightedItem(ObjectType.LILAC, 80),
+                ).selectWeightedRandom()
             val plant =
                 when (spawnedObject) {
                     ObjectType.RAINBOW_FLOWER -> RainbowFlower(location, game)
@@ -321,7 +328,7 @@ class GardeningMinigame(
                 }
             plant.spawn()
             plants[location] = plant
-        }, 0, 2)
+        }, 0, 5)
         // start a timer that increases the water level of the taps every 5 ticks
         Bukkit.getScheduler().runTaskTimer(plugin, { t ->
             if (!running) {
@@ -335,13 +342,12 @@ class GardeningMinigame(
                 }
             }
         }, 0, 5)
-        // start a 5-minute countdown for the game
-        startCountdown(300000) {
+        // start a 2,5-minute countdown for the game
+        startCountdown((2.5 * 60 * 1000).toLong()) {
             end()
         }
-        // reset players
-        for (player in game.getPlayers()) {
-            player.inventory.clear()
+        // setup players
+        for (player in game.onlinePlayers) {
             // add a lead to the player's inventory
             val hose = ItemStack.of(Material.LEAD)
             hose.editMeta { meta ->
@@ -352,6 +358,7 @@ class GardeningMinigame(
                         Component.text("Right click with the hose to increase its power."),
                         Component.text("Left click with the hose to decrease its power."),
                         Component.text("Sneak to shoot water from your hose."),
+                        Component.text("Drop to detach the hose, whereever you are."),
                     ).map { it.decoration(TextDecoration.ITALIC, false).color(NamedTextColor.GRAY) },
                 )
             }
@@ -369,6 +376,12 @@ class GardeningMinigame(
             hoses[player.uniqueId] = mutableListOf()
             hosePowers[player.uniqueId] = 5
             player.level = hosePowers[player.uniqueId]!!
+        }
+    }
+
+    override fun finish() {
+        for (player in game.onlinePlayers) {
+            resetHose(player)
         }
     }
 
@@ -419,7 +432,6 @@ class GardeningMinigame(
                 }
             }
         }
-        super.handlePlayerMove(event)
     }
 
     override fun handleEntityMove(event: EntityMoveEvent) {
@@ -460,7 +472,6 @@ class GardeningMinigame(
                 pBuilder.spawn()
             }
         }
-        super.handleEntityMove(event)
     }
 
     override fun handlePlayerInteract(event: PlayerInteractEvent) {
@@ -493,7 +504,6 @@ class GardeningMinigame(
             hosePowers[event.player.uniqueId] = hosePowers[event.player.uniqueId]!!.coerceIn(0, 10)
             event.player.level = hosePowers[event.player.uniqueId]!!
         }
-        super.handlePlayerInteract(event)
     }
 
     override fun handleBlockPhysics(event: BlockPhysicsEvent) {
@@ -501,23 +511,19 @@ class GardeningMinigame(
         if (event.block.type in dontCancel) {
             event.isCancelled = true
         }
-        super.handleBlockPhysics(event)
     }
 
     override fun handleEntityCombust(event: EntityCombustEvent) {
         if (event.entity.type == EntityType.ZOMBIE) {
             event.isCancelled = true
         }
-        super.handleEntityCombust(event)
     }
 
     override fun handlePlayerDeath(event: PlayerDeathEvent) {
         event.isCancelled = true
         val player = event.player
         player.teleport(startPos)
-        player.sendMessage(Component.text("You lost -100 points for dying... seriously, how?", NamedTextColor.RED))
-        game.playerData(player)!!.score -= 100
-        super.handlePlayerDeath(event)
+        game.addScore(player, -100, "dying... seriously, how?")
     }
 
     override fun handleBlockBreak(event: BlockBreakEvent) {
@@ -526,6 +532,12 @@ class GardeningMinigame(
         if (item.type == Material.SHEARS) {
             val plant = plants[block.location] ?: return
             plant.killWeed(event.player)
+        }
+    }
+
+    override fun handlePlayerDropItem(event: PlayerDropItemEvent) {
+        if (event.itemDrop.itemStack.type == Material.LEAD) {
+            resetHose(event.player)
         }
     }
 

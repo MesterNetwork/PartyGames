@@ -1,0 +1,41 @@
+structures:
+  # Easy difficulty
+  portal:
+    difficulty: EASY
+  bed:
+    difficulty: EASY
+  farm:
+    difficulty: EASY
+  japanese_idk:
+    difficulty: EASY
+  mushroom:
+    difficulty: EASY
+  well:
+    difficulty: EASY
+  # Medium difficulty
+  bookshelves:
+    difficulty: MEDIUM
+  tree:
+    difficulty: MEDIUM
+  dragon:
+    difficulty: MEDIUM
+  enchanting:
+    difficulty: MEDIUM
+  bigportal:
+    difficulty: MEDIUM
+  warrior:
+    difficulty: MEDIUM
+  # Hard difficulty
+  arcade:
+    difficulty: HARD
+  boat:
+    difficulty: HARD
+  car:
+    difficulty: HARD
+  grave:
+    difficulty: HARD
+  # Insane difficulty
+  outpost:
+    difficulty: INSANE
+  end_city:
+    difficulty: INSANE

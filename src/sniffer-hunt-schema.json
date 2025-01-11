@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "treasures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "The item material of the treasure."
+          },
+          "maxAmount": {
+            "type": "integer",
+            "description": "The maximum amount of the item that can be dropped."
+          },
+          "amountScaleFactor": {
+            "type": "integer",
+            "description": "The scale factor for the quadratic amount distribution. Higher value means more items will be dropped when the treasure value is higher."
+          },
+          "rarity": {
+            "type": "string",
+            "enum": [
+              "COMMON",
+              "UNCOMMON",
+              "RARE",
+              "EPIC",
+              "LEGENDARY"
+            ],
+            "description": "The rarity of the treasure."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "item",
+          "maxAmount",
+          "amountScaleFactor",
+          "rarity"
+        ]
+      },
+      "additionalProperties": false,
+      "description": "The treasures that can be dropped during the hunt."
+    },
+    "rarityChances": {
+      "type": "object",
+      "properties": {
+        "COMMON": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "UNCOMMON": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "RARE": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "EPIC": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "LEGENDARY": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      },
+      "required": [
+        "COMMON",
+        "UNCOMMON",
+        "RARE",
+        "EPIC",
+        "LEGENDARY"
+      ],
+      "additionalProperties": false,
+      "description": "The chance of each rarity. The value represents the upper bound of the chance range, where the lower bound is the previous rarity's max chance."
+    }
+  },
+  "required": [
+    "treasures",
+    "rarityChances"
+  ]
+}

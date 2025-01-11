@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft-07/schema",
   "type": "object",
   "properties": {
     "items": {
@@ -66,10 +66,71 @@
         }
       },
       "additionalProperties": false
+    },
+    "health": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The starting max health of players."
+    },
+    "spawn-locations": {
+      "type": "object",
+      "patternProperties": {
+        "^[0-9]+$": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "The x coordinate of the spawn location."
+              },
+              "y": {
+                "type": "number",
+                "description": "The y coordinate of the spawn location."
+              },
+              "z": {
+                "type": "number",
+                "description": "The z coordinate of the spawn location."
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "supply-drops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The key of the supply drop."
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The weight of the supply drop."
+          }
+        },
+        "required": [
+          "key",
+          "weight"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
-    "items"
+    "items",
+    "spawn-locations",
+    "health",
+    "supply-drops"
   ],
   "additionalProperties": false
 }

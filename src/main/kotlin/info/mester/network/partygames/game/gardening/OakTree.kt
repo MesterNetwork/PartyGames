@@ -52,8 +52,8 @@ class OakTree(
     override fun getTotalScore(): Int =
         when (level) {
             0 -> 5
-            1 -> 15
-            2 -> 30
+            1 -> 10
+            2 -> 15
             else -> 0
         }
 

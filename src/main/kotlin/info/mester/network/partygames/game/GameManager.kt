@@ -10,21 +10,24 @@ import kotlin.reflect.KClass
 
 enum class GameType(
     val minigames: List<KClass<out Minigame>>,
-    val minVersion: Int,
+    val displayName: String
 ) {
-    ARCADE(listOf(MathMinigame::class, RunawayMinigame::class), 47),
-    HEALTH_SHOP(listOf(HealthShopMinigame::class), 735),
-    SPEED_BUILDERS(listOf(SpeedBuildersMinigame::class), 47),
-    GARDENING(listOf(GardeningMinigame::class), 477),
+    HEALTH_SHOP(listOf(HealthShopMinigame::class), "Health Shop"),
+    SPEED_BUILDERS(listOf(SpeedBuildersMinigame::class), "Speed Builders"),
+    GARDENING(listOf(GardeningMinigame::class), "Gardening"),
     FAMILY_NIGHT(
         listOf(
-            MathMinigame::class,
-            RunawayMinigame::class,
             HealthShopMinigame::class,
             SpeedBuildersMinigame::class,
             GardeningMinigame::class,
         ),
-        735,
+        "Family Night",
+    ),
+    SNIFFER_HUNT(
+        listOf(
+            SnifferHuntMinigame::class,
+        ),
+        "Sniffer Hunt",
     ),
 }
 
@@ -65,26 +68,36 @@ class GameManager(
         type: GameType,
         players: List<Player>,
     ) {
-        // check for minimum version
-        val inCompatiblePlayers = players.filter { plugin.viaAPI.getPlayerVersion(it.uniqueId) < type.minVersion }
-        if (inCompatiblePlayers.isNotEmpty()) {
-            val compatibleAudience = Audience.audience(players.filter { it !in inCompatiblePlayers })
-            val incompatibleAudience = Audience.audience(inCompatiblePlayers)
-            compatibleAudience.sendMessage(
+//        // check for minimum version
+//        val inCompatiblePlayers = players.filter { plugin.viaAPI.getPlayerVersion(it.uniqueId) < type.minVersion }
+//        if (inCompatiblePlayers.isNotEmpty()) {
+//            val compatibleAudience = Audience.audience(players.filter { it !in inCompatiblePlayers })
+//            val incompatibleAudience = Audience.audience(inCompatiblePlayers)
+//            compatibleAudience.sendMessage(
+//                mm.deserialize(
+//                    "<red>You are trying to join a game that is not compatible with your Minecraft version! Please play using the latest version of Minecraft if you want to guarantee full compatibility.",
+//                ),
+//            )
+//            incompatibleAudience.sendMessage(
+//                mm.deserialize(
+//                    "<red>The following players are using an incompatible version of Minecraft and cannot join this game:",
+//                ),
+//            )
+//            incompatibleAudience.sendMessage(
+//                mm.deserialize(
+//                    inCompatiblePlayers
+//                        .map { "<yellow>${it.name}</yellow>" }
+//                        .joinToString { "<dark_gray>,</dark_gray " },
+//                ),
+//            )
+//            return
+//        }
+        // check if there is a player that is already in a game
+        val playersInGame = players.filter { getGameOf(it) != null }
+        if (playersInGame.isNotEmpty()) {
+            Audience.audience(playersInGame).sendMessage(
                 mm.deserialize(
-                    "<red>You are trying to join a game that is not compatible with your Minecraft version! Please play using the latest version of Minecraft if you want to guarantee full compatibility.",
-                ),
-            )
-            incompatibleAudience.sendMessage(
-                mm.deserialize(
-                    "<red>The following players are using an incompatible version of Minecraft and cannot join this game:",
-                ),
-            )
-            incompatibleAudience.sendMessage(
-                mm.deserialize(
-                    inCompatiblePlayers
-                        .map { "<yellow>${it.name}</yellow>" }
-                        .joinToString { "<dark_gray>, " },
+                    "<red>You are already in a game! You cannot join another game!",
                 ),
             )
             return
@@ -97,9 +110,9 @@ class GameManager(
         queue.addPlayers(players)
     }
 
-    private fun getQueueOf(player: Player) = queues.values.firstOrNull { it.hasPlayer(player) }
+    fun getQueueOf(player: Player) = queues.values.firstOrNull { it.hasPlayer(player) }
 
-    private fun getGameOf(player: Player) = games.values.firstOrNull { it.hasPlayer(player) }
+    fun getGameOf(player: Player) = games.values.firstOrNull { it.hasPlayer(player) }
 
     fun getGameByWorld(world: World) = games.values.firstOrNull { it.worldName == world.name }
 
@@ -109,13 +122,18 @@ class GameManager(
 
     fun removePlayerFromQueue(player: Player) {
         getQueueOf(player)?.removePlayer(player)
-        getGameOf(player)?.removePlayer(player)
     }
 
     fun startGame(queue: Queue) {
         queues.remove(queue.id)
         val players = queue.getPlayers()
-        val game = Game(plugin, queue.type.minigames, players)
+        val game = Game(plugin, queue.type, players)
         games[game.id] = game
+    }
+
+    fun getGames(): Array<Game> = games.values.toTypedArray()
+
+    fun removeGame(game: Game) {
+        games.remove(game.id)
     }
 }
