@@ -18,6 +18,7 @@ import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.logging.Level
+import kotlin.math.floor
 
 data class PlayerData(
     var score: Int,
@@ -84,6 +85,7 @@ class Game(
     }
 
     private val slimeAPI = AdvancedSlimePaperAPI.instance()
+    private val sidebarManager = plugin.sidebarManager
 
     /**
      * The unique ID of the game
@@ -135,7 +137,12 @@ class Game(
             BossBar.Overlay.PROGRESS,
         )
     private val audience get() = Audience.audience(onlinePlayers)
-    private val firemapAwared = mutableSetOf<UUID>()
+
+    /**
+     * Map of phrases that have been awarded to players
+     * Used for things like giving xp for saying "gg" after the game ends
+     */
+    private val awardedPhrases = mutableMapOf<String, MutableSet<UUID>>()
 
     /**
      * Function to get a player's data
@@ -159,6 +166,8 @@ class Game(
             .take(n)
             .map { Bukkit.getOfflinePlayer(it.first) to it.second }
 
+    fun topPlayers() = topPlayers(playerDatas.size)
+
     /**
      * Function to add a player to the game
      *
@@ -180,7 +189,11 @@ class Game(
         handleDisconnect(player, true)
         if (player.isOnline) {
             resetPlayer(player)
+            sidebarManager.openLobbySidebar(player)
             player.teleport(plugin.spawnLocation)
+        }
+        if (playerDatas.isEmpty()) {
+            end()
         }
     }
 
@@ -288,8 +301,10 @@ class Game(
         Bukkit.getScheduler().runTaskTimer(plugin, IntroductionTimer(this), 0, 1)
     }
 
+    fun hasNextMinigame(): Boolean = minigameIndex < readyMinigames.size - 1
+
     private fun nextMinigame(): Boolean {
-        if (minigameIndex >= readyMinigames.size - 1 || (state != GameState.POST_GAME && state != GameState.STARTING)) {
+        if (!hasNextMinigame() || (state != GameState.POST_GAME && state != GameState.STARTING)) {
             return false
         }
 
@@ -375,15 +390,78 @@ class Game(
     private fun end() {
         audience.sendMessage(Component.text("The game has ended!", NamedTextColor.GREEN))
         // create a sorted list of player data based on their score
-        val sortedPlayerData = playerDatas.toList().sortedByDescending { it.second.score }
+        val topList = topPlayers()
         // display the top 3 players
-        for ((playerUUID, data) in sortedPlayerData.take(3)) {
-            val player = Bukkit.getOfflinePlayer(playerUUID)
-            audience.sendMessage(Component.text("${player.name} has scored ${data.score} points!", NamedTextColor.GOLD))
-        }
+        val messageLength = 30
+        val topListMessage =
+            buildString {
+                append("<dark_gray>${"-".repeat(messageLength)}\n")
+                append("<yellow><bold>Top players:</bold>\n")
+
+                for (i in topList.indices) {
+                    val topPlayer = topList.getOrNull(i)
+                    val color =
+                        if (topPlayer != null) {
+                            when (i) {
+                                0 -> "<#Ffd700>"
+                                1 -> "<#C0C0C0>"
+                                2 -> "<#CD7F32>"
+                                else -> "<gray>"
+                            }
+                        } else {
+                            "<gray>"
+                        }
+                    append(
+                        "${color}${i + 1}. ${topPlayer?.first?.name ?: "<gray>Nobody"} <gray>- <green>${topPlayer?.second?.score ?: 0}\n",
+                    )
+                }
+
+                append("<dark_gray>${"-".repeat(messageLength)}")
+            }
+        audience.sendMessage(mm.deserialize(topListMessage))
         // increase everyone's xp based on the score
-        for ((playerUUID, data) in sortedPlayerData) {
-            plugin.levelManager.addXp(playerUUID, data.score)
+        for ((player, data) in topList) {
+            val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId)
+            plugin.levelManager.addXp(player.uniqueId, data.score.coerceAtLeast(0))
+            val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
+            val levelUpMessage =
+                buildString {
+                    val levelString = "<gray>Level: <yellow>${oldLevel.level}"
+                    append(levelString)
+                    val leveledUp = newLevel.level > oldLevel.level
+                    if (leveledUp) {
+                        append(" <dark_gray>-> <green>${newLevel.level} <green><bold>LEVEL UP!</bold>\n")
+                    } else {
+                        append("\n")
+                    }
+                    append("<gray>Progress: ")
+                    append("<yellow>${newLevel.xp} <dark_gray>[")
+                    val maxSquares = 15
+                    // render the progress bar (we have progressLength squares available)
+                    val progress = (newLevel.xp / newLevel.xpToNextLevel.toFloat())
+                    val previousProgress = (oldLevel.xp / oldLevel.xpToNextLevel.toFloat())
+                    val filledSquares = floor(progress * maxSquares).toInt()
+                    var previousFilledSquares = if (leveledUp) 0 else floor(previousProgress * maxSquares).toInt()
+                    // if there are no additional squares, that means we've only earned very little progress
+                    // in that case, the last progress square should always be green to indicate that
+                    var additionalSquares = filledSquares - previousFilledSquares
+                    if (additionalSquares == 0) {
+                        previousFilledSquares -= 1
+                        additionalSquares = 1
+                    }
+                    for (i in 0 until previousFilledSquares) {
+                        append("<yellow>■")
+                    }
+                    for (i in 0 until additionalSquares) {
+                        append("<green>■")
+                    }
+                    for (i in 0 until maxSquares - filledSquares) {
+                        append("<gray>■")
+                    }
+                    append("<dark_gray>] <green>${newLevel.xpToNextLevel}\n")
+                    append("<dark_gray>${"-".repeat(messageLength)}")
+                }
+            Bukkit.getPlayer(player.uniqueId)?.sendMessage(mm.deserialize(levelUpMessage))
         }
         // TODO: add a nice place where people can see the winners as player NPCs, then teleport everyone back in about 10 seconds
         terminate()
@@ -393,14 +471,14 @@ class Game(
         resetPlayer(player)
         plugin.sidebarManager.openGameSidebar(player)
         player.gameMode = GameMode.SPECTATOR
-        // teleport to current minigame
-        if (runningMinigame != null) {
-            player.teleport(runningMinigame!!.startPos)
-        }
         audience.sendMessage(
             MiniMessage.miniMessage().deserialize("<green><bold><italic>${player.name} has rejoined the game!"),
         )
-        runningMinigame?.handleRejoin(player)
+        // teleport to current minigame
+        if (runningMinigame != null) {
+            player.teleport(runningMinigame!!.startPos)
+            runningMinigame!!.handleRejoin(player)
+        }
     }
 
     fun handleDisconnect(
@@ -438,11 +516,19 @@ class Game(
         }
     }
 
-    fun awardSayingFiremap(player: Player) {
-        if (firemapAwared.contains(player.uniqueId)) {
+    fun awardPhrase(
+        player: Player,
+        phrase: String,
+        score: Int,
+        reason: String,
+    ) {
+        if (!awardedPhrases.containsKey(phrase)) {
+            awardedPhrases[phrase] = mutableSetOf()
+        }
+        if (awardedPhrases[phrase]!!.contains(player.uniqueId)) {
             return
         }
-        firemapAwared.add(player.uniqueId)
-        addScore(player, 50, "Being awesome")
+        awardedPhrases[phrase]!!.add(player.uniqueId)
+        addScore(player, score, reason)
     }
 }

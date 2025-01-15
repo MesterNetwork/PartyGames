@@ -19,9 +19,9 @@ open class Weed(
         }
     }
 
-    override fun getTotalScore() = -10
+    override fun getTotalScore() = -5
 
     override fun getProgressScale() = 5.0
 
-    override fun getWeedKillScore() = 5
+    override fun getWeedKillScore() = 3
 }

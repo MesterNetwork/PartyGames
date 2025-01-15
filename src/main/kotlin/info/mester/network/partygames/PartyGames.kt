@@ -9,6 +9,8 @@ import info.mester.network.partygames.level.LevelPlaceholder
 import info.mester.network.partygames.sidebar.SidebarManager
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.megavex.scoreboardlibrary.api.ScoreboardLibrary
+import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableException
+import net.megavex.scoreboardlibrary.api.noop.NoopScoreboardLibrary
 import okhttp3.OkHttpClient
 import org.bukkit.Bukkit
 import org.bukkit.GameRule
@@ -158,7 +160,12 @@ class PartyGames : JavaPlugin() {
         saveResource("sniffer-hunt.yml", true)
         spawnLocation = config.getLocation("spawn-location")!!
         // register low-level APIs
-        scoreboardLibrary = ScoreboardLibrary.loadScoreboardLibrary(this)
+        try {
+            scoreboardLibrary = ScoreboardLibrary.loadScoreboardLibrary(this)
+        } catch (e: NoPacketAdapterAvailableException) {
+            logger.warning("Failed to load ScoreboardLibrary, fallbacking to no-op")
+            scoreboardLibrary = NoopScoreboardLibrary()
+        }
         viaAPI = Via.getAPI()
         // register managers
         databaseManager = DatabaseManager(File(dataFolder, "partygames.db"))

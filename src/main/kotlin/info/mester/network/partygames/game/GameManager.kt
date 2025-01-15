@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
 
 enum class GameType(
     val minigames: List<KClass<out Minigame>>,
-    val displayName: String
+    val displayName: String,
 ) {
     HEALTH_SHOP(listOf(HealthShopMinigame::class), "Health Shop"),
     SPEED_BUILDERS(listOf(SpeedBuildersMinigame::class), "Speed Builders"),
@@ -20,6 +20,7 @@ enum class GameType(
             HealthShopMinigame::class,
             SpeedBuildersMinigame::class,
             GardeningMinigame::class,
+            DamageDealer::class,
         ),
         "Family Night",
     ),
@@ -28,6 +29,12 @@ enum class GameType(
             SnifferHuntMinigame::class,
         ),
         "Sniffer Hunt",
+    ),
+    DAMAGE_DEALER(
+        listOf(
+            DamageDealer::class,
+        ),
+        "Damage Dealer",
     ),
 }
 

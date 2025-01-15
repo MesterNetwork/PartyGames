@@ -15,8 +15,6 @@ structures:
   # Medium difficulty
   bookshelves:
     difficulty: MEDIUM
-  tree:
-    difficulty: MEDIUM
   dragon:
     difficulty: MEDIUM
   enchanting:
@@ -26,13 +24,15 @@ structures:
   warrior:
     difficulty: MEDIUM
   # Hard difficulty
+  tree:
+    difficulty: HARD
   arcade:
     difficulty: HARD
   boat:
     difficulty: HARD
   car:
     difficulty: HARD
-  grave:
+  graveyard:
     difficulty: HARD
   # Insane difficulty
   outpost:

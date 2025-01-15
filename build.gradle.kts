@@ -1,8 +1,8 @@
 plugins {
-    kotlin("jvm") version "2.0.20-Beta2"
+    kotlin("jvm") version "2.1.0"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("org.sonarqube") version "4.2.1.3168"
-    id("io.papermc.paperweight.userdev") version "1.7.4"
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.13"
     java
 }
 
@@ -25,20 +25,20 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation(kotlin("reflect"))
     // set up paper
-    paperweight.paperDevBundle("1.21.3-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
 
     compileOnly("com.squareup.okhttp3:okhttp:4.12.0")
     compileOnly("net.objecthunter:exp4j:0.4.8")
     // WorldEdit
-    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.9-SNAPSHOT")
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.10-SNAPSHOT")
     // AdvancedSlimePaper
     compileOnly("com.infernalsuite.aswm:api:3.0.0-SNAPSHOT")
     // ViaVersion
-    compileOnly("com.viaversion:viaversion:5.1.1")
+    compileOnly("com.viaversion:viaversion:5.2.1")
     // Testing
     testImplementation(kotlin("test"))
     // ScoreboardLibrary
-    val scoreboardLibraryVersion = "2.2.1"
+    val scoreboardLibraryVersion = "2.2.2"
     implementation("net.megavex:scoreboard-library-api:$scoreboardLibraryVersion")
     runtimeOnly("net.megavex:scoreboard-library-implementation:$scoreboardLibraryVersion")
     implementation("net.megavex:scoreboard-library-extra-kotlin:$scoreboardLibraryVersion") // Kotlin specific extensions (optional)
@@ -85,7 +85,7 @@ tasks {
 
 tasks.register<Copy>("copyPluginToRun") {
     dependsOn("build")
-    from(buildDir.resolve("libs").resolve("partygames-${project.version}-dev-all.jar"))
+    from(buildDir.resolve("libs").resolve("partygames-${project.version}-all.jar"))
     into(rootDir.resolve("run").resolve("plugins"))
 }
 

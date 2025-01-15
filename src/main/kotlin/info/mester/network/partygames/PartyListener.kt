@@ -1,5 +1,6 @@
 package info.mester.network.partygames
 
+import com.destroystokyo.paper.event.block.AnvilDamagedEvent
 import info.mester.network.partygames.admin.InvseeUI
 import info.mester.network.partygames.admin.PlayerAdminUI
 import info.mester.network.partygames.game.Game
@@ -54,7 +55,6 @@ class PartyListener(
     private val plugin: PartyGames,
 ) : Listener {
     private val gameManager = plugin.gameManager
-    private val sidebarManager = plugin.sidebarManager
 
     private fun getMinigameFromWorld(world: World) = gameManager.getGameByWorld(world)?.runningMinigame
 
@@ -141,13 +141,32 @@ class PartyListener(
                 viewers.add(player)
             }
         }
+        val plainText = PlainTextComponentSerializer.plainText().serialize(event.message())
+        val game = gameManager.getGameOf(event.player) ?: return
         // special code for saying "fire map"
-        val game = gameManager.getGameOf(event.player)
-        if (game?.state == GameState.PRE_GAME && game.runningMinigame is HealthShopMinigame && game.runningMinigame?.worldIndex == 0) {
-            val plainText = PlainTextComponentSerializer.plainText().serialize(event.message())
-            if (plainText == "fire map") {
-                game.awardSayingFiremap(event.player)
-            }
+        if (game.state == GameState.PRE_GAME &&
+            game.runningMinigame is HealthShopMinigame &&
+            game.runningMinigame?.worldIndex == 0 &&
+            plainText == "fire map"
+        ) {
+            game.awardPhrase(event.player, plainText, 25, "FIRE MAP!!!!")
+        }
+        // special code for saying "gg"
+        if (game.state == GameState.POST_GAME && !game.hasNextMinigame() && plainText.lowercase() == "gg") {
+            game.awardPhrase(event.player, "gg", 15, "Good Game")
+        }
+        // special code for saying "i wanna lose"
+        if (plainText.lowercase() == "i wanna lose") {
+            game.awardPhrase(event.player, "minuspoints", -200, "You wanted it")
+        }
+        // special code for "givex" and "losex"
+        if (plainText.lowercase().startsWith("give") && event.player.hasPermission("partygames.admin")) {
+            val amount = plainText.substringAfter("give").toIntOrNull() ?: return
+            game.addScore(event.player, amount, "admin command")
+        }
+        if (plainText.lowercase().startsWith("lose") && event.player.hasPermission("partygames.admin")) {
+            val amount = plainText.substringAfter("lose").toIntOrNull() ?: return
+            game.addScore(event.player, -amount, "admin command")
         }
         val minigame = getMinigameFromWorld(event.player.world)
         minigame?.handlePlayerChat(event)
@@ -234,16 +253,8 @@ class PartyListener(
 
     @EventHandler
     fun onEntityDamageByEntity(event: EntityDamageByEntityEvent) {
-        val damagee = event.entity
-        if (damagee !is Player) {
-            return
-        }
-        @Suppress("UnstableApiUsage")
-        val damager = event.damageSource.causingEntity
-        val minigame = getMinigameFromWorld(damagee.world)
-        if (minigame is HealthShopMinigame && damager is Player) {
-            minigame.handlePlayerHit(damager, damagee, event.finalDamage)
-        }
+        val minigame = getMinigameFromWorld(event.entity.world)
+        minigame?.handleEntityDamageByEntity(event)
     }
 
     @EventHandler
@@ -373,5 +384,10 @@ class PartyListener(
     fun onEntityDismount(event: EntityDismountEvent) {
         val runningMinigame = getMinigameFromWorld(event.entity.world)
         runningMinigame?.handleEntityDismount(event)
+    }
+
+    @EventHandler
+    fun onAnvilDamaged(event: AnvilDamagedEvent) {
+        event.isCancelled = true
     }
 }

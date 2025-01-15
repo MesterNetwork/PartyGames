@@ -15,16 +15,21 @@ class GameSidebarComponent(
 ) : SidebarComponent {
     private fun renderLeaderboard(drawable: LineDrawable) {
         drawable.drawLine(Component.empty())
-        val top3 = game.topPlayers(3)
-        drawable.drawLine(mm.deserialize("<white>Top 3 players:"))
-        for (i in 0 until 3) {
-            if (i >= top3.size) {
+        val topList = game.topPlayers(8)
+        drawable.drawLine(mm.deserialize("<white>Top players:"))
+        for (i in 0 until 8) {
+            if (i >= topList.size) {
                 break
             }
-            val data = top3[i]
+            val data = topList[i]
             val player = data.first
             val playerData = data.second
-            drawable.drawLine(mm.deserialize("<yellow>${i + 1}. ${player.name} <gray>- <green>${playerData.score}"))
+            drawable.drawLine(
+                mm.deserialize(
+                    // display the player's name in gray if they're offline
+                    "<yellow>${i + 1}. ${if (player.isOnline) player.name else "<gray>${player.name}"} <gray>- <green>${playerData.score}",
+                ),
+            )
         }
     }
 
@@ -58,6 +63,7 @@ class GameSidebarComponent(
             }
 
             else -> {
+                drawable.drawLine(mm.deserialize("<white>Game state: <yellow>${game.state}"))
             }
         }
     }

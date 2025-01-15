@@ -77,6 +77,7 @@ class Bootstrapper : PluginBootstrap {
                                 HealthShopMinigame.reload()
                                 SpeedBuildersMinigame.reload()
                                 SnifferHuntMinigame.reload()
+                                PartyGames.plugin.reloadConfig()
                                 PartyGames.plugin.reload()
                                 sender.sendMessage(Component.text("Reloaded the configuration!", NamedTextColor.GREEN))
                                 Command.SINGLE_SUCCESS

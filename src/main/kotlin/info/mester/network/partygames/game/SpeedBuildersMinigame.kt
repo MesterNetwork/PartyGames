@@ -3,6 +3,7 @@ package info.mester.network.partygames.game
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.CuboidRegion
 import info.mester.network.partygames.PartyGames
+import info.mester.network.partygames.mm
 import info.mester.network.partygames.pow
 import info.mester.network.partygames.util.WeightedItem
 import info.mester.network.partygames.util.selectWeightedRandom
@@ -14,14 +15,18 @@ import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.World
 import org.bukkit.block.Banner
 import org.bukkit.block.BlockState
 import org.bukkit.block.data.type.ChiseledBookshelf
+import org.bukkit.block.data.type.Fence
+import org.bukkit.block.data.type.Gate
+import org.bukkit.block.data.type.GlassPane
 import org.bukkit.block.data.type.Slab
+import org.bukkit.block.data.type.TrapDoor
 import org.bukkit.block.structure.Mirror
 import org.bukkit.block.structure.StructureRotation
 import org.bukkit.configuration.file.YamlConfiguration
-import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPhysicsEvent
@@ -72,10 +77,7 @@ private fun Location.toPlayerArea(): CuboidRegion {
     return CuboidRegion(corner1.toBlockVector(), corner2.toBlockVector())
 }
 
-private val silkTouchPickaxe =
-    ItemStack.of(Material.NETHERITE_PICKAXE).apply {
-        addEnchantment(Enchantment.SILK_TOUCH, 1)
-    }
+private fun CuboidRegion.toLocation(world: World): Location = Location(world, pos1.x().toDouble(), pos1.y().toDouble(), pos1.z().toDouble())
 
 /**
  * How much padding should be between the player areas.
@@ -119,9 +121,14 @@ class SpeedBuildersMinigame(
     private val playerAreas = mutableMapOf<UUID, CuboidRegion>()
     private var state = SpeedBuildersState.MEMORISE
     private var currentStructureData: StructureData? = null
+    private var currentStructure: Structure? = null
     private val blockBreakCooldowns = mutableMapOf<UUID, Long>()
     private var round = 0
 
+    /**
+     * Load the structure based on the current structure data.
+     * @return the loaded structure
+     */
     private fun getStructure(): Structure {
         // load structure from plugin.dataFolder/speedbuilders/structureData.fileName
         if (currentStructureData == null) {
@@ -156,12 +163,57 @@ class SpeedBuildersMinigame(
             if (originalBlock.type != copyBlock.type) {
                 continue
             }
-            // special case for white and red mushroom blocks: the sides are too difficult to replicate, so instead just ignore and check only for type
-            if (originalBlock.type == Material.RED_MUSHROOM_BLOCK || originalBlock.type == Material.BROWN_MUSHROOM_BLOCK) {
+            val originalBlockData = originalBlock.blockData
+            val copyBlockData = copyBlock.blockData
+            // special case for mushroom blocks: the sides are too difficult to replicate, so instead just ignore and check only for type
+            if (originalBlock.type == Material.RED_MUSHROOM_BLOCK ||
+                originalBlock.type == Material.BROWN_MUSHROOM_BLOCK ||
+                originalBlock.type == Material.MUSHROOM_STEM
+            ) {
                 correctBlocks++
                 continue
             }
-            if (!originalBlock.blockData.matches(copyBlock.blockData)) {
+            // special case for trapdoors
+            if (originalBlockData is TrapDoor && copyBlockData is TrapDoor) {
+                if (originalBlockData.isOpen != copyBlockData.isOpen) {
+                    continue
+                }
+                // check for half (must be same when not open)
+                if (!originalBlockData.isOpen && originalBlockData.half != copyBlockData.half) {
+                    continue
+                }
+                // check for direction (must be same when powered)
+                if (originalBlockData.isOpen && originalBlockData.facing != copyBlockData.facing) {
+                    continue
+                }
+                correctBlocks++
+                continue
+            }
+            // special case for gates
+            if (originalBlockData is Gate && copyBlockData is Gate) {
+                if (originalBlockData.isOpen != copyBlockData.isOpen) {
+                    continue
+                }
+                // check for direction (same when open, same or opposite when closed)
+                if (originalBlockData.isOpen && originalBlockData.facing != copyBlockData.facing) {
+                    continue
+                }
+                if (!originalBlockData.isOpen &&
+                    originalBlockData.facing != copyBlockData.facing.oppositeFace &&
+                    originalBlockData.facing != copyBlockData.facing
+                ) {
+                    continue
+                }
+                correctBlocks++
+                continue
+            }
+            // blocks where only type should be checked (the data is too complicated)
+            if (originalBlockData is Fence || originalBlockData is GlassPane) {
+                correctBlocks++
+                continue
+            }
+            // general block data check
+            if (!originalBlockData.matches(copyBlockData)) {
                 continue
             }
             // special code for banners
@@ -179,7 +231,7 @@ class SpeedBuildersMinigame(
         original: Structure,
         location: Location,
     ): Double {
-        // create a strcture based on the play area (+1 to make sure the edges are included)
+        // create a strcture based on the play area
         val endPos =
             location
                 .clone()
@@ -318,6 +370,22 @@ class SpeedBuildersMinigame(
         giveItemFromBlock(event.block.state, player)
     }
 
+    private fun checkForPerfect(player: Player) {
+        val structure = currentStructure ?: return
+        if (player.gameMode != GameMode.SURVIVAL || state != SpeedBuildersState.BUILD) {
+            return
+        }
+        val playerArea = playerAreas[player.uniqueId]!!
+        val accuracy = calculateAccuracy(structure, playerArea.toLocation(startPos.world))
+        if (accuracy == 1.0) {
+            player.gameMode = GameMode.SPECTATOR
+            audience.sendMessage(mm.deserialize("<yellow>${player.name} has a perfect build!"))
+            if (onlinePlayers.none { it.gameMode == GameMode.SURVIVAL }) {
+                startJudge()
+            }
+        }
+    }
+
     override fun handleBlockPlace(event: BlockPlaceEvent) {
         if (state != SpeedBuildersState.BUILD) {
             event.isCancelled = true
@@ -338,6 +406,7 @@ class SpeedBuildersMinigame(
         if (replacedState.type != Material.AIR) {
             giveItemFromBlock(replacedState, player)
         }
+        checkForPerfect(player)
     }
 
     override fun handleBlockPhysics(event: BlockPhysicsEvent) {
@@ -390,10 +459,28 @@ class SpeedBuildersMinigame(
         if (state == SpeedBuildersState.MEMORISE) {
             event.isCancelled = true
         }
+        if (state == SpeedBuildersState.BUILD) {
+            Bukkit.getScheduler().runTaskLater(
+                plugin,
+                Runnable {
+                    if (state != SpeedBuildersState.BUILD) {
+                        return@Runnable
+                    }
+                    checkForPerfect(event.player)
+                },
+                1,
+            )
+        }
     }
 
     private fun startMemorise() {
         state = SpeedBuildersState.MEMORISE
+        // make sure that every player who became a spectator the last game due to perfect build is in survival again
+        for (player in game.onlinePlayers.filter { it.gameMode == GameMode.SPECTATOR && playerAreas.containsKey(it.uniqueId) }) {
+            player.gameMode = GameMode.SURVIVAL
+            player.allowFlight = true
+            player.isFlying = true
+        }
         // calculate the chances of each difficulty based on the round
         round += 1
         val easyWeight = (-0.006 * round.pow(3) + 0.25 * round.pow(2) - 4.1 * round + 25).coerceAtLeast(0.0)
@@ -410,14 +497,14 @@ class SpeedBuildersMinigame(
         // select a random structure based on the difficulty
         currentStructureData = selectStructure(difficulty)
         val structure = getStructure()
+        currentStructure = structure
         for ((playerUUID, playerArea) in playerAreas) {
             val player = Bukkit.getPlayer(playerUUID) ?: continue
             player.sendMessage(Component.text("Memorise the structure!", NamedTextColor.GREEN))
             // place down the structure in the play area
-            val pos1 = playerArea.pos1
-            val pos1Location = Location(startPos.world, pos1.x().toDouble(), pos1.y().toDouble(), pos1.z().toDouble())
+            val location = playerArea.toLocation(startPos.world)
             structure.place(
-                pos1Location,
+                location,
                 true,
                 StructureRotation.NONE,
                 Mirror.NONE,
@@ -426,7 +513,7 @@ class SpeedBuildersMinigame(
                 Random(),
             )
             // teleport the player to the platform
-            player.teleport(pos1Location.clone().add(-0.5, 1.0, -0.5))
+            player.teleport(location.clone().add(-0.5, 1.0, -0.5))
             player.isFlying = true
         }
         startCountdown(10000) {
@@ -442,30 +529,29 @@ class SpeedBuildersMinigame(
             clearPlayerArea(playerArea, false)
             // give items to the player
             player.inventory.clear()
-            giveItemsFromStructure(getStructure(), player)
+            giveItemsFromStructure(currentStructure!!, player)
         }
         audience.sendMessage(Component.text("Build the structure!", NamedTextColor.GREEN))
-        startCountdown(32000) {
+        startCountdown(30000) {
             startJudge()
         }
     }
 
     private fun startJudge() {
+        stopCountdown()
         state = SpeedBuildersState.JUDGE
-        val structure = getStructure()
+        val structure = currentStructure!!
         val accuracies =
             playerAreas.entries.associate { (player, playerArea) ->
-                val pos1 = playerArea.pos1
-                val pos1Location =
-                    Location(startPos.world, pos1.x().toDouble(), pos1.y().toDouble(), pos1.z().toDouble())
-                player to calculateAccuracy(structure, pos1Location)
+                val location = playerArea.toLocation(startPos.world)
+                player to calculateAccuracy(structure, location)
             }
         val baseScore =
             when (currentStructureData!!.difficulty) {
-                StructureDifficulty.EASY -> 5
-                StructureDifficulty.MEDIUM -> 12
-                StructureDifficulty.HARD -> 25
-                StructureDifficulty.INSANE -> 40
+                StructureDifficulty.EASY -> 10
+                StructureDifficulty.MEDIUM -> 25
+                StructureDifficulty.HARD -> 50
+                StructureDifficulty.INSANE -> 85
             }
         // show the accuracy of the player's structure and add score
         for ((playerUUID, accuracy) in accuracies) {
@@ -503,7 +589,7 @@ class SpeedBuildersMinigame(
             } else {
                 worstPlayers.forEach { player -> eliminatePlayer(player) }
             }
-            if (alivePlayers.size - worstPlayers.size == 1) {
+            if (alivePlayers.size - worstPlayers.size <= 1) {
                 win()
             } else {
                 // start a 3-second countdown to start the next round
@@ -519,8 +605,8 @@ class SpeedBuildersMinigame(
     }
 
     private fun win() {
-        val winner = game.onlinePlayers.first { player -> playerAreas.containsKey(player.uniqueId) }
-        audience.sendMessage(Component.text("The winner is ${winner.name}!", NamedTextColor.GREEN))
+        val winner = game.onlinePlayers.firstOrNull { player -> playerAreas.containsKey(player.uniqueId) }
+        audience.sendMessage(Component.text("The winner is ${winner?.name ?: "Nobody"}!", NamedTextColor.GREEN))
         end()
     }
 
@@ -547,7 +633,7 @@ class SpeedBuildersMinigame(
         get() =
             Component.text(
                 "You will be given a random structure you have to memorise in 10 seconds.\n" +
-                        "After the time runs out, you will have 32 seconds to replicate the structure.",
+                    "After the time runs out, you will have 30 seconds to replicate the structure.",
                 NamedTextColor.AQUA,
             )
 }

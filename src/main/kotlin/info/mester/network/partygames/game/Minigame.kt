@@ -8,7 +8,6 @@ import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
-import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
@@ -16,6 +15,7 @@ import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityCombustEvent
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDismountEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
@@ -69,8 +69,7 @@ abstract class Minigame(
 
         game.onlinePlayers.forEach { player ->
             player.teleport(startPos)
-            player.isFlying = false
-            player.gameMode = GameMode.SURVIVAL
+            Game.resetPlayer(player)
         }
     }
 
@@ -137,6 +136,8 @@ abstract class Minigame(
     ) {
         if (showBar) {
             audience.showBossBar(game.remainingBossBar)
+        } else {
+            audience.hideBossBar(game.remainingBossBar)
         }
         countdownUUID = UUID.randomUUID()
         val startTime = System.currentTimeMillis()
@@ -166,6 +167,11 @@ abstract class Minigame(
         onEnd: () -> Unit,
     ) {
         startCountdown(duration, true, onEnd)
+    }
+
+    fun stopCountdown() {
+        // by creating a new UUID, the currently running countdown will be cancelled
+        countdownUUID = UUID.randomUUID()
     }
 
     // functions for handling events
@@ -208,7 +214,10 @@ abstract class Minigame(
     }
 
     open fun handleRejoin(player: Player) {}
+
     open fun handlePlayerChat(event: AsyncChatEvent) {}
+
+    open fun handleEntityDamageByEntity(event: EntityDamageByEntityEvent) {}
 
     abstract val name: Component
     abstract val description: Component

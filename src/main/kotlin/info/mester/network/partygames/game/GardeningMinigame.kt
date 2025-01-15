@@ -23,6 +23,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.Bukkit
+import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -137,8 +138,8 @@ class GardeningMinigame(
             )
 
         for (neighbor in neighbors) {
-            // only provide 25% of the water to the neighbor plant
-            plants[neighbor]?.water(player, waterAmount * 0.25)
+            // only provide 40% of the water to the neighbor plant
+            plants[neighbor]?.water(player, waterAmount * 0.4)
         }
     }
 
@@ -271,6 +272,7 @@ class GardeningMinigame(
             }
         }, 0, 1)
         // spawn 150 garden taps with a timer to prevent lag
+        var tapCount = 0
         Bukkit.getScheduler().runTaskTimer(plugin, { t ->
             if (!running) {
                 t.cancel()
@@ -282,6 +284,10 @@ class GardeningMinigame(
                 return@runTaskTimer
             }
             taps[location] = GardenTap(location)
+            tapCount++
+            if (tapCount >= 150) {
+                t.cancel()
+            }
         }, 0, 1)
         // start a timer that spawns an object every 5 ticks
         Bukkit.getScheduler().runTaskTimer(plugin, { t ->
@@ -348,41 +354,61 @@ class GardeningMinigame(
         }
         // setup players
         for (player in game.onlinePlayers) {
-            // add a lead to the player's inventory
-            val hose = ItemStack.of(Material.LEAD)
-            hose.editMeta { meta ->
-                meta.itemName(Component.text("Hose", NamedTextColor.GOLD))
-                meta.lore(
-                    listOf(
-                        Component.text("Right click on a garden tap to attach a hose to it."),
-                        Component.text("Right click with the hose to increase its power."),
-                        Component.text("Left click with the hose to decrease its power."),
-                        Component.text("Sneak to shoot water from your hose."),
-                        Component.text("Drop to detach the hose, whereever you are."),
-                    ).map { it.decoration(TextDecoration.ITALIC, false).color(NamedTextColor.GRAY) },
-                )
-            }
-            val weedKiller = ItemStack.of(Material.SHEARS)
-            weedKiller.editMeta { meta ->
-                meta.itemName(Component.text("Weed Killer", NamedTextColor.GOLD))
-                meta.lore(
-                    listOf(
-                        Component.text("Left click on a weed to kill it."),
-                    ).map { it.decoration(TextDecoration.ITALIC, false).color(NamedTextColor.GRAY) },
-                )
-            }
-            player.inventory.addItem(hose)
-            player.inventory.addItem(weedKiller)
-            hoses[player.uniqueId] = mutableListOf()
-            hosePowers[player.uniqueId] = 5
-            player.level = hosePowers[player.uniqueId]!!
+            setupPlayer(player)
         }
+    }
+
+    private fun setupPlayer(player: Player) {
+        // add a lead to the player's inventory
+        val hose = ItemStack.of(Material.LEAD)
+        hose.editMeta { meta ->
+            meta.itemName(Component.text("Hose", NamedTextColor.GOLD))
+            meta.lore(
+                listOf(
+                    Component.text("Right click on a garden tap to attach a hose to it."),
+                    Component.text("Right click with the hose to increase its power."),
+                    Component.text("Left click with the hose to decrease its power."),
+                    Component.text("Sneak to shoot water from your hose."),
+                    Component.text("Drop to detach the hose, whereever you are."),
+                ).map { it.decoration(TextDecoration.ITALIC, false).color(NamedTextColor.GRAY) },
+            )
+        }
+        val weedKiller = ItemStack.of(Material.SHEARS)
+        weedKiller.editMeta { meta ->
+            meta.itemName(Component.text("Weed Killer", NamedTextColor.GOLD))
+            meta.lore(
+                listOf(
+                    Component.text("Left click on a weed to kill it."),
+                ).map { it.decoration(TextDecoration.ITALIC, false).color(NamedTextColor.GRAY) },
+            )
+        }
+        player.inventory.addItem(hose)
+        player.inventory.addItem(weedKiller)
+        hoses[player.uniqueId] = mutableListOf()
+        hosePowers[player.uniqueId] = 5
+        player.level = hosePowers[player.uniqueId]!!
     }
 
     override fun finish() {
         for (player in game.onlinePlayers) {
             resetHose(player)
         }
+    }
+
+    override fun handleRejoin(player: Player) {
+        if (game.state == GameState.PLAYING) {
+            setupPlayer(player)
+            player.showBossBar(game.remainingBossBar)
+            player.gameMode = GameMode.SURVIVAL
+            player.teleport(startPos)
+        }
+    }
+
+    override fun handleDisconnect(
+        player: Player,
+        didLeave: Boolean,
+    ) {
+        resetHose(player)
     }
 
     override fun handlePlayerMove(event: PlayerMoveEvent) {

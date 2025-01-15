@@ -32,8 +32,7 @@ class RainbowFlower(
         }
     }
 
-    // score formula: 0.2 * level**2 + 10
-    override fun getTotalScore() = (0.2 * level.pow(2) + 10).toInt()
+    override fun getTotalScore() = (0.15 * level.pow(2) + 5).toInt()
 
     override fun getProgressScale() = -0.09 * level + 1
 }

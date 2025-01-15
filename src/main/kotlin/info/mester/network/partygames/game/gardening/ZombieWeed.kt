@@ -1,5 +1,6 @@
 package info.mester.network.partygames.game.gardening
 
+import info.mester.network.partygames.PartyGames
 import info.mester.network.partygames.game.Game
 import org.bukkit.Bukkit
 import org.bukkit.Location
@@ -34,7 +35,7 @@ class ZombieWeed(
             entity.isInvulnerable = true
             entity.addPotionEffect(PotionEffect(PotionEffectType.INVISIBILITY, -1, 255, false, false, false))
             entity.getAttribute(Attribute.FOLLOW_RANGE)?.baseValue = 64.0
-            entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = 1.0
+            entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = 2.0
             // spawn a block display to act as the weed
             location.world.spawn(location, BlockDisplay::class.java) { blockDisplay ->
                 blockDisplay.block = Material.DEAD_BUSH.createBlockData()
@@ -50,7 +51,7 @@ class ZombieWeed(
                 // start a timer that teleports the block display to the enemy
                 Bukkit
                     .getScheduler()
-                    .runTaskTimer(_root_ide_package_.info.mester.network.partygames.PartyGames.plugin, { t ->
+                    .runTaskTimer(PartyGames.plugin, { t ->
                         if (entity.isDead) {
                             t.cancel()
                             blockDisplay.remove()

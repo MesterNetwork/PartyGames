@@ -19,16 +19,7 @@ class Loader : PluginLoader {
                 .Builder("rapture", "default", "https://repo.rapture.pw/repository/maven-releases/")
                 .build(),
         )
-        resolver.addRepository(
-            RemoteRepository
-                .Builder(
-                    "infernalsuite",
-                    "default",
-                    "https://repo.infernalsuite.com/repository/maven-snapshots/",
-                ).build(),
-        )
         resolver.addDependency(Dependency(DefaultArtifact("com.squareup.okhttp3:okhttp:4.12.0"), null))
-        resolver.addDependency(Dependency(DefaultArtifact("net.objecthunter:exp4j:0.4.8"), null))
         classpathBuilder.addLibrary(resolver)
     }
 }

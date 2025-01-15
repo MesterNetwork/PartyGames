@@ -1,8 +1,6 @@
 package info.mester.network.partygames.level
 
 import info.mester.network.partygames.PartyGames
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import java.util.UUID
 
@@ -75,15 +73,5 @@ class LevelManager(
         }
         // add the remaining xp to the current level
         levelData.xp += remainingXp
-
-        if (levelledUp) {
-            // Optionally broadcast level-up event
-            Bukkit.getPlayer(uuid)?.sendMessage(
-                Component.text(
-                    "Congratulations! You've leveled up to level ${levelData.level}!",
-                    NamedTextColor.GREEN,
-                ),
-            )
-        }
     }
 }

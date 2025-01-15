@@ -24,12 +24,15 @@ import org.bukkit.attribute.Attribute
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Chest
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.damage.DamageSource
+import org.bukkit.damage.DamageType
 import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.FallingBlock
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityRegainHealthEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
@@ -209,10 +212,10 @@ class HealthShopMinigame(
         player: Player,
         didSurvive: Boolean,
     ) {
-        // for every 15th second the player has survived, give them a point
+        // for every 20th second the player has survived, give them a point
         val survivedTime = System.currentTimeMillis() - fightStartedTime
         val survivedSeconds = survivedTime / 1000
-        val survivedPoints = floor((survivedSeconds / 15).toDouble()).toInt() + (if (didSurvive) 5 else 0)
+        val survivedPoints = floor((survivedSeconds / 20).toDouble()).toInt() * (if (didSurvive) 2 else 1)
         if (survivedPoints > 0) {
             game.addScore(player, survivedPoints, "Survived $survivedSeconds seconds")
         }
@@ -226,7 +229,7 @@ class HealthShopMinigame(
         worldBorder.size = 121.0
         worldBorder.center = startPos
         worldBorder.warningDistance = 2
-        worldBorder.damageBuffer = 0.5
+        worldBorder.damageBuffer = 0.0
         worldBorder.damageAmount = 1.5
         // send the players to the predefined spawn locations
         val spawnLocations =
@@ -304,14 +307,14 @@ class HealthShopMinigame(
                 player.inventory.addItem(ItemStack.of(Material.ARROW, maxArrows))
             }
         }
-        // start a 5-minute countdown for the fight
-        startCountdown(300000) {
+        // start a 3-minute countdown for the fight
+        startCountdown(3 * 60 * 1000) {
             end()
         }
         // start the supply chest timer
-        Bukkit.getScheduler().runTaskTimer(plugin, SupplyChestTimer(this, 5 * 60 * 20), 0, 1)
+        Bukkit.getScheduler().runTaskTimer(plugin, SupplyChestTimer(this, 3 * 60 * 20), 0, 1)
         // shrink the world border to completely close in the last 30 seconds (5 minutes is the fight duration)
-        startPos.world.worldBorder.setSize(5.0, TimeUnit.SECONDS, 5 * 60 - 30)
+        startPos.world.worldBorder.setSize(5.0, TimeUnit.SECONDS, 3 * 60 - 30)
     }
 
     override fun finish() {
@@ -331,9 +334,17 @@ class HealthShopMinigame(
         val worldBorder = startPos.world.worldBorder
         // generate a random location within the world border (minus 2 blocks to avoid spawning on the border)
         val maxSize = (worldBorder.size.toInt() - 2) / 2
-        val x = worldBorder.center.x + Random.nextInt(-maxSize, maxSize)
-        val z = worldBorder.center.z + Random.nextInt(-maxSize, maxSize)
-        val spawnLocation = Vector(x, 120.0, z).toLocation(startPos.world)
+        var x: Double
+        var z: Double
+        while (true) {
+            x = worldBorder.center.x + Random.nextInt(-maxSize, maxSize)
+            z = worldBorder.center.z + Random.nextInt(-maxSize, maxSize)
+            // check if the location is not facing the void
+            if (startPos.world.getHighestBlockAt(x.toInt(), z.toInt()).type != Material.AIR) {
+                break
+            }
+        }
+        val spawnLocation = Vector(x, startPos.y + 50, z).toLocation(startPos.world)
         val fallingBlock =
             startPos.world.spawn(spawnLocation, FallingBlock::class.java) { entity ->
                 entity.blockData = Material.CHEST.createBlockData()
@@ -442,16 +453,15 @@ class HealthShopMinigame(
         event.player.sendMessage(Component.text("Left click to reopen the shop.", NamedTextColor.AQUA))
     }
 
-    fun handlePlayerHit(
-        damager: Player,
-        damagee: Player,
-        damage: Double,
-    ) {
+    override fun handleEntityDamageByEntity(event: EntityDamageByEntityEvent) {
         if (state != HealthShopMinigameState.FIGHT) {
             return
         }
-        val damagerUUID = damager.uniqueId
-        val damageeUUID = damagee.uniqueId
+        val damager = event.damager
+        val damagee = event.entity
+        if (damagee !is Player || damager !is Player) {
+            return
+        }
 
         if (damagee.isBlocking) {
             // nuke the shield
@@ -468,13 +478,13 @@ class HealthShopMinigame(
             )
         }
 
-        lastDamageTimes[damagerUUID] = Pair(damageeUUID, System.currentTimeMillis())
+        lastDamageTimes[damagee.uniqueId] = Pair(damager.uniqueId, System.currentTimeMillis())
         // show the damager the damagee's name and health in actionbar
         damager.sendActionBar(
             MiniMessage.miniMessage().deserialize(
                 "<green><bold>${damagee.name}<reset> <dark_gray>-<reset> <red>${
                     String.format(
-                        max(0.0, floor(damagee.health - damage) / 2).toString(),
+                        max(0.0, floor(damagee.health - event.finalDamage) / 2).toString(),
                         "%.1f",
                     )
                 } ♥",
@@ -492,7 +502,6 @@ class HealthShopMinigame(
         // put the player in spectator
         val killedPlayer = event.entity
         killedPlayer.gameMode = GameMode.SPECTATOR
-        // give survive points
         giveSurvivePoints(event.entity, false)
         // check if the player died from a player damage
         @Suppress("UnstableApiUsage")
@@ -508,11 +517,11 @@ class HealthShopMinigame(
                 return@let
             }
             val assistPlayer = Bukkit.getPlayer(lastDamagerUUID) ?: return@let
-            game.addScore(assistPlayer, 8, "Assisted ${event.entity.name}")
+            game.addScore(assistPlayer, 10, "Assisted ${event.entity.name}")
         }
         // handle player kill
         if (killerPlayer is Player) {
-            game.addScore(killerPlayer, 20, "Killed ${event.entity.name}")
+            game.addScore(killerPlayer, 40, "Killed ${event.entity.name}")
             // check if the player has the steal perk
             if (killerPlayer.persistentDataContainer.get(
                     NamespacedKey(plugin, "steal_perk"),
@@ -637,6 +646,12 @@ class HealthShopMinigame(
                 player.allowFlight = true
             }
         }
+        // check if player is below 0 (kill instantly)
+        if (player.location.y < 0) {
+            player.teleport(startPos)
+            @Suppress("UnstableApiUsage")
+            player.damage(9999.0, DamageSource.builder(DamageType.OUT_OF_WORLD).build())
+        }
     }
 
     override fun handleBlockPlace(event: BlockPlaceEvent) {
@@ -729,10 +744,18 @@ class HealthShopMinigame(
             return
         }
         lastDoubleJump[player.uniqueId] = System.currentTimeMillis()
-        // apply small velocity to the player in the direction they're looking in
         event.isCancelled = true
         player.allowFlight = false
         player.isFlying = false
+        // create a small explosion particle
+        ParticleBuilder(Particle.EXPLOSION)
+            .location(player.location)
+            .count(3)
+            .offset(0.0, 0.0, 0.0)
+            .source(player)
+            .allPlayers()
+            .spawn()
+        // apply small velocity to the player in the direction they're looking in
         player.velocity =
             player.location.direction
                 .normalize()
