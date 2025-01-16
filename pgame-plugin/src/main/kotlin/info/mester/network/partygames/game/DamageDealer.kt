@@ -1,5 +1,7 @@
 package info.mester.network.partygames.game
 
+import info.mester.network.partygames.api.Game
+import info.mester.network.partygames.api.Minigame
 import info.mester.network.partygames.mm
 import info.mester.network.partygames.pow
 import info.mester.network.partygames.util.WeightedItem

@@ -1,6 +1,5 @@
-package info.mester.network.partygames.game
+package info.mester.network.partygames.api
 
-import info.mester.network.partygames.PartyGames
 import io.papermc.paper.event.entity.EntityMoveEvent
 import io.papermc.paper.event.player.AsyncChatEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
@@ -36,7 +35,7 @@ abstract class Minigame(
 ) {
     private var _running = false
     private var countdownUUID = UUID.randomUUID()
-    protected val plugin = PartyGames.plugin
+    protected val plugin = PartyGamesCore.getInstance()
     protected val audience get() = Audience.audience(game.onlinePlayers + game.world.players.filter { plugin.isAdmin(it) })
     protected val onlinePlayers get() = game.onlinePlayers
     val running get() = _running

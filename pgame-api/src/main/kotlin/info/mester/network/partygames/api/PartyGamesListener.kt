@@ -1,13 +1,8 @@
-package info.mester.network.partygames
+package info.mester.network.partygames.api
 
 import com.destroystokyo.paper.event.block.AnvilDamagedEvent
 import info.mester.network.partygames.api.admin.InvseeUI
 import info.mester.network.partygames.api.admin.PlayerAdminUI
-import info.mester.network.partygames.game.Game
-import info.mester.network.partygames.game.GameState
-import info.mester.network.partygames.game.HealthShopMinigame
-import info.mester.network.partygames.game.SpeedBuildersMinigame
-import info.mester.network.partygames.game.healthshop.HealthShopUI
 import io.papermc.paper.event.block.BlockBreakProgressUpdateEvent
 import io.papermc.paper.event.entity.EntityMoveEvent
 import io.papermc.paper.event.player.AsyncChatEvent
@@ -51,12 +46,12 @@ import org.bukkit.event.player.PlayerToggleFlightEvent
 import org.bukkit.event.world.WorldLoadEvent
 import org.bukkit.inventory.EquipmentSlot
 
-class PartyListener(
-    private val plugin: PartyGames,
+class PartyGamesListener(
+    private val core: PartyGamesCore,
 ) : Listener {
-    private val gameManager = plugin.gameManager
+    private val gameRegistry = core.gameRegistry
 
-    private fun getMinigameFromWorld(world: World) = gameManager.getGameByWorld(world)?.runningMinigame
+    private fun getMinigameFromWorld(world: World) = gameRegistry.getGameByWorld(world)?.runningMinigame
 
     @EventHandler
     fun onPlayerInteractAtEntity(event: PlayerInteractAtEntityEvent) {
@@ -64,8 +59,8 @@ class PartyListener(
             return
         }
         // check if the player is an admin and if they right-clicked a player while in a game
-        val game = gameManager.getGameByWorld(event.player.world)
-        if (PartyGames.plugin.isAdmin(event.player) &&
+        val game = gameRegistry.getGameByWorld(event.player.world)
+        if (core.isAdmin(event.player) &&
             event.rightClicked is Player &&
             game != null
         ) {
@@ -84,7 +79,7 @@ class PartyListener(
     fun onInventoryClick(event: InventoryClickEvent) {
         val clickedInventory = event.clickedInventory ?: return
         val holder = clickedInventory.getHolder(false)
-        if (holder is Player) {
+        if (holder is Player && !core.isAdmin(event.whoClicked)) {
             // don't let players interact with their armor and offhand
             if (event.slotType == InventoryType.SlotType.ARMOR || event.slot == 40) {
                 event.isCancelled = true
@@ -106,6 +101,8 @@ class PartyListener(
             event.isCancelled = true
             return
         }
+        val minigame = getMinigameFromWorld(event.whoClicked.world)
+        minigame?.handleInventoryClick(event, clickedInventory)
     }
 
     @EventHandler
@@ -142,7 +139,7 @@ class PartyListener(
             }
         }
         val plainText = PlainTextComponentSerializer.plainText().serialize(event.message())
-        val game = gameManager.getGameOf(event.player) ?: return
+        val game = gameRegistry.getGameOf(event.player) ?: return
         // special code for saying "fire map"
         if (game.state == GameState.PRE_GAME &&
             game.runningMinigame is HealthShopMinigame &&
@@ -205,8 +202,8 @@ class PartyListener(
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
         plugin.setAdmin(event.player, false)
-        gameManager.getQueueOf(event.player)?.removePlayer(event.player)
-        gameManager.getGameOf(event.player)?.handleDisconnect(event.player, false)
+        gameRegistry.getQueueOf(event.player)?.removePlayer(event.player)
+        gameRegistry.getGameOf(event.player)?.handleDisconnect(event.player, false)
         plugin.sidebarManager.unregisterPlayer(event.player)
     }
 
@@ -224,7 +221,7 @@ class PartyListener(
         attribute.baseValue = attribute.defaultValue
         event.player.sendHealthUpdate()
         // check if the player is still in a game
-        gameManager.getGameOf(event.player)?.handleRejoin(event.player)
+        gameRegistry.getGameOf(event.player)?.handleRejoin(event.player)
     }
 
     @EventHandler

@@ -1,5 +1,5 @@
 name: PartyGames
-version: 'a1.0'
+version: '1.0'
 main: info.mester.network.partygames.PartyGames
 api-version: '1.21'
 bootstrapper: info.mester.network.partygames.Bootstrapper

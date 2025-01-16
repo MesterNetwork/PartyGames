@@ -10,26 +10,21 @@ repositories {
     maven("https://maven.enginehub.org/repo/")
     maven("https://repo.rapture.pw/repository/maven-releases/")
     maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
-    maven("https://repo.viaversion.com")
-    maven("https://haoshoku.xyz:8081/repository/default")
-    maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
+    maven("https://repo.extendedclip.com/releases/")
 }
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation(kotlin("reflect"))
-    implementation(project(":pgame-api"))
+    compileOnly(project(":pgame-api"))
 
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
 
-    compileOnly("com.squareup.okhttp3:okhttp:4.12.0")
     compileOnly("net.objecthunter:exp4j:0.4.8")
     // WorldEdit
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.10-SNAPSHOT")
     // AdvancedSlimePaper
     compileOnly("com.infernalsuite.aswm:api:3.0.0-SNAPSHOT")
-    // ViaVersion
-    compileOnly("com.viaversion:viaversion:5.2.1")
     // Testing
     testImplementation(kotlin("test"))
     // ScoreboardLibrary
@@ -80,8 +75,18 @@ tasks {
 
 tasks.register<Copy>("copyPluginToRun") {
     dependsOn("build")
-    from(buildDir.resolve("libs").resolve("partygames-${project.version}-all.jar"))
-    into(rootDir.resolve("run").resolve("plugins"))
+    val jarFile =
+        layout.buildDirectory
+            .file("libs/pgame-plugin-${project.version}-all.jar")
+            .get()
+            .asFile
+    val destination =
+        layout.buildDirectory
+            .dir("../../run/plugins")
+            .get()
+            .asFile
+    from(jarFile)
+    into(destination)
 }
 
 sourceSets {

@@ -13,9 +13,6 @@ repositories {
     maven("https://maven.enginehub.org/repo/")
     maven("https://repo.rapture.pw/repository/maven-releases/")
     maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
-    maven("https://repo.viaversion.com")
-    maven("https://haoshoku.xyz:8081/repository/default")
-    maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
 }
 
 dependencies {
@@ -23,6 +20,7 @@ dependencies {
     implementation(kotlin("reflect"))
 
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
+    compileOnly("com.infernalsuite.aswm:api:3.0.0-SNAPSHOT")
 }
 val targetJavaVersion = 21
 kotlin {
@@ -46,6 +44,22 @@ tasks {
     test {
         useJUnitPlatform()
     }
+}
+
+tasks.register<Copy>("copyPluginToRun") {
+    dependsOn("build")
+    val jarFile =
+        layout.buildDirectory
+            .file("libs/pgame-api-${project.version}-all.jar")
+            .get()
+            .asFile
+    val destination =
+        layout.buildDirectory
+            .dir("../../run/plugins")
+            .get()
+            .asFile
+    from(jarFile)
+    into(destination)
 }
 
 sourceSets {

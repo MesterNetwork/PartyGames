@@ -1,4 +1,4 @@
-package info.mester.network.partygames.admin
+package info.mester.network.partygames.api.admin
 
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit

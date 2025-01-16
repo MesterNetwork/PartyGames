@@ -2,8 +2,8 @@ package info.mester.network.partygames
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
-import info.mester.network.partygames.admin.GamesUI
-import info.mester.network.partygames.admin.InvseeUI
+import info.mester.network.partygames.api.admin.GamesUI
+import info.mester.network.partygames.api.admin.InvseeUI
 import info.mester.network.partygames.game.GameType
 import info.mester.network.partygames.game.HealthShopMinigame
 import info.mester.network.partygames.game.SnifferHuntMinigame

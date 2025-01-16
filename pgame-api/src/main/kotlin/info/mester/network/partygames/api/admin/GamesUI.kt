@@ -1,4 +1,4 @@
-package info.mester.network.partygames.admin
+package info.mester.network.partygames.api.admin
 
 import info.mester.network.partygames.PartyGames
 import info.mester.network.partygames.shorten

@@ -1,4 +1,4 @@
-package info.mester.network.partygames.admin
+package info.mester.network.partygames.api.admin
 
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName

@@ -75,30 +75,6 @@ class GameManager(
         type: GameType,
         players: List<Player>,
     ) {
-//        // check for minimum version
-//        val inCompatiblePlayers = players.filter { plugin.viaAPI.getPlayerVersion(it.uniqueId) < type.minVersion }
-//        if (inCompatiblePlayers.isNotEmpty()) {
-//            val compatibleAudience = Audience.audience(players.filter { it !in inCompatiblePlayers })
-//            val incompatibleAudience = Audience.audience(inCompatiblePlayers)
-//            compatibleAudience.sendMessage(
-//                mm.deserialize(
-//                    "<red>You are trying to join a game that is not compatible with your Minecraft version! Please play using the latest version of Minecraft if you want to guarantee full compatibility.",
-//                ),
-//            )
-//            incompatibleAudience.sendMessage(
-//                mm.deserialize(
-//                    "<red>The following players are using an incompatible version of Minecraft and cannot join this game:",
-//                ),
-//            )
-//            incompatibleAudience.sendMessage(
-//                mm.deserialize(
-//                    inCompatiblePlayers
-//                        .map { "<yellow>${it.name}</yellow>" }
-//                        .joinToString { "<dark_gray>,</dark_gray " },
-//                ),
-//            )
-//            return
-//        }
         // check if there is a player that is already in a game
         val playersInGame = players.filter { getGameOf(it) != null }
         if (playersInGame.isNotEmpty()) {

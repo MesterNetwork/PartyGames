@@ -1,10 +1,8 @@
-package info.mester.network.partygames.game
+package info.mester.network.partygames.api
 
 import com.infernalsuite.aswm.api.AdvancedSlimePaperAPI
 import com.infernalsuite.aswm.api.world.SlimeWorld
-import info.mester.network.partygames.PartyGames
-import info.mester.network.partygames.mm
-import info.mester.network.partygames.shorten
+import info.mester.network.partygames.api.events.GameStartedEvent
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.bossbar.BossBar
 import net.kyori.adventure.key.Key
@@ -19,6 +17,10 @@ import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.logging.Level
 import kotlin.math.floor
+
+private fun UUID.shorten() = this.toString().replace("-", "")
+
+private val mm = MiniMessage.miniMessage()
 
 data class PlayerData(
     var score: Int,
@@ -52,8 +54,8 @@ enum class GameState {
 }
 
 class Game(
-    private val plugin: PartyGames,
-    val type: GameType,
+    private val core: PartyGamesCore,
+    val bundle: MinigameBundle,
     players: List<Player>,
 ) {
     companion object {
@@ -190,7 +192,7 @@ class Game(
         if (player.isOnline) {
             resetPlayer(player)
             sidebarManager.openLobbySidebar(player)
-            player.teleport(plugin.spawnLocation)
+            player.teleport(plugin.spawnLocation) // TODO: replace with PlayerRemovedFromGameEvent
         }
         if (playerDatas.isEmpty()) {
             end()
@@ -210,17 +212,24 @@ class Game(
         // set up the game
         audience.sendMessage(Component.text("Starting the game...", NamedTextColor.GREEN))
         readyMinigames =
-            type.minigames
+            bundle.minigames
                 .shuffled()
-                .map { it.constructors.first().call(this) }
-                .toTypedArray()
+                .map {
+                    core.gameRegistry
+                        .getMinigame(it)!!
+                        .minigame.constructors
+                        .first()
+                        .call(this)
+                }.toTypedArray()
         // update the playing placeholder
-        plugin.playingPlaceholder.addPlaying(type.name, players.size)
+        plugin.playingPlaceholder.addPlaying(type.name, players.size) // TODO: use the event
         try {
             val success = nextMinigame()
             if (!success) {
                 throw IllegalStateException("Couldn't load the first minigame!")
             }
+            val event = GameStartedEvent(this)
+            event.callEvent()
             // wait a tick and set up the sidebar
             Bukkit.getScheduler().runTaskLater(
                 plugin,
@@ -233,7 +242,7 @@ class Game(
             )
         } catch (err: IllegalStateException) {
             // uh-oh!
-            plugin.logger.log(Level.SEVERE, "An error occurred while setting up the game!", err)
+            core.logger.log(Level.SEVERE, "An error occurred while setting up the game!", err)
             audience.sendMessage(Component.text("An error occurred while setting up the game!", NamedTextColor.RED))
             terminate()
         }
@@ -257,13 +266,13 @@ class Game(
         minigameIndex++
         _runningMinigame = readyMinigames[minigameIndex]
         // start an async task to load the world
-        Bukkit.getAsyncScheduler().runNow(plugin) {
+        Bukkit.getAsyncScheduler().runNow(core) {
             // clone the minigame's world into the game's world
             val minigameWorld = slimeAPI.getLoadedWorld(_runningMinigame!!.rootWorldName)
             val gameWorld = minigameWorld.clone(worldName)
             // now switch to sync mode
             Bukkit.getScheduler().runTask(
-                plugin,
+                core,
                 Runnable {
                     startIntroduction(gameWorld)
                 },
@@ -291,14 +300,14 @@ class Game(
         if (minigameIndex > 0) {
             minigameIndex--
             // teleport all admins to the new world too
-            for (admin in world.players.filter { plugin.isAdmin(it) }) {
+            for (admin in world.players.filter { core.isAdmin(it) }) {
                 admin.teleport(minigame.startPos)
             }
             unloadWorld(false)
             minigameIndex++
         }
         // start a timer that rotates the players around the start pos
-        Bukkit.getScheduler().runTaskTimer(plugin, IntroductionTimer(this), 0, 1)
+        Bukkit.getScheduler().runTaskTimer(core, IntroductionTimer(this), 0, 1)
     }
 
     fun hasNextMinigame(): Boolean = minigameIndex < readyMinigames.size - 1
@@ -329,7 +338,7 @@ class Game(
         }
         // wait for 5 seconds and load the new minigame
         Bukkit.getScheduler().runTaskLater(
-            plugin,
+            core,
             Runnable {
                 val success = nextMinigame()
                 if (!success) {
@@ -366,7 +375,7 @@ class Game(
      */
     fun terminate() {
         _state = GameState.STOPPED
-        plugin.playingPlaceholder.removePlaying(type.name, playerDatas.size)
+        plugin.playingPlaceholder.removePlaying(type.name, playerDatas.size) // TODO: replace with GameTerminatedEvent
         // this could be the case if we forcefully end the tournament with the command
         runningMinigame?.terminate()
         _runningMinigame = null
@@ -421,7 +430,7 @@ class Game(
         audience.sendMessage(mm.deserialize(topListMessage))
         // increase everyone's xp based on the score
         for ((player, data) in topList) {
-            val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId)
+            val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId) // TODO: replace with GameEndedEvent
             plugin.levelManager.addXp(player.uniqueId, data.score.coerceAtLeast(0))
             val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
             val levelUpMessage =
@@ -469,7 +478,7 @@ class Game(
 
     fun handleRejoin(player: Player) {
         resetPlayer(player)
-        plugin.sidebarManager.openGameSidebar(player)
+        plugin.sidebarManager.openGameSidebar(player) // TODO: replace with PlayerRejoinedEvent
         player.gameMode = GameMode.SPECTATOR
         audience.sendMessage(
             MiniMessage.miniMessage().deserialize("<green><bold><italic>${player.name} has rejoined the game!"),

@@ -112,7 +112,7 @@ gradle-app.setting
 **/build/
 
 # Common working directory
-pgame-plugin/run/
+run
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
