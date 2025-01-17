@@ -1,0 +1,13 @@
+name: TestMinigame
+version: "1.0"
+main: info.mester.network.testminigame.MinigamePlugin
+api-version: "1.21"
+load: POSTWORLD
+dependencies:
+  server:
+    PartyGamesCore:
+      load: BEFORE
+      required: true
+      join-classpath: true
+authors:
+  - Mester

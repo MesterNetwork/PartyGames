@@ -9,3 +9,4 @@ pluginManagement {
 
 include("pgame-api")
 include("pgame-plugin")
+include("test-minigame")

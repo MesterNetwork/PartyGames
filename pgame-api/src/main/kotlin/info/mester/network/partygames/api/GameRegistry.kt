@@ -40,6 +40,9 @@ class GameRegistry(
         worlds: List<MinigameWorld>,
         registerAs: String? = null,
     ) {
+        if (worlds.isEmpty()) {
+            throw IllegalArgumentException("Worlds cannot be empty!")
+        }
         val clazz = plugin.javaClass.classLoader.loadClass(className)
         if (!Minigame::class.java.isAssignableFrom(clazz)) {
             throw IllegalArgumentException("Class $className is not a subclass of Minigame!")
@@ -64,7 +67,7 @@ class GameRegistry(
 
     fun getMinigame(name: String): RegisteredMinigame? = minigames.firstOrNull { it.name == name.uppercase() }
 
-    fun getBundle(name: String): MinigameBundle? = bundles.firstOrNull { it.name == name }
+    private fun getBundle(name: String): MinigameBundle? = bundles.firstOrNull { it.name == name }
 
     fun startGame(
         players: List<Player>,

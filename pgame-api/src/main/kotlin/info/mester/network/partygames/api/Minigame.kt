@@ -133,7 +133,7 @@ abstract class Minigame(
     fun startCountdown(
         duration: Long,
         showBar: Boolean,
-        onEnd: () -> Unit,
+        onEnd: Runnable,
     ) {
         if (showBar) {
             audience.showBossBar(game.remainingBossBar)
@@ -154,7 +154,7 @@ abstract class Minigame(
                     }
                     if (!updateRemainingTime(startTime, duration)) {
                         t.cancel()
-                        onEnd()
+                        onEnd.run()
                     }
                 }
             },
@@ -165,7 +165,7 @@ abstract class Minigame(
 
     fun startCountdown(
         duration: Long,
-        onEnd: () -> Unit,
+        onEnd: Runnable,
     ) {
         startCountdown(duration, true, onEnd)
     }

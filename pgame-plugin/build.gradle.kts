@@ -4,6 +4,9 @@ plugins {
     java
 }
 
+group = "info.mester.network.partygames"
+version = "1.0"
+
 repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://oss.sonatype.org/content/groups/public/")
