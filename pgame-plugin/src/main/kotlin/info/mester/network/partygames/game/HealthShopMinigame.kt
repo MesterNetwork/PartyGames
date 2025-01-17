@@ -2,6 +2,8 @@ package info.mester.network.partygames.game
 
 import com.destroystokyo.paper.ParticleBuilder
 import info.mester.network.partygames.PartyGames
+import info.mester.network.partygames.api.Game
+import info.mester.network.partygames.api.Minigame
 import info.mester.network.partygames.game.healthshop.HealthShopItem
 import info.mester.network.partygames.game.healthshop.HealthShopUI
 import info.mester.network.partygames.game.healthshop.SupplyChestTimer
@@ -36,12 +38,14 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityRegainHealthEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerToggleFlightEvent
+import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.CompassMeta
 import org.bukkit.persistence.PersistentDataType
@@ -68,7 +72,7 @@ class ShopFailedException(
 
 class HealthShopMinigame(
     game: Game,
-) : Minigame(game, "healthshop") {
+) : Minigame(game, "health_shop") {
     companion object {
         private val shopItems: MutableList<HealthShopItem> = mutableListOf()
         private val startLocations: MutableMap<Int, Array<Vector>> = mutableMapOf()
@@ -401,7 +405,7 @@ class HealthShopMinigame(
         )
     }
 
-    fun handleEntityShootBow(event: EntityShootBowEvent) {
+    override fun handleEntityShootBow(event: EntityShootBowEvent) {
         if (state != HealthShopMinigameState.FIGHT) {
             return
         }
@@ -551,7 +555,7 @@ class HealthShopMinigame(
         }
     }
 
-    fun handleEntityRegainHealth(event: EntityRegainHealthEvent) {
+    override fun handleEntityRegainHealth(event: EntityRegainHealthEvent) {
         // don't let players during the shop state regain health
         if (state == HealthShopMinigameState.SHOP) {
             event.isCancelled = true
@@ -559,7 +563,7 @@ class HealthShopMinigame(
         }
     }
 
-    fun handlePlayerItemConsume(event: PlayerItemConsumeEvent) {
+    override fun handlePlayerItemConsume(event: PlayerItemConsumeEvent) {
         if (state != HealthShopMinigameState.FIGHT) {
             return
         }
@@ -596,10 +600,9 @@ class HealthShopMinigame(
                 event.setUseItemInHand(Event.Result.DENY)
                 // get the nearest player
                 val nearestPlayer =
-                    Bukkit
-                        .getOnlinePlayers()
+                    game.onlinePlayers
                         .filter {
-                            it.gameMode == GameMode.SURVIVAL && !PartyGames.plugin.isAdmin(it) && it.uniqueId != player.uniqueId
+                            it.gameMode == GameMode.SURVIVAL && it.uniqueId != player.uniqueId
                         }.minByOrNull { it.location.distance(player.location) }
                 if (nearestPlayer == null) {
                     player.sendMessage(
@@ -721,6 +724,17 @@ class HealthShopMinigame(
                 HealthShopUI.setRegenPotion(potion, true)
                 player.inventory.addItem(potion)
             }
+        }
+    }
+
+    override fun handleInventoryClick(
+        event: InventoryClickEvent,
+        clickedInventory: Inventory,
+    ) {
+        val holder = clickedInventory.getHolder(false)
+        if (holder is HealthShopUI) {
+            event.isCancelled = true
+            holder.onInventoryClick(event)
         }
     }
 

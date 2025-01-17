@@ -1,5 +1,6 @@
 package info.mester.network.partygames.api
 
+import io.papermc.paper.event.block.BlockBreakProgressUpdateEvent
 import io.papermc.paper.event.entity.EntityMoveEvent
 import io.papermc.paper.event.player.AsyncChatEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
@@ -16,14 +17,19 @@ import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityCombustEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDismountEvent
+import org.bukkit.event.entity.EntityRegainHealthEvent
+import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractAtEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerToggleFlightEvent
+import org.bukkit.inventory.Inventory
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import java.util.function.Consumer
@@ -31,7 +37,7 @@ import kotlin.random.Random
 
 abstract class Minigame(
     protected val game: Game,
-    startPosPath: String,
+    name: String,
 ) {
     private var _running = false
     private var countdownUUID = UUID.randomUUID()
@@ -49,15 +55,11 @@ abstract class Minigame(
     val worldIndex: Int
 
     init {
-        val startPosConfig = plugin.config.getConfigurationSection("locations.minigames.$startPosPath")!!
-        val worlds = startPosConfig.getStringList("worlds")
-        // choose a random world from the list
-        worldIndex = Random.nextInt(0, worlds.size)
-        rootWorldName = worlds[worldIndex]
-        val x = startPosConfig.getDouble("x", 0.0)
-        val y = startPosConfig.getDouble("y", 0.0)
-        val z = startPosConfig.getDouble("z", 0.0)
-        startPos = Location(Bukkit.getWorld(rootWorldName)!!, x, y, z)
+        val core = PartyGamesCore.getInstance()
+        val minigameConfig = core.gameRegistry.getMinigame(name)!!
+        worldIndex = Random.nextInt(0, minigameConfig.worlds.size)
+        rootWorldName = minigameConfig.worlds[worldIndex].name
+        startPos = minigameConfig.worlds[worldIndex].startPos.toLocation(Bukkit.getWorld(rootWorldName)!!)
     }
 
     /**
@@ -217,6 +219,20 @@ abstract class Minigame(
     open fun handlePlayerChat(event: AsyncChatEvent) {}
 
     open fun handleEntityDamageByEntity(event: EntityDamageByEntityEvent) {}
+
+    open fun handleInventoryClick(
+        event: InventoryClickEvent,
+        clickedInventory: Inventory,
+    ) {
+    }
+
+    open fun handleEntityShootBow(event: EntityShootBowEvent) {}
+
+    open fun handleBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {}
+
+    open fun handlePlayerItemConsume(event: PlayerItemConsumeEvent) {}
+
+    open fun handleEntityRegainHealth(event: EntityRegainHealthEvent) {}
 
     abstract val name: Component
     abstract val description: Component

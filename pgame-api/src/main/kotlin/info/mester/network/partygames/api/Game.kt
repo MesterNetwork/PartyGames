@@ -3,6 +3,7 @@ package info.mester.network.partygames.api
 import com.infernalsuite.aswm.api.AdvancedSlimePaperAPI
 import com.infernalsuite.aswm.api.world.SlimeWorld
 import info.mester.network.partygames.api.events.GameStartedEvent
+import info.mester.network.partygames.api.events.GameTerminatedEvent
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.bossbar.BossBar
 import net.kyori.adventure.key.Key
@@ -16,9 +17,6 @@ import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.logging.Level
-import kotlin.math.floor
-
-private fun UUID.shorten() = this.toString().replace("-", "")
 
 private val mm = MiniMessage.miniMessage()
 
@@ -87,7 +85,6 @@ class Game(
     }
 
     private val slimeAPI = AdvancedSlimePaperAPI.instance()
-    private val sidebarManager = plugin.sidebarManager
 
     /**
      * The unique ID of the game
@@ -191,8 +188,8 @@ class Game(
         handleDisconnect(player, true)
         if (player.isOnline) {
             resetPlayer(player)
-            sidebarManager.openLobbySidebar(player)
-            player.teleport(plugin.spawnLocation) // TODO: replace with PlayerRemovedFromGameEvent
+            // sidebarManager.openLobbySidebar(player)
+            // player.teleport(plugin.spawnLocation) // TODO: replace with PlayerRemovedFromGameEvent
         }
         if (playerDatas.isEmpty()) {
             end()
@@ -221,25 +218,13 @@ class Game(
                         .first()
                         .call(this)
                 }.toTypedArray()
-        // update the playing placeholder
-        plugin.playingPlaceholder.addPlaying(type.name, players.size) // TODO: use the event
         try {
             val success = nextMinigame()
             if (!success) {
                 throw IllegalStateException("Couldn't load the first minigame!")
             }
-            val event = GameStartedEvent(this)
+            val event = GameStartedEvent(this, players)
             event.callEvent()
-            // wait a tick and set up the sidebar
-            Bukkit.getScheduler().runTaskLater(
-                plugin,
-                Runnable {
-                    for (player in players) {
-                        plugin.sidebarManager.openGameSidebar(player)
-                    }
-                },
-                1,
-            )
         } catch (err: IllegalStateException) {
             // uh-oh!
             core.logger.log(Level.SEVERE, "An error occurred while setting up the game!", err)
@@ -375,22 +360,21 @@ class Game(
      */
     fun terminate() {
         _state = GameState.STOPPED
-        plugin.playingPlaceholder.removePlaying(type.name, playerDatas.size) // TODO: replace with GameTerminatedEvent
         // this could be the case if we forcefully end the tournament with the command
         runningMinigame?.terminate()
         _runningMinigame = null
+        val event = GameTerminatedEvent(this, playerDatas.size)
+        event.callEvent()
         // send everyone to the lobby world and unload the world
         world.players.forEach {
-            it.teleport(plugin.spawnLocation)
+            it.teleport(event.getSpawnLocation())
         }
         unloadWorld()
         // final cleanup
         for (player in onlinePlayers) {
             resetPlayer(player)
-            plugin.sidebarManager.openLobbySidebar(player)
-            plugin.showPlayerLevel(player)
         }
-        plugin.gameManager.removeGame(this)
+        core.gameRegistry.removeGame(this)
     }
 
     /**
@@ -429,56 +413,56 @@ class Game(
             }
         audience.sendMessage(mm.deserialize(topListMessage))
         // increase everyone's xp based on the score
-        for ((player, data) in topList) {
-            val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId) // TODO: replace with GameEndedEvent
-            plugin.levelManager.addXp(player.uniqueId, data.score.coerceAtLeast(0))
-            val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
-            val levelUpMessage =
-                buildString {
-                    val levelString = "<gray>Level: <yellow>${oldLevel.level}"
-                    append(levelString)
-                    val leveledUp = newLevel.level > oldLevel.level
-                    if (leveledUp) {
-                        append(" <dark_gray>-> <green>${newLevel.level} <green><bold>LEVEL UP!</bold>\n")
-                    } else {
-                        append("\n")
-                    }
-                    append("<gray>Progress: ")
-                    append("<yellow>${newLevel.xp} <dark_gray>[")
-                    val maxSquares = 15
-                    // render the progress bar (we have progressLength squares available)
-                    val progress = (newLevel.xp / newLevel.xpToNextLevel.toFloat())
-                    val previousProgress = (oldLevel.xp / oldLevel.xpToNextLevel.toFloat())
-                    val filledSquares = floor(progress * maxSquares).toInt()
-                    var previousFilledSquares = if (leveledUp) 0 else floor(previousProgress * maxSquares).toInt()
-                    // if there are no additional squares, that means we've only earned very little progress
-                    // in that case, the last progress square should always be green to indicate that
-                    var additionalSquares = filledSquares - previousFilledSquares
-                    if (additionalSquares == 0) {
-                        previousFilledSquares -= 1
-                        additionalSquares = 1
-                    }
-                    for (i in 0 until previousFilledSquares) {
-                        append("<yellow>■")
-                    }
-                    for (i in 0 until additionalSquares) {
-                        append("<green>■")
-                    }
-                    for (i in 0 until maxSquares - filledSquares) {
-                        append("<gray>■")
-                    }
-                    append("<dark_gray>] <green>${newLevel.xpToNextLevel}\n")
-                    append("<dark_gray>${"-".repeat(messageLength)}")
-                }
-            Bukkit.getPlayer(player.uniqueId)?.sendMessage(mm.deserialize(levelUpMessage))
-        }
+//        for ((player, data) in topList) {
+//            val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId) // TODO: replace with GameEndedEvent
+//            plugin.levelManager.addXp(player.uniqueId, data.score.coerceAtLeast(0))
+//            val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
+//            val levelUpMessage =
+//                buildString {
+//                    val levelString = "<gray>Level: <yellow>${oldLevel.level}"
+//                    append(levelString)
+//                    val leveledUp = newLevel.level > oldLevel.level
+//                    if (leveledUp) {
+//                        append(" <dark_gray>-> <green>${newLevel.level} <green><bold>LEVEL UP!</bold>\n")
+//                    } else {
+//                        append("\n")
+//                    }
+//                    append("<gray>Progress: ")
+//                    append("<yellow>${newLevel.xp} <dark_gray>[")
+//                    val maxSquares = 15
+//                    // render the progress bar (we have progressLength squares available)
+//                    val progress = (newLevel.xp / newLevel.xpToNextLevel.toFloat())
+//                    val previousProgress = (oldLevel.xp / oldLevel.xpToNextLevel.toFloat())
+//                    val filledSquares = floor(progress * maxSquares).toInt()
+//                    var previousFilledSquares = if (leveledUp) 0 else floor(previousProgress * maxSquares).toInt()
+//                    // if there are no additional squares, that means we've only earned very little progress
+//                    // in that case, the last progress square should always be green to indicate that
+//                    var additionalSquares = filledSquares - previousFilledSquares
+//                    if (additionalSquares == 0) {
+//                        previousFilledSquares -= 1
+//                        additionalSquares = 1
+//                    }
+//                    for (i in 0 until previousFilledSquares) {
+//                        append("<yellow>■")
+//                    }
+//                    for (i in 0 until additionalSquares) {
+//                        append("<green>■")
+//                    }
+//                    for (i in 0 until maxSquares - filledSquares) {
+//                        append("<gray>■")
+//                    }
+//                    append("<dark_gray>] <green>${newLevel.xpToNextLevel}\n")
+//                    append("<dark_gray>${"-".repeat(messageLength)}")
+//                }
+//            Bukkit.getPlayer(player.uniqueId)?.sendMessage(mm.deserialize(levelUpMessage))
+//        }
         // TODO: add a nice place where people can see the winners as player NPCs, then teleport everyone back in about 10 seconds
         terminate()
     }
 
     fun handleRejoin(player: Player) {
         resetPlayer(player)
-        plugin.sidebarManager.openGameSidebar(player) // TODO: replace with PlayerRejoinedEvent
+        // plugin.sidebarManager.openGameSidebar(player) // TODO: replace with PlayerRejoinedEvent
         player.gameMode = GameMode.SPECTATOR
         audience.sendMessage(
             MiniMessage.miniMessage().deserialize("<green><bold><italic>${player.name} has rejoined the game!"),

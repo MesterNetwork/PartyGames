@@ -1,7 +1,7 @@
 package info.mester.network.partygames.sidebar
 
-import info.mester.network.partygames.game.Game
-import info.mester.network.partygames.game.GameState
+import info.mester.network.partygames.api.Game
+import info.mester.network.partygames.api.GameState
 import info.mester.network.partygames.mm
 import info.mester.network.partygames.shorten
 import net.kyori.adventure.text.Component

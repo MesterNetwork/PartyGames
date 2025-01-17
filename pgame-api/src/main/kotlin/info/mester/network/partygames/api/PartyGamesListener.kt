@@ -7,7 +7,6 @@ import io.papermc.paper.event.block.BlockBreakProgressUpdateEvent
 import io.papermc.paper.event.entity.EntityMoveEvent
 import io.papermc.paper.event.player.AsyncChatEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.World
 import org.bukkit.attribute.Attribute
@@ -43,7 +42,6 @@ import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerSwapHandItemsEvent
 import org.bukkit.event.player.PlayerToggleFlightEvent
-import org.bukkit.event.world.WorldLoadEvent
 import org.bukkit.inventory.EquipmentSlot
 
 class PartyGamesListener(
@@ -92,11 +90,6 @@ class PartyGamesListener(
             holder.onInventoryClick(event)
         }
 
-        if (holder is HealthShopUI) {
-            event.isCancelled = true
-            holder.onInventoryClick(event)
-        }
-
         if (holder is InvseeUI) {
             event.isCancelled = true
             return
@@ -127,43 +120,8 @@ class PartyGamesListener(
 
     @EventHandler
     fun onAsyncChat(event: AsyncChatEvent) {
-        if (PartyGames.plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
-        }
-        // rewrite viewers so only players in the same world can see the message
-        if (!event.player.hasPermission("partygames.globalchat")) {
-            val viewers = event.viewers()
-            viewers.clear()
-            for (player in event.player.world.players) {
-                viewers.add(player)
-            }
-        }
-        val plainText = PlainTextComponentSerializer.plainText().serialize(event.message())
-        val game = gameRegistry.getGameOf(event.player) ?: return
-        // special code for saying "fire map"
-        if (game.state == GameState.PRE_GAME &&
-            game.runningMinigame is HealthShopMinigame &&
-            game.runningMinigame?.worldIndex == 0 &&
-            plainText == "fire map"
-        ) {
-            game.awardPhrase(event.player, plainText, 25, "FIRE MAP!!!!")
-        }
-        // special code for saying "gg"
-        if (game.state == GameState.POST_GAME && !game.hasNextMinigame() && plainText.lowercase() == "gg") {
-            game.awardPhrase(event.player, "gg", 15, "Good Game")
-        }
-        // special code for saying "i wanna lose"
-        if (plainText.lowercase() == "i wanna lose") {
-            game.awardPhrase(event.player, "minuspoints", -200, "You wanted it")
-        }
-        // special code for "givex" and "losex"
-        if (plainText.lowercase().startsWith("give") && event.player.hasPermission("partygames.admin")) {
-            val amount = plainText.substringAfter("give").toIntOrNull() ?: return
-            game.addScore(event.player, amount, "admin command")
-        }
-        if (plainText.lowercase().startsWith("lose") && event.player.hasPermission("partygames.admin")) {
-            val amount = plainText.substringAfter("lose").toIntOrNull() ?: return
-            game.addScore(event.player, -amount, "admin command")
         }
         val minigame = getMinigameFromWorld(event.player.world)
         minigame?.handlePlayerChat(event)
@@ -172,7 +130,7 @@ class PartyGamesListener(
     @EventHandler
     fun onPrePlayerAttack(event: PrePlayerAttackEntityEvent) {
         // by default disable the event for every non-admin player
-        if (plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
         }
         event.isCancelled = true
@@ -183,7 +141,7 @@ class PartyGamesListener(
 
     @EventHandler
     fun onInventoryClose(event: InventoryCloseEvent) {
-        if (plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
         }
         val minigame = getMinigameFromWorld(event.player.world)
@@ -192,7 +150,7 @@ class PartyGamesListener(
 
     @EventHandler
     fun onPlayerMove(event: PlayerMoveEvent) {
-        if (plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
         }
         val minigame = getMinigameFromWorld(event.player.world)
@@ -201,20 +159,16 @@ class PartyGamesListener(
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
-        plugin.setAdmin(event.player, false)
-        gameRegistry.getQueueOf(event.player)?.removePlayer(event.player)
+        core.setAdmin(event.player, false)
         gameRegistry.getGameOf(event.player)?.handleDisconnect(event.player, false)
-        plugin.sidebarManager.unregisterPlayer(event.player)
     }
 
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
         Game.resetPlayer(event.player)
-        plugin.showPlayerLevel(event.player)
-        plugin.sidebarManager.openLobbySidebar(event.player)
         // make sure admins are hidden from new players
-        for (admin in Bukkit.getOnlinePlayers().filter { plugin.isAdmin(it) }) {
-            event.player.hidePlayer(plugin, admin)
+        for (admin in Bukkit.getOnlinePlayers().filter { core.isAdmin(it) }) {
+            event.player.hidePlayer(core, admin)
         }
         // reset some attributes
         val attribute = event.player.getAttribute(Attribute.MAX_HEALTH)!!
@@ -226,7 +180,7 @@ class PartyGamesListener(
 
     @EventHandler
     fun onBlockBreak(event: BlockBreakEvent) {
-        if (plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
         }
         val minigame = getMinigameFromWorld(event.player.world) ?: return
@@ -236,16 +190,14 @@ class PartyGamesListener(
 
     @EventHandler
     fun onEntityRegainHealth(event: EntityRegainHealthEvent) {
-        if (plugin.isAdmin(event.entity)) {
+        if (core.isAdmin(event.entity)) {
             return
         }
         if (event.entityType != EntityType.PLAYER) {
             return
         }
         val runningMinigame = getMinigameFromWorld(event.entity.world)
-        if (runningMinigame is HealthShopMinigame) {
-            runningMinigame.handleEntityRegainHealth(event)
-        }
+        runningMinigame?.handleEntityRegainHealth(event)
     }
 
     @EventHandler
@@ -263,14 +215,12 @@ class PartyGamesListener(
     @EventHandler
     fun onPlayerItemConsume(event: PlayerItemConsumeEvent) {
         val minigame = getMinigameFromWorld(event.player.world)
-        if (minigame is HealthShopMinigame) {
-            minigame.handlePlayerItemConsume(event)
-        }
+        minigame?.handlePlayerItemConsume(event)
     }
 
     @EventHandler
     fun onPlayerDropItem(event: PlayerDropItemEvent) {
-        if (plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
         }
 
@@ -281,18 +231,16 @@ class PartyGamesListener(
 
     @EventHandler
     fun onBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {
-        if (plugin.isAdmin(event.entity)) {
+        if (core.isAdmin(event.entity)) {
             return
         }
         val minigame = getMinigameFromWorld(event.entity.world)
-        if (minigame is SpeedBuildersMinigame) {
-            minigame.handleBlockBreakProgressUpdate(event)
-        }
+        minigame?.handleBlockBreakProgressUpdate(event)
     }
 
     @EventHandler
     fun onBlockPlace(event: BlockPlaceEvent) {
-        if (plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
         }
         val minigame = getMinigameFromWorld(event.player.world)
@@ -307,7 +255,7 @@ class PartyGamesListener(
 
     @EventHandler
     fun onEntityShootBow(event: EntityShootBowEvent) {
-        if (plugin.isAdmin(event.entity)) {
+        if (core.isAdmin(event.entity)) {
             return
         }
         // don't allow arrows from being picked up
@@ -316,17 +264,14 @@ class PartyGamesListener(
             projectile.pickupStatus = AbstractArrow.PickupStatus.CREATIVE_ONLY
         }
         val minigame = getMinigameFromWorld(event.entity.world)
-        if (minigame is HealthShopMinigame) {
-            minigame.handleEntityShootBow(event)
-        }
+        minigame?.handleEntityShootBow(event)
     }
 
     @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {
-        if (PartyGames.plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
         }
-        plugin.gameManager.getQueueOf(event.player)?.handlePlayerInteract(event)
         getMinigameFromWorld(event.player.world)?.handlePlayerInteract(event)
     }
 
@@ -346,12 +291,6 @@ class PartyGamesListener(
     fun onEntityCombust(event: EntityCombustEvent) {
         val minigame = getMinigameFromWorld(event.entity.world)
         minigame?.handleEntityCombust(event)
-    }
-
-    @EventHandler
-    fun onWorldLoad(event: WorldLoadEvent) {
-        val world = event.world
-        PartyGames.initWorld(world)
     }
 
     @EventHandler

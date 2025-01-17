@@ -139,7 +139,7 @@ data class DamageDealerItem(
 
 class DamageDealer(
     game: Game,
-) : Minigame(game, "damagedealer") {
+) : Minigame(game, "damage_dealer") {
     private val levelItems = mutableListOf<DamageDealerItem>()
 
     init {

@@ -3,6 +3,8 @@ package info.mester.network.partygames.game
 import de.exlll.configlib.YamlConfigurationProperties
 import de.exlll.configlib.YamlConfigurationStore
 import info.mester.network.partygames.PartyGames.Companion.plugin
+import info.mester.network.partygames.api.Game
+import info.mester.network.partygames.api.Minigame
 import info.mester.network.partygames.game.snifferhunt.RideableSniffer
 import info.mester.network.partygames.game.snifferhunt.SnifferHuntConfig
 import info.mester.network.partygames.game.snifferhunt.TreasureRarity
@@ -30,7 +32,7 @@ enum class SnifferHuntState {
 
 class SnifferHuntMinigame(
     game: Game,
-) : Minigame(game, "snifferhunt") {
+) : Minigame(game, "sniffer_hunt") {
     companion object {
         lateinit var config: SnifferHuntConfig
             private set

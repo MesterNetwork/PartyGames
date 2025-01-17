@@ -3,37 +3,27 @@ package info.mester.network.partygames.game
 import info.mester.network.partygames.PartyGames
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.minimessage.MiniMessage
-import org.bukkit.World
 import org.bukkit.entity.Player
 import java.util.UUID
-import kotlin.reflect.KClass
 
 enum class GameType(
-    val minigames: List<KClass<out Minigame>>,
+    val minigames: List<String>,
     val displayName: String,
 ) {
-    HEALTH_SHOP(listOf(HealthShopMinigame::class), "Health Shop"),
-    SPEED_BUILDERS(listOf(SpeedBuildersMinigame::class), "Speed Builders"),
-    GARDENING(listOf(GardeningMinigame::class), "Gardening"),
+    HEALTH_SHOP(listOf("healthshop"), "Health Shop"),
+    SPEED_BUILDERS(listOf("speedbuilders"), "Speed Builders"),
+    GARDENING(listOf("gardening"), "Gardening"),
     FAMILY_NIGHT(
         listOf(
-            HealthShopMinigame::class,
-            SpeedBuildersMinigame::class,
-            GardeningMinigame::class,
-            DamageDealer::class,
+            "healthshop",
+            "speedbuilders",
+            "gardening",
+            "damagedealer",
         ),
         "Family Night",
     ),
-    SNIFFER_HUNT(
-        listOf(
-            SnifferHuntMinigame::class,
-        ),
-        "Sniffer Hunt",
-    ),
     DAMAGE_DEALER(
-        listOf(
-            DamageDealer::class,
-        ),
+        listOf("damagedealer"),
         "Damage Dealer",
     ),
 }
@@ -41,10 +31,11 @@ enum class GameType(
 private val mm = MiniMessage.miniMessage()
 
 class GameManager(
-    private val plugin: PartyGames,
+    plugin: PartyGames,
 ) {
+    private val core = plugin.core
+    private val gameRegistry = core.gameRegistry
     private val queues = mutableMapOf<UUID, Queue>()
-    private val games = mutableMapOf<UUID, Game>()
 
     private fun createQueue(
         type: GameType,
@@ -76,7 +67,7 @@ class GameManager(
         players: List<Player>,
     ) {
         // check if there is a player that is already in a game
-        val playersInGame = players.filter { getGameOf(it) != null }
+        val playersInGame = players.filter { gameRegistry.getGameOf(it) != null }
         if (playersInGame.isNotEmpty()) {
             Audience.audience(playersInGame).sendMessage(
                 mm.deserialize(
@@ -95,14 +86,6 @@ class GameManager(
 
     fun getQueueOf(player: Player) = queues.values.firstOrNull { it.hasPlayer(player) }
 
-    fun getGameOf(player: Player) = games.values.firstOrNull { it.hasPlayer(player) }
-
-    fun getGameByWorld(world: World) = games.values.firstOrNull { it.worldName == world.name }
-
-    fun shutdown() {
-        games.values.forEach { it.terminate() }
-    }
-
     fun removePlayerFromQueue(player: Player) {
         getQueueOf(player)?.removePlayer(player)
     }
@@ -110,13 +93,6 @@ class GameManager(
     fun startGame(queue: Queue) {
         queues.remove(queue.id)
         val players = queue.getPlayers()
-        val game = Game(plugin, queue.type, players)
-        games[game.id] = game
-    }
-
-    fun getGames(): Array<Game> = games.values.toTypedArray()
-
-    fun removeGame(game: Game) {
-        games.remove(game.id)
+        gameRegistry.startGame(players, queue.type.name)
     }
 }

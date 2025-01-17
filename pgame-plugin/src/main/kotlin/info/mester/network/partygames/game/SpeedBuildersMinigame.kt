@@ -3,6 +3,8 @@ package info.mester.network.partygames.game
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.CuboidRegion
 import info.mester.network.partygames.PartyGames
+import info.mester.network.partygames.api.Game
+import info.mester.network.partygames.api.Minigame
 import info.mester.network.partygames.mm
 import info.mester.network.partygames.pow
 import info.mester.network.partygames.util.WeightedItem
@@ -86,7 +88,7 @@ const val AREA_OFFSET = 5
 
 class SpeedBuildersMinigame(
     game: Game,
-) : Minigame(game, "speedbuilders") {
+) : Minigame(game, "speed_builders") {
     companion object {
         val plugin = PartyGames.plugin
         private val structures = mutableListOf<StructureData>()
@@ -327,7 +329,7 @@ class SpeedBuildersMinigame(
         }
     }
 
-    fun handleBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {
+    override fun handleBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {
         if (event.entity !is Player) return
         if (state != SpeedBuildersState.BUILD) return
         val player = event.entity as Player

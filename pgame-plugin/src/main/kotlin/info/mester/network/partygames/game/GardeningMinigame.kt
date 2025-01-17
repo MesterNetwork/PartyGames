@@ -2,6 +2,9 @@ package info.mester.network.partygames.game
 
 import com.destroystokyo.paper.ParticleBuilder
 import info.mester.network.partygames.UUIDDataType
+import info.mester.network.partygames.api.Game
+import info.mester.network.partygames.api.GameState
+import info.mester.network.partygames.api.Minigame
 import info.mester.network.partygames.game.gardening.Cactus
 import info.mester.network.partygames.game.gardening.GardenTap
 import info.mester.network.partygames.game.gardening.Lilac

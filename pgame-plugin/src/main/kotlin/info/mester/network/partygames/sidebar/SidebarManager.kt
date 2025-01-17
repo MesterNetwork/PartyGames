@@ -1,7 +1,7 @@
 package info.mester.network.partygames.sidebar
 
 import info.mester.network.partygames.PartyGames
-import info.mester.network.partygames.game.Game
+import info.mester.network.partygames.api.Game
 import info.mester.network.partygames.game.Queue
 import info.mester.network.partygames.mm
 import net.megavex.scoreboardlibrary.api.sidebar.Sidebar
@@ -117,7 +117,7 @@ class SidebarManager(
     }
 
     fun openGameSidebar(player: Player) {
-        val game = plugin.gameManager.getGameOf(player) ?: return
+        val game = plugin.core.gameRegistry.getGameOf(player) ?: return
         createSidebar(player, createGameLayout(game, player))
     }
 

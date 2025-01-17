@@ -7,6 +7,10 @@ loader: info.mester.network.partygames.Loader
 load: POSTWORLD
 dependencies:
   server:
+    PartyGamesCore:
+      load: BEFORE
+      required: true
+      join-classpath: true
     WorldEdit:
       load: BEFORE
       required: true

@@ -1,10 +1,29 @@
 package info.mester.network.partygames.api
 
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
+import org.bukkit.Material
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.UUID
+
+fun createBasicItem(
+    material: Material,
+    name: String,
+    count: Int = 1,
+    vararg lore: String,
+): ItemStack {
+    val item = ItemStack.of(material, count)
+    item.editMeta { meta ->
+        meta.displayName(MiniMessage.miniMessage().deserialize("<!i>$name"))
+        meta.lore(lore.map { MiniMessage.miniMessage().deserialize("<!i>$it") })
+    }
+    return item
+}
+
+fun UUID.shorten() = this.toString().replace("-", "")
 
 class PartyGamesCore : JavaPlugin() {
     companion object {
@@ -86,6 +105,11 @@ class PartyGamesCore : JavaPlugin() {
 
     override fun onEnable() {
         instance = this
-        gameRegistry = GameRegistry()
+        gameRegistry = GameRegistry(this)
+        Bukkit.getPluginManager().registerEvents(PartyGamesListener(this), this)
+    }
+
+    override fun onDisable() {
+        gameRegistry.shutdown()
     }
 }

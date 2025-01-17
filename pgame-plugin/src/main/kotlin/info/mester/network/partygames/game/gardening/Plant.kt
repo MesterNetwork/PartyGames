@@ -1,6 +1,6 @@
 package info.mester.network.partygames.game.gardening
 
-import info.mester.network.partygames.game.Game
+import info.mester.network.partygames.api.Game
 import info.mester.network.partygames.roundTo
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextColor

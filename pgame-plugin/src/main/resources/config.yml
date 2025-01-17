@@ -1,11 +1,5 @@
 locations:
   minigames:
-    runaway:
-      worlds:
-        - mg-runaway
-      x: 0.5
-      y: 63.0
-      z: 0.5
     healthshop:
       worlds:
         - mg-healthshop

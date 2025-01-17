@@ -3,7 +3,6 @@ version: '1.0'
 main: info.mester.network.partygames.api.PartyGamesCore
 api-version: '1.21'
 bootstrapper: info.mester.network.partygames.api.Bootstrapper
-loader: info.mester.network.partygames.Loader
 load: POSTWORLD
 authors:
   - Mester
@@ -11,3 +10,4 @@ description: Core API for Party Games
 website: https://github.com/MesterNetwork/PartyGames
 contributors:
   - ChatGPT
+  - Methamphetamine

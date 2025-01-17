@@ -1,7 +1,7 @@
 package info.mester.network.partygames.game.gardening
 
 import info.mester.network.partygames.PartyGames
-import info.mester.network.partygames.game.Game
+import info.mester.network.partygames.api.Game
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material

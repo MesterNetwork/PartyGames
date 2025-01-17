@@ -1,136 +1,29 @@
 package info.mester.network.partygames
 
-import com.destroystokyo.paper.event.block.AnvilDamagedEvent
-import info.mester.network.partygames.api.admin.InvseeUI
-import info.mester.network.partygames.api.admin.PlayerAdminUI
-import info.mester.network.partygames.game.Game
-import info.mester.network.partygames.game.GameState
+import info.mester.network.partygames.api.GameState
+import info.mester.network.partygames.api.events.GameStartedEvent
+import info.mester.network.partygames.api.events.GameTerminatedEvent
 import info.mester.network.partygames.game.HealthShopMinigame
-import info.mester.network.partygames.game.SpeedBuildersMinigame
-import info.mester.network.partygames.game.healthshop.HealthShopUI
-import io.papermc.paper.event.block.BlockBreakProgressUpdateEvent
-import io.papermc.paper.event.entity.EntityMoveEvent
 import io.papermc.paper.event.player.AsyncChatEvent
-import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
-import org.bukkit.Bukkit
-import org.bukkit.World
-import org.bukkit.attribute.Attribute
-import org.bukkit.entity.AbstractArrow
-import org.bukkit.entity.Arrow
-import org.bukkit.entity.EntityType
-import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
-import org.bukkit.event.block.BlockBreakEvent
-import org.bukkit.event.block.BlockPhysicsEvent
-import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.ArrowBodyCountChangeEvent
-import org.bukkit.event.entity.EntityChangeBlockEvent
-import org.bukkit.event.entity.EntityCombustEvent
-import org.bukkit.event.entity.EntityDamageByEntityEvent
-import org.bukkit.event.entity.EntityDamageEvent
-import org.bukkit.event.entity.EntityDismountEvent
-import org.bukkit.event.entity.EntityRegainHealthEvent
-import org.bukkit.event.entity.EntityShootBowEvent
-import org.bukkit.event.entity.FoodLevelChangeEvent
-import org.bukkit.event.entity.PlayerDeathEvent
-import org.bukkit.event.inventory.InventoryClickEvent
-import org.bukkit.event.inventory.InventoryCloseEvent
-import org.bukkit.event.inventory.InventoryOpenEvent
-import org.bukkit.event.inventory.InventoryType
-import org.bukkit.event.player.PlayerDropItemEvent
-import org.bukkit.event.player.PlayerInteractAtEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
-import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerJoinEvent
-import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
-import org.bukkit.event.player.PlayerSwapHandItemsEvent
-import org.bukkit.event.player.PlayerToggleFlightEvent
 import org.bukkit.event.world.WorldLoadEvent
-import org.bukkit.inventory.EquipmentSlot
 
 class PartyListener(
     private val plugin: PartyGames,
 ) : Listener {
     private val gameManager = plugin.gameManager
-
-    private fun getMinigameFromWorld(world: World) = gameManager.getGameByWorld(world)?.runningMinigame
-
-    @EventHandler
-    fun onPlayerInteractAtEntity(event: PlayerInteractAtEntityEvent) {
-        if (event.hand == EquipmentSlot.OFF_HAND) {
-            return
-        }
-        // check if the player is an admin and if they right-clicked a player while in a game
-        val game = gameManager.getGameByWorld(event.player.world)
-        if (PartyGames.plugin.isAdmin(event.player) &&
-            event.rightClicked is Player &&
-            game != null
-        ) {
-            event.isCancelled = true
-            // setup admin ui
-            val playerAdminUI = PlayerAdminUI(game, event.rightClicked as Player)
-            event.player.openInventory(playerAdminUI.inventory)
-            return
-        }
-        // execute the event on the minigame
-        val minigame = getMinigameFromWorld(event.player.world)
-        minigame?.handlePlayerInteractAtEntity(event)
-    }
-
-    @EventHandler
-    fun onInventoryClick(event: InventoryClickEvent) {
-        val clickedInventory = event.clickedInventory ?: return
-        val holder = clickedInventory.getHolder(false)
-        if (holder is Player) {
-            // don't let players interact with their armor and offhand
-            if (event.slotType == InventoryType.SlotType.ARMOR || event.slot == 40) {
-                event.isCancelled = true
-                return
-            }
-        }
-
-        if (holder is PlayerAdminUI) {
-            event.isCancelled = true
-            holder.onInventoryClick(event)
-        }
-
-        if (holder is HealthShopUI) {
-            event.isCancelled = true
-            holder.onInventoryClick(event)
-        }
-
-        if (holder is InvseeUI) {
-            event.isCancelled = true
-            return
-        }
-    }
-
-    @EventHandler
-    fun onEntityDamage(event: EntityDamageEvent) {
-        // cancel fall damage
-        if (event.entity.type == EntityType.PLAYER && event.cause == EntityDamageEvent.DamageCause.FALL) {
-            event.isCancelled = true
-            return
-        }
-    }
-
-    @EventHandler
-    fun onFoodLevelChange(event: FoodLevelChangeEvent) {
-        if (event.entity.type == EntityType.PLAYER) {
-            event.isCancelled = true
-            val player = event.entity as Player
-            player.foodLevel = 20
-            player.saturation = 0f
-            player.sendHealthUpdate()
-        }
-    }
+    private val core = plugin.core
+    private val sidebarManager = plugin.sidebarManager
 
     @EventHandler
     fun onAsyncChat(event: AsyncChatEvent) {
-        if (PartyGames.plugin.isAdmin(event.player)) {
+        if (core.isAdmin(event.player)) {
             return
         }
         // rewrite viewers so only players in the same world can see the message
@@ -142,7 +35,7 @@ class PartyListener(
             }
         }
         val plainText = PlainTextComponentSerializer.plainText().serialize(event.message())
-        val game = gameManager.getGameOf(event.player) ?: return
+        val game = core.gameRegistry.getGameOf(event.player) ?: return
         // special code for saying "fire map"
         if (game.state == GameState.PRE_GAME &&
             game.runningMinigame is HealthShopMinigame &&
@@ -168,138 +61,18 @@ class PartyListener(
             val amount = plainText.substringAfter("lose").toIntOrNull() ?: return
             game.addScore(event.player, -amount, "admin command")
         }
-        val minigame = getMinigameFromWorld(event.player.world)
-        minigame?.handlePlayerChat(event)
-    }
-
-    @EventHandler
-    fun onPrePlayerAttack(event: PrePlayerAttackEntityEvent) {
-        // by default disable the event for every non-admin player
-        if (plugin.isAdmin(event.player)) {
-            return
-        }
-        event.isCancelled = true
-        // however, the minigame may override the cancellation, allowing the event
-        val minigame = getMinigameFromWorld(event.player.world) ?: return
-        minigame.handlePrePlayerAttack(event)
-    }
-
-    @EventHandler
-    fun onInventoryClose(event: InventoryCloseEvent) {
-        if (plugin.isAdmin(event.player)) {
-            return
-        }
-        val minigame = getMinigameFromWorld(event.player.world)
-        minigame?.handleInventoryClose(event)
-    }
-
-    @EventHandler
-    fun onPlayerMove(event: PlayerMoveEvent) {
-        if (plugin.isAdmin(event.player)) {
-            return
-        }
-        val minigame = getMinigameFromWorld(event.player.world)
-        minigame?.handlePlayerMove(event)
     }
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
-        plugin.setAdmin(event.player, false)
         gameManager.getQueueOf(event.player)?.removePlayer(event.player)
-        gameManager.getGameOf(event.player)?.handleDisconnect(event.player, false)
         plugin.sidebarManager.unregisterPlayer(event.player)
     }
 
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
-        Game.resetPlayer(event.player)
         plugin.showPlayerLevel(event.player)
         plugin.sidebarManager.openLobbySidebar(event.player)
-        // make sure admins are hidden from new players
-        for (admin in Bukkit.getOnlinePlayers().filter { plugin.isAdmin(it) }) {
-            event.player.hidePlayer(plugin, admin)
-        }
-        // reset some attributes
-        val attribute = event.player.getAttribute(Attribute.MAX_HEALTH)!!
-        attribute.baseValue = attribute.defaultValue
-        event.player.sendHealthUpdate()
-        // check if the player is still in a game
-        gameManager.getGameOf(event.player)?.handleRejoin(event.player)
-    }
-
-    @EventHandler
-    fun onBlockBreak(event: BlockBreakEvent) {
-        if (plugin.isAdmin(event.player)) {
-            return
-        }
-        val minigame = getMinigameFromWorld(event.player.world) ?: return
-        event.isCancelled = true // only cancel the event if we're in a minigame
-        minigame.handleBlockBreak(event)
-    }
-
-    @EventHandler
-    fun onEntityRegainHealth(event: EntityRegainHealthEvent) {
-        if (plugin.isAdmin(event.entity)) {
-            return
-        }
-        if (event.entityType != EntityType.PLAYER) {
-            return
-        }
-        val runningMinigame = getMinigameFromWorld(event.entity.world)
-        if (runningMinigame is HealthShopMinigame) {
-            runningMinigame.handleEntityRegainHealth(event)
-        }
-    }
-
-    @EventHandler
-    fun onEntityDamageByEntity(event: EntityDamageByEntityEvent) {
-        val minigame = getMinigameFromWorld(event.entity.world)
-        minigame?.handleEntityDamageByEntity(event)
-    }
-
-    @EventHandler
-    fun onPlayerDeath(event: PlayerDeathEvent) {
-        val minigame = getMinigameFromWorld(event.entity.world)
-        minigame?.handlePlayerDeath(event)
-    }
-
-    @EventHandler
-    fun onPlayerItemConsume(event: PlayerItemConsumeEvent) {
-        val minigame = getMinigameFromWorld(event.player.world)
-        if (minigame is HealthShopMinigame) {
-            minigame.handlePlayerItemConsume(event)
-        }
-    }
-
-    @EventHandler
-    fun onPlayerDropItem(event: PlayerDropItemEvent) {
-        if (plugin.isAdmin(event.player)) {
-            return
-        }
-
-        event.isCancelled = true
-        val minigame = getMinigameFromWorld(event.player.world)
-        minigame?.handlePlayerDropItem(event)
-    }
-
-    @EventHandler
-    fun onBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {
-        if (plugin.isAdmin(event.entity)) {
-            return
-        }
-        val minigame = getMinigameFromWorld(event.entity.world)
-        if (minigame is SpeedBuildersMinigame) {
-            minigame.handleBlockBreakProgressUpdate(event)
-        }
-    }
-
-    @EventHandler
-    fun onBlockPlace(event: BlockPlaceEvent) {
-        if (plugin.isAdmin(event.player)) {
-            return
-        }
-        val minigame = getMinigameFromWorld(event.player.world)
-        minigame?.handleBlockPlace(event)
     }
 
     @EventHandler
@@ -309,46 +82,11 @@ class PartyListener(
     }
 
     @EventHandler
-    fun onEntityShootBow(event: EntityShootBowEvent) {
-        if (plugin.isAdmin(event.entity)) {
-            return
-        }
-        // don't allow arrows from being picked up
-        val projectile = event.projectile
-        if (projectile is Arrow) {
-            projectile.pickupStatus = AbstractArrow.PickupStatus.CREATIVE_ONLY
-        }
-        val minigame = getMinigameFromWorld(event.entity.world)
-        if (minigame is HealthShopMinigame) {
-            minigame.handleEntityShootBow(event)
-        }
-    }
-
-    @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {
-        if (PartyGames.plugin.isAdmin(event.player)) {
+        if (plugin.core.isAdmin(event.player)) {
             return
         }
         plugin.gameManager.getQueueOf(event.player)?.handlePlayerInteract(event)
-        getMinigameFromWorld(event.player.world)?.handlePlayerInteract(event)
-    }
-
-    @EventHandler
-    fun onEntityMove(event: EntityMoveEvent) {
-        val minigame = getMinigameFromWorld(event.entity.world)
-        minigame?.handleEntityMove(event)
-    }
-
-    @EventHandler
-    fun onBlockPhysics(event: BlockPhysicsEvent) {
-        val minigame = getMinigameFromWorld(event.block.world)
-        minigame?.handleBlockPhysics(event)
-    }
-
-    @EventHandler
-    fun onEntityCombust(event: EntityCombustEvent) {
-        val minigame = getMinigameFromWorld(event.entity.world)
-        minigame?.handleEntityCombust(event)
     }
 
     @EventHandler
@@ -358,36 +96,22 @@ class PartyListener(
     }
 
     @EventHandler
-    fun onPlayerSwapHandItems(event: PlayerSwapHandItemsEvent) {
-        event.isCancelled = true
+    fun onGameStarted(event: GameStartedEvent) {
+        val game = event.game
+        plugin.playingPlaceholder.addPlaying(game.bundle.name, event.players.size)
+        for (player in event.players) {
+            sidebarManager.openGameSidebar(player)
+        }
     }
 
     @EventHandler
-    fun onEntityChangeBlock(event: EntityChangeBlockEvent) {
-        val runningMinigame = getMinigameFromWorld(event.entity.world)
-        runningMinigame?.handleEntityChangeBlock(event)
-    }
-
-    @EventHandler
-    fun onInventoryOpen(event: InventoryOpenEvent) {
-        val runningMinigame = getMinigameFromWorld(event.player.world)
-        runningMinigame?.handleInventoryOpen(event)
-    }
-
-    @EventHandler
-    fun onPlayerToogleFlight(event: PlayerToggleFlightEvent) {
-        val runningMinigame = getMinigameFromWorld(event.player.world)
-        runningMinigame?.handlePlayerToggleFlight(event)
-    }
-
-    @EventHandler
-    fun onEntityDismount(event: EntityDismountEvent) {
-        val runningMinigame = getMinigameFromWorld(event.entity.world)
-        runningMinigame?.handleEntityDismount(event)
-    }
-
-    @EventHandler
-    fun onAnvilDamaged(event: AnvilDamagedEvent) {
-        event.isCancelled = true
+    fun onGameTerminated(event: GameTerminatedEvent) {
+        val game = event.game
+        plugin.playingPlaceholder.removePlaying(game.bundle.name, event.playerCount)
+        for (player in event.game.onlinePlayers) {
+            plugin.sidebarManager.openLobbySidebar(player)
+            plugin.showPlayerLevel(player)
+        }
+        event.setSpawnLocation(plugin.spawnLocation)
     }
 }

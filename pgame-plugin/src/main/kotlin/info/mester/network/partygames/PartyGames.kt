@@ -1,7 +1,12 @@
 package info.mester.network.partygames
 
+import info.mester.network.partygames.api.MinigameWorld
 import info.mester.network.partygames.api.PartyGamesCore
+import info.mester.network.partygames.game.DamageDealer
 import info.mester.network.partygames.game.GameManager
+import info.mester.network.partygames.game.GardeningMinigame
+import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.game.SpeedBuildersMinigame
 import info.mester.network.partygames.level.LevelManager
 import info.mester.network.partygames.level.LevelPlaceholder
 import info.mester.network.partygames.sidebar.SidebarManager
@@ -63,6 +68,7 @@ fun Int.toRomanNumeral(): String {
 fun Int.pow(power: Int): Double = this.toDouble().pow(power)
 
 class PartyGames : JavaPlugin() {
+    lateinit var core: PartyGamesCore
     lateinit var gameManager: GameManager
     lateinit var scoreboardLibrary: ScoreboardLibrary
     lateinit var playingPlaceholder: PlayingPlaceholder
@@ -70,10 +76,10 @@ class PartyGames : JavaPlugin() {
     lateinit var levelManager: LevelManager
     lateinit var spawnLocation: Location
     lateinit var sidebarManager: SidebarManager
-    lateinit var partyGamesCore: PartyGamesCore
 
     companion object {
-        val plugin = PartyGames()
+        private var _plugin: PartyGames? = null
+        val plugin get() = _plugin!!
 
         fun initWorld(world: World) {
             world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false)
@@ -101,6 +107,8 @@ class PartyGames : JavaPlugin() {
     }
 
     override fun onEnable() {
+        _plugin = this
+        core = PartyGamesCore.getInstance()
         saveResource("config.yml", true)
         saveResource("health-shop.yml", true)
         saveResource("speed-builders.yml", true)
@@ -122,6 +130,7 @@ class PartyGames : JavaPlugin() {
         playingPlaceholder = PlayingPlaceholder()
         playingPlaceholder.register()
         LevelPlaceholder(levelManager).register()
+        registerMinigames()
         // set up event listeners
         server.pluginManager.registerEvents(PartyListener(this), this)
         // init all worlds
@@ -130,9 +139,55 @@ class PartyGames : JavaPlugin() {
         }
     }
 
+    private fun registerMinigames() {
+        core.gameRegistry.registerMinigame(
+            this,
+            HealthShopMinigame::class.qualifiedName!!,
+            "health_shop",
+            listOf(
+                MinigameWorld("mg-healthshop", org.bukkit.util.Vector(0.5, 63.0, 0.5)),
+                MinigameWorld("mg-healthshop2", org.bukkit.util.Vector(0.5, 65.0, 0.5)),
+            ),
+            "Health Shop",
+        )
+        core.gameRegistry.registerMinigame(
+            this,
+            SpeedBuildersMinigame::class.qualifiedName!!,
+            "speed_builders",
+            listOf(
+                MinigameWorld("mg-speedbuilders", org.bukkit.util.Vector(0.5, 60.0, 0.5)),
+            ),
+            "Speed Builders",
+        )
+        core.gameRegistry.registerMinigame(
+            this,
+            GardeningMinigame::class.qualifiedName!!,
+            "gardening",
+            listOf(
+                MinigameWorld("mg-gardening", org.bukkit.util.Vector(0.5, 65.0, 0.5)),
+            ),
+            "Gardening",
+        )
+        core.gameRegistry.registerMinigame(
+            this,
+            DamageDealer::class.qualifiedName!!,
+            "damage_dealer",
+            listOf(
+                MinigameWorld("mg-damagedealer", org.bukkit.util.Vector(0.5, 62.0, 0.5)),
+            ),
+            "Damage Dealer",
+        )
+        // register bundles for each minigame, then family night
+        core.gameRegistry.registerBundle(
+            this,
+            listOf("healthshop", "speedbuilders", "gardening", "damagedealer"),
+            "family_night",
+            "Family Night",
+        )
+    }
+
     override fun onDisable() {
         // Plugin shutdown logic
-        gameManager.shutdown()
         levelManager.stop()
     }
 }
