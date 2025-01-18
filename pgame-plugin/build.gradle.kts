@@ -22,8 +22,6 @@ dependencies {
     compileOnly(project(":pgame-api"))
 
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
-
-    compileOnly("net.objecthunter:exp4j:0.4.8")
     // WorldEdit
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.10-SNAPSHOT")
     // AdvancedSlimePaper

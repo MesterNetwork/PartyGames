@@ -1,11 +1,3 @@
-## Dependencies
-
-- AdvancedSlimePaper for MC 1.21.4
-- WorldEdit 7.3.10
-- ViaVersion 5.2.1
-- ScoreboardLibrary 2.2.2
-- PlaceholderAPI 2.11.6
-
 ## Structure
 
 The project is divided into two parts: the core API and the plugin for Mester Network.
@@ -17,10 +9,19 @@ track of players, handling game events etc.
 
 By itself it does not contain any minigames, they have to be registered by external plugins.
 
+#### Dependencies
+
+- AdvancedSlimePaper for MC 1.21.4
+
 ### Plugin
 
 The plugin is located in `pgame-plugin`. It's the Party Games plugin for Mester Network and contains the specific
 minigames for that server and other non-game related logic, including a leveling system.
+
+#### Dependencies
+
+- WorldEdit 7.3.10
+- PlaceholderAPI 2.11.6
 
 ## API Usage
 
@@ -218,3 +219,24 @@ The `players` parameter is a list of `Player` objects, and the `bundleName` para
 the game in.
 
 This immediately starts the game. If the bundle contains multiple minigames, their order will be randomly selected.
+
+The `test-minigame` project contains examples of how to write minigames in Kotlin and Java.
+
+### Creating the minigame worlds
+
+Before a minigame can be started, you need to register the worlds you specified in the `worlds` parameter
+of `registerMinigame` with AdvancedSlimePaper.
+
+Join the ASP server with the core plugin and your custom plugin, then for each world you want to use, run the following
+command:
+
+```text
+/swm create <world name> file
+```
+
+This will create a new, empty world with the name you specified. The world file will be saved in <server's root>
+/slime_worlds/<world name>.slime
+
+Now you can enter this world with `/swm goto <world name>` and start building it to your liking. The world is
+periodically auto-saved, but you can always manually save with `/swm save <world name>`. To go back to the main world,
+use `/swm goto world`.

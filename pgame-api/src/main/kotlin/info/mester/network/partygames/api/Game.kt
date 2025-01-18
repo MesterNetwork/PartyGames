@@ -2,8 +2,11 @@ package info.mester.network.partygames.api
 
 import com.infernalsuite.aswm.api.AdvancedSlimePaperAPI
 import com.infernalsuite.aswm.api.world.SlimeWorld
+import info.mester.network.partygames.api.events.GameEndedEvent
 import info.mester.network.partygames.api.events.GameStartedEvent
 import info.mester.network.partygames.api.events.GameTerminatedEvent
+import info.mester.network.partygames.api.events.PlayerRejoinedEvent
+import info.mester.network.partygames.api.events.PlayerRemovedFromGameEvent
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.bossbar.BossBar
 import net.kyori.adventure.key.Key
@@ -188,9 +191,9 @@ class Game(
         handleDisconnect(player, true)
         if (player.isOnline) {
             resetPlayer(player)
-            // sidebarManager.openLobbySidebar(player)
-            // player.teleport(plugin.spawnLocation) // TODO: replace with PlayerRemovedFromGameEvent
         }
+        val event = PlayerRemovedFromGameEvent(this, player)
+        event.callEvent()
         if (playerDatas.isEmpty()) {
             end()
         }
@@ -412,57 +415,18 @@ class Game(
                 append("<dark_gray>${"-".repeat(messageLength)}")
             }
         audience.sendMessage(mm.deserialize(topListMessage))
-        // increase everyone's xp based on the score
-//        for ((player, data) in topList) {
-//            val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId) // TODO: replace with GameEndedEvent
-//            plugin.levelManager.addXp(player.uniqueId, data.score.coerceAtLeast(0))
-//            val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
-//            val levelUpMessage =
-//                buildString {
-//                    val levelString = "<gray>Level: <yellow>${oldLevel.level}"
-//                    append(levelString)
-//                    val leveledUp = newLevel.level > oldLevel.level
-//                    if (leveledUp) {
-//                        append(" <dark_gray>-> <green>${newLevel.level} <green><bold>LEVEL UP!</bold>\n")
-//                    } else {
-//                        append("\n")
-//                    }
-//                    append("<gray>Progress: ")
-//                    append("<yellow>${newLevel.xp} <dark_gray>[")
-//                    val maxSquares = 15
-//                    // render the progress bar (we have progressLength squares available)
-//                    val progress = (newLevel.xp / newLevel.xpToNextLevel.toFloat())
-//                    val previousProgress = (oldLevel.xp / oldLevel.xpToNextLevel.toFloat())
-//                    val filledSquares = floor(progress * maxSquares).toInt()
-//                    var previousFilledSquares = if (leveledUp) 0 else floor(previousProgress * maxSquares).toInt()
-//                    // if there are no additional squares, that means we've only earned very little progress
-//                    // in that case, the last progress square should always be green to indicate that
-//                    var additionalSquares = filledSquares - previousFilledSquares
-//                    if (additionalSquares == 0) {
-//                        previousFilledSquares -= 1
-//                        additionalSquares = 1
-//                    }
-//                    for (i in 0 until previousFilledSquares) {
-//                        append("<yellow>■")
-//                    }
-//                    for (i in 0 until additionalSquares) {
-//                        append("<green>■")
-//                    }
-//                    for (i in 0 until maxSquares - filledSquares) {
-//                        append("<gray>■")
-//                    }
-//                    append("<dark_gray>] <green>${newLevel.xpToNextLevel}\n")
-//                    append("<dark_gray>${"-".repeat(messageLength)}")
-//                }
-//            Bukkit.getPlayer(player.uniqueId)?.sendMessage(mm.deserialize(levelUpMessage))
-//        }
+        val event = GameEndedEvent(this, topList)
+        event.callEvent()
         // TODO: add a nice place where people can see the winners as player NPCs, then teleport everyone back in about 10 seconds
         terminate()
     }
 
     fun handleRejoin(player: Player) {
         resetPlayer(player)
-        // plugin.sidebarManager.openGameSidebar(player) // TODO: replace with PlayerRejoinedEvent
+        val event = PlayerRejoinedEvent(this, player)
+        if (!event.callEvent()) {
+            return
+        }
         player.gameMode = GameMode.SPECTATOR
         audience.sendMessage(
             MiniMessage.miniMessage().deserialize("<green><bold><italic>${player.name} has rejoined the game!"),

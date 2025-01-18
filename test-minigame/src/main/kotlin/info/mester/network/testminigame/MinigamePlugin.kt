@@ -1,6 +1,7 @@
 package info.mester.network.testminigame
 
 import com.mojang.brigadier.Command
+import com.mojang.brigadier.arguments.StringArgumentType
 import info.mester.network.partygames.api.MinigameWorld
 import info.mester.network.partygames.api.PartyGamesCore
 import io.papermc.paper.command.brigadier.Commands
@@ -22,6 +23,24 @@ class MinigamePlugin : JavaPlugin() {
             ),
             "Place Block",
         )
+        core.gameRegistry.registerMinigame(
+            this,
+            SimpleMinigame::class.qualifiedName!!,
+            "simple",
+            listOf(
+                MinigameWorld("simple", Vector(0.5, 60.0, 0.5)),
+            ),
+            "Simple Minigame",
+        )
+        core.gameRegistry.registerMinigame(
+            this,
+            JavaMinigame::class.qualifiedName!!,
+            "java",
+            listOf(
+                MinigameWorld("java", Vector(0.5, 60.0, 0.5)),
+            ),
+            "Java Minigame",
+        )
         // register /start command
         @Suppress("UnstableApiUsage")
         lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
@@ -29,17 +48,25 @@ class MinigamePlugin : JavaPlugin() {
             commands.register(
                 Commands
                     .literal("start")
-                    .executes { ctx ->
-                        val sender = ctx.source.sender
-                        if (sender !is Player) {
-                            return@executes 1
-                        }
-                        val players = Bukkit.getOnlinePlayers().toList()
-                        core.gameRegistry.startGame(players, "place_block")
-                        Command.SINGLE_SUCCESS
-                    }.build(),
+                    .then(
+                        Commands
+                            .argument("bundle", StringArgumentType.word())
+                            .suggests { _, builder ->
+                                val bundles = core.gameRegistry.getBundles()
+                                bundles.map { it.name }.forEach(builder::suggest)
+                                builder.buildFuture()
+                            }.executes { ctx ->
+                                val sender = ctx.source.sender
+                                if (sender !is Player) {
+                                    return@executes 1
+                                }
+                                val bundleName = StringArgumentType.getString(ctx, "bundle")
+                                val players = Bukkit.getOnlinePlayers().toList()
+                                core.gameRegistry.startGame(players, bundleName)
+                                Command.SINGLE_SUCCESS
+                            },
+                    ).build(),
             )
         }
-        println("PlaceBlockMinigame enabled!")
     }
 }

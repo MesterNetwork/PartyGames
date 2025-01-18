@@ -42,3 +42,16 @@ tasks {
         useJUnitPlatform()
     }
 }
+
+sourceSets {
+    main {
+        java {
+            srcDir("src/main/kotlin")
+        }
+    }
+    test {
+        java {
+            srcDir("src/test/kotlin")
+        }
+    }
+}

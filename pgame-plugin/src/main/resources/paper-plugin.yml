@@ -3,7 +3,6 @@ version: '1.0'
 main: info.mester.network.partygames.PartyGames
 api-version: '1.21'
 bootstrapper: info.mester.network.partygames.Bootstrapper
-loader: info.mester.network.partygames.Loader
 load: POSTWORLD
 dependencies:
   server:
@@ -12,10 +11,6 @@ dependencies:
       required: true
       join-classpath: true
     WorldEdit:
-      load: BEFORE
-      required: true
-      join-classpath: true
-    ViaVersion:
       load: BEFORE
       required: true
       join-classpath: true

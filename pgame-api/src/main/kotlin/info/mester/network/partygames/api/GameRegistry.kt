@@ -69,6 +69,8 @@ class GameRegistry(
 
     private fun getBundle(name: String): MinigameBundle? = bundles.firstOrNull { it.name == name }
 
+    fun getBundles(): List<MinigameBundle> = bundles
+
     fun startGame(
         players: List<Player>,
         bundleName: String,

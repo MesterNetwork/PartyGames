@@ -176,38 +176,55 @@ abstract class Minigame(
     }
 
     // functions for handling events
+    // entity events
     open fun handleEntityMove(event: EntityMoveEvent) {}
 
-    open fun handlePlayerInteract(event: PlayerInteractEvent) {}
-
-    open fun handlePlayerMove(event: PlayerMoveEvent) {}
-
-    open fun handleBlockPhysics(event: BlockPhysicsEvent) {}
+    open fun handleEntityChangeBlock(event: EntityChangeBlockEvent) {}
 
     open fun handleEntityCombust(event: EntityCombustEvent) {}
 
-    open fun handlePlayerDeath(event: PlayerDeathEvent) {}
+    open fun handleEntityDismount(event: EntityDismountEvent) {}
+
+    open fun handleEntityDamageByEntity(event: EntityDamageByEntityEvent) {}
+
+    open fun handleEntityRegainHealth(event: EntityRegainHealthEvent) {}
+
+    open fun handleEntityShootBow(event: EntityShootBowEvent) {}
+
+    // block events
+    open fun handleBlockPhysics(event: BlockPhysicsEvent) {}
 
     open fun handleBlockBreak(event: BlockBreakEvent) {}
 
     open fun handleBlockPlace(event: BlockPlaceEvent) {}
 
+    open fun handleBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {}
+
+    // player events
+    open fun handlePlayerMove(event: PlayerMoveEvent) {}
+
+    open fun handlePlayerInteract(event: PlayerInteractEvent) {}
+
+    open fun handlePlayerDeath(event: PlayerDeathEvent) {}
+
     open fun handlePrePlayerAttack(event: PrePlayerAttackEntityEvent) {}
 
-    open fun handleInventoryClose(event: InventoryCloseEvent) {}
-
     open fun handlePlayerDropItem(event: PlayerDropItemEvent) {}
-
-    open fun handleEntityChangeBlock(event: EntityChangeBlockEvent) {}
-
-    open fun handleInventoryOpen(event: InventoryOpenEvent) {}
 
     open fun handlePlayerToggleFlight(event: PlayerToggleFlightEvent) {}
 
     open fun handlePlayerInteractAtEntity(event: PlayerInteractAtEntityEvent) {}
 
-    open fun handleEntityDismount(event: EntityDismountEvent) {}
+    open fun handlePlayerChat(event: AsyncChatEvent) {}
 
+    open fun handlePlayerItemConsume(event: PlayerItemConsumeEvent) {}
+
+    // inventory events
+    open fun handleInventoryClose(event: InventoryCloseEvent) {}
+
+    open fun handleInventoryOpen(event: InventoryOpenEvent) {}
+
+    // game events
     open fun handleDisconnect(
         player: Player,
         didLeave: Boolean,
@@ -216,23 +233,11 @@ abstract class Minigame(
 
     open fun handleRejoin(player: Player) {}
 
-    open fun handlePlayerChat(event: AsyncChatEvent) {}
-
-    open fun handleEntityDamageByEntity(event: EntityDamageByEntityEvent) {}
-
     open fun handleInventoryClick(
         event: InventoryClickEvent,
         clickedInventory: Inventory,
     ) {
     }
-
-    open fun handleEntityShootBow(event: EntityShootBowEvent) {}
-
-    open fun handleBlockBreakProgressUpdate(event: BlockBreakProgressUpdateEvent) {}
-
-    open fun handlePlayerItemConsume(event: PlayerItemConsumeEvent) {}
-
-    open fun handleEntityRegainHealth(event: EntityRegainHealthEvent) {}
 
     abstract val name: Component
     abstract val description: Component
