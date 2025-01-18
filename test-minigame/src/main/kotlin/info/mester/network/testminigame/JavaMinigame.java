@@ -17,17 +17,6 @@ import java.util.Objects;
 public class JavaMinigame extends Minigame {
     public JavaMinigame(@NotNull Game game) {
         super(game, "java");
-
-        // everything works as expected
-        getAudience().sendMessage(Component.text("Hello from Java!"));
-
-        for (var player : getOnlinePlayers()) {
-            assert player != null; // this is very silly because getOnlinePlayers() never returns null elements, but Java is gonna do Java stuff
-            player.getInventory().addItem(ItemStack.of(Material.DIAMOND_SWORD));
-        }
-
-        // create a countdown without the bar on top of the screen
-        startCountdown(20 * 1000, false, this::end);
     }
 
     // to enable players damaging entities, you need to uncancel prePlayerAttackEntity
@@ -62,6 +51,17 @@ public class JavaMinigame extends Minigame {
     @Override
     public void start() {
         super.start();
+
+        // everything works as expected
+        getAudience().sendMessage(Component.text("Hello from Java!"));
+
+        for (var player : getOnlinePlayers()) {
+            assert player != null; // this is very silly because getOnlinePlayers() never returns null elements, but Java is gonna do Java stuff
+            player.getInventory().addItem(ItemStack.of(Material.DIAMOND_SWORD));
+        }
+
+        // create a countdown without the bar on top of the screen
+        startCountdown(20 * 1000, false, this::end);
     }
 
     @Override
