@@ -22,8 +22,8 @@ class GameSidebarComponent(
                 break
             }
             val data = topList[i]
-            val player = data.first
-            val playerData = data.second
+            val player = data.player
+            val playerData = data.data
             drawable.drawLine(
                 mm.deserialize(
                     // display the player's name in gray if they're offline

@@ -1,14 +1,13 @@
 package info.mester.network.partygames.api.events
 
 import info.mester.network.partygames.api.Game
-import info.mester.network.partygames.api.PlayerData
-import org.bukkit.OfflinePlayer
+import info.mester.network.partygames.api.TopPlayerData
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 
 class GameEndedEvent(
     val game: Game,
-    val topList: List<Pair<OfflinePlayer, PlayerData>>,
+    val topList: List<TopPlayerData>,
 ) : Event() {
     companion object {
         private val HANDLER_LIST = HandlerList()

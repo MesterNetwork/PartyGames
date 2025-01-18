@@ -27,6 +27,11 @@ data class PlayerData(
     var score: Int,
 )
 
+data class TopPlayerData(
+    val player: OfflinePlayer,
+    val data: PlayerData,
+)
+
 enum class GameState {
     /**
      * The game is in the loading state, where the players fly around the starting position and the game is explained
@@ -161,12 +166,12 @@ class Game(
      * @param n the number of players to get
      * @return a list of pairs of the player and their data
      */
-    fun topPlayers(n: Int): List<Pair<OfflinePlayer, PlayerData>> =
+    fun topPlayers(n: Int): List<TopPlayerData> =
         playerDatas
             .toList()
             .sortedByDescending { it.second.score }
             .take(n)
-            .map { Bukkit.getOfflinePlayer(it.first) to it.second }
+            .map { TopPlayerData(Bukkit.getOfflinePlayer(it.first), it.second) }
 
     fun topPlayers() = topPlayers(playerDatas.size)
 
@@ -408,7 +413,7 @@ class Game(
                             "<gray>"
                         }
                     append(
-                        "${color}${i + 1}. ${topPlayer?.first?.name ?: "<gray>Nobody"} <gray>- <green>${topPlayer?.second?.score ?: 0}\n",
+                        "${color}${i + 1}. ${topPlayer?.player?.name ?: "<gray>Nobody"} <gray>- <green>${topPlayer?.data?.score ?: 0}\n",
                     )
                 }
 
