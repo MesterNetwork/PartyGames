@@ -33,9 +33,8 @@ public class JavaMinigame extends Minigame {
         player.setGameMode(GameMode.SPECTATOR);
         @SuppressWarnings("UnstableApiUsage")
         Entity killer = event.getDamageSource().getCausingEntity();
-        if (killer instanceof Player) {
+        if (killer instanceof Player killerPlayer) {
             // only award points to players
-            Player killerPlayer = (Player) killer;
             killerPlayer.sendMessage(Component.text("You killed " + player.getName() + "!"));
             getGame().addScore(killerPlayer, 10, "Killed " + player.getName());
         }
