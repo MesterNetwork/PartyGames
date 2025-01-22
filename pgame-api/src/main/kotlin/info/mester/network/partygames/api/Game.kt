@@ -133,6 +133,11 @@ class Game(
     val state get() = _state
 
     /**
+     * The tick when the game started
+     */
+    val startTime = Bukkit.getCurrentTick()
+
+    /**
      * The boss bar to be used for the remaining time
      */
     val remainingBossBar =
@@ -277,6 +282,7 @@ class Game(
         // load the new world
         slimeAPI.loadWorld(gameWorld, true)
         val minigame = _runningMinigame as Minigame
+        minigame.onLoad()
         audience.sendMessage(
             Component
                 .text("Welcome to ", NamedTextColor.GREEN)

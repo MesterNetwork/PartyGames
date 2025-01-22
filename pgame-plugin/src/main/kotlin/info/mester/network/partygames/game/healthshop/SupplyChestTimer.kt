@@ -6,13 +6,13 @@ import java.util.function.Consumer
 import kotlin.math.exp
 import kotlin.random.Random
 
-private const val STEEPNESS = 2.0
+private const val STEEPNESS = 2.2
 
 class SupplyChestTimer(
     private val minigame: HealthShopMinigame,
     private val maxTime: Int,
 ) : Consumer<BukkitTask> {
-    private var offset = 0.0
+    private var offset = -0.2
     private var currentTime = 0
 
     override fun accept(t: BukkitTask) {
@@ -30,7 +30,7 @@ class SupplyChestTimer(
         val result = randomValue < functionValue
         // update the offset
         if (result) {
-            offset -= 0.035 // the next chest will have a lower chance of spawning
+            offset -= 0.055 // the next chest will have a lower chance of spawning
             minigame.spawnSupplyChest()
         }
         currentTime += 1

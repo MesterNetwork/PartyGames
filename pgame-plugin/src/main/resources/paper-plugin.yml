@@ -10,7 +10,7 @@ dependencies:
       load: BEFORE
       required: true
       join-classpath: true
-    WorldEdit:
+    FastAsyncWorldEdit:
       load: BEFORE
       required: true
       join-classpath: true

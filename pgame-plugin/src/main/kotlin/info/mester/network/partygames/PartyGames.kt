@@ -2,11 +2,7 @@ package info.mester.network.partygames
 
 import info.mester.network.partygames.api.MinigameWorld
 import info.mester.network.partygames.api.PartyGamesCore
-import info.mester.network.partygames.game.DamageDealer
 import info.mester.network.partygames.game.GameManager
-import info.mester.network.partygames.game.GardeningMinigame
-import info.mester.network.partygames.game.HealthShopMinigame
-import info.mester.network.partygames.game.SpeedBuildersMinigame
 import info.mester.network.partygames.level.LevelManager
 import info.mester.network.partygames.level.LevelPlaceholder
 import info.mester.network.partygames.sidebar.SidebarManager
@@ -103,17 +99,19 @@ class PartyGames : JavaPlugin() {
     }
 
     fun reload() {
+        reloadConfig()
         spawnLocation = config.getLocation("spawn-location")!!
+        registerMinigames()
     }
 
     override fun onEnable() {
         _plugin = this
         core = PartyGamesCore.getInstance()
-        saveResource("config.yml", true)
-        saveResource("health-shop.yml", true)
-        saveResource("speed-builders.yml", true)
-        saveResource("sniffer-hunt.yml", true)
-        spawnLocation = config.getLocation("spawn-location")!!
+        saveResource("config.yml", false)
+        saveResource("health-shop.yml", false)
+        saveResource("speed-builders.yml", false)
+        saveResource("sniffer-hunt.yml", false)
+        reload()
         // register low-level APIs
         try {
             scoreboardLibrary = ScoreboardLibrary.loadScoreboardLibrary(this)
@@ -130,7 +128,6 @@ class PartyGames : JavaPlugin() {
         playingPlaceholder = PlayingPlaceholder()
         playingPlaceholder.register()
         LevelPlaceholder(levelManager).register()
-        registerMinigames()
         // set up event listeners
         server.pluginManager.registerEvents(PartyListener(this), this)
         // init all worlds
@@ -140,48 +137,38 @@ class PartyGames : JavaPlugin() {
     }
 
     private fun registerMinigames() {
-        core.gameRegistry.registerMinigame(
-            this,
-            HealthShopMinigame::class.qualifiedName!!,
-            "health_shop",
-            listOf(
-                MinigameWorld("mg-healthshop", org.bukkit.util.Vector(0.5, 63.0, 0.5)),
-                MinigameWorld("mg-healthshop2", org.bukkit.util.Vector(0.5, 65.0, 0.5)),
-            ),
-            "Health Shop",
-        )
-        core.gameRegistry.registerMinigame(
-            this,
-            SpeedBuildersMinigame::class.qualifiedName!!,
-            "speed_builders",
-            listOf(
-                MinigameWorld("mg-speedbuilders", org.bukkit.util.Vector(0.5, 60.0, 0.5)),
-            ),
-            "Speed Builders",
-        )
-        core.gameRegistry.registerMinigame(
-            this,
-            GardeningMinigame::class.qualifiedName!!,
-            "gardening",
-            listOf(
-                MinigameWorld("mg-gardening", org.bukkit.util.Vector(0.5, 65.0, 0.5)),
-            ),
-            "Gardening",
-        )
-        core.gameRegistry.registerMinigame(
-            this,
-            DamageDealer::class.qualifiedName!!,
-            "damage_dealer",
-            listOf(
-                MinigameWorld("mg-damagedealer", org.bukkit.util.Vector(0.5, 62.0, 0.5)),
-            ),
-            "Damage Dealer",
-        )
+        core.gameRegistry.unregisterPlugin(this)
+        val minigames = config.getConfigurationSection("minigames")!!
+        for (minigameName in minigames.getKeys(false)) {
+            val minigameConfig = minigames.getConfigurationSection(minigameName)!!
+            val worldsList = minigameConfig.getList("worlds")!!
+            val worlds =
+                worldsList.mapNotNull { entry ->
+                    if (entry is Map<*, *>) {
+                        val world = entry["world"] as String
+                        val x = entry["x"] as Double
+                        val y = entry["y"] as Double
+                        val z = entry["z"] as Double
+                        MinigameWorld(world, org.bukkit.util.Vector(x, y, z))
+                    } else {
+                        null
+                    }
+                }
+            val className = minigameConfig.getString("class")!!
+            val displayName = minigameConfig.getString("display-name")
+            core.gameRegistry.registerMinigame(
+                this,
+                className,
+                minigameName,
+                worlds,
+                displayName,
+            )
+        }
         // register bundles for each minigame, then family night
         core.gameRegistry.registerBundle(
             this,
             listOf("healthshop", "speedbuilders", "gardening", "damagedealer"),
-            "family_night",
+            "familynight",
             "Family Night",
         )
     }

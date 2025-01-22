@@ -57,6 +57,7 @@ public class JavaMinigame extends Minigame {
         for (var player : getOnlinePlayers()) {
             assert player != null; // this is very silly because getOnlinePlayers() never returns null elements, but Java is gonna do Java stuff
             player.getInventory().addItem(ItemStack.of(Material.DIAMOND_SWORD));
+            player.sendMessage(Component.text("Hello from Java!"));
         }
 
         // create a countdown without the bar on top of the screen

@@ -1,6 +1,7 @@
 package info.mester.network.partygames.api
 
 import com.mojang.brigadier.Command
+import com.mojang.brigadier.arguments.StringArgumentType
 import info.mester.network.partygames.api.admin.GamesUI
 import info.mester.network.partygames.api.admin.InvseeUI
 import io.papermc.paper.command.brigadier.Commands
@@ -14,6 +15,7 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.minimessage.MiniMessage
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.UUID
@@ -81,6 +83,34 @@ class Bootstrapper : PluginBootstrap {
                                 game.terminate()
                                 Command.SINGLE_SUCCESS
                             },
+                    ).then(
+                        // start
+                        Commands
+                            .literal("start")
+                            .then(
+                                Commands
+                                    .argument("bundle", StringArgumentType.word())
+                                    .suggests { ctx, builder ->
+                                        val core = PartyGamesCore.getInstance()
+                                        val bundles = core.gameRegistry.getBundles()
+                                        runCatching {
+                                            val bundleName = StringArgumentType.getString(ctx.child, "bundle")
+                                            bundles
+                                                .filter { it.name.uppercase().startsWith(bundleName.uppercase()) }
+                                                .map { it.name }
+                                                .forEach(builder::suggest)
+                                        }.onFailure {
+                                            bundles.map { it.name.uppercase() }.forEach(builder::suggest)
+                                        }
+                                        builder.buildFuture()
+                                    }.executes { ctx ->
+                                        val core = PartyGamesCore.getInstance()
+                                        val bundleName = StringArgumentType.getString(ctx, "bundle")
+                                        val players = Bukkit.getOnlinePlayers().toList()
+                                        core.gameRegistry.startGame(players, bundleName)
+                                        Command.SINGLE_SUCCESS
+                                    },
+                            ),
                     ).build(),
                 "Main function for managing tournaments",
             )

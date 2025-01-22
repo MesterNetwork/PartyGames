@@ -72,7 +72,7 @@ class ShopFailedException(
 
 class HealthShopMinigame(
     game: Game,
-) : Minigame(game, "health_shop") {
+) : Minigame(game, "healthshop") {
     companion object {
         private val shopItems: MutableList<HealthShopItem> = mutableListOf()
         private val startLocations: MutableMap<Int, Array<Vector>> = mutableMapOf()
@@ -225,16 +225,19 @@ class HealthShopMinigame(
         }
     }
 
-    override fun start() {
-        super.start()
-        startPos.world.time = 13000
+    override fun onLoad() {
+        game.world.time = 13000
         // set up the world border
-        val worldBorder = startPos.world.worldBorder
+        val worldBorder = game.world.worldBorder
         worldBorder.size = 121.0
         worldBorder.center = startPos
         worldBorder.warningDistance = 2
         worldBorder.damageBuffer = 0.0
         worldBorder.damageAmount = 1.5
+    }
+
+    override fun start() {
+        super.start()
         // send the players to the predefined spawn locations
         val spawnLocations =
             if (startLocations.contains(worldIndex)) startLocations[worldIndex]!!.toList().shuffled() else emptyList()

@@ -128,10 +128,14 @@ class PartyListener(
 
     @EventHandler
     fun onGameEnded(event: GameEndedEvent) {
+        val timeElapsed = (Bukkit.getCurrentTick() - event.game.startTime) * 0.05
         // increase everyone's xp based on the score
         for ((player, data) in event.topList) {
             val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId)
-            plugin.levelManager.addXp(player.uniqueId, data.score.coerceAtLeast(0))
+            // XP is points gained + 15 per half a minute
+            val xpFromPlayTime = (timeElapsed.toInt() / 30) * 15
+            val addedXp = data.score.coerceAtLeast(0) + xpFromPlayTime
+            plugin.levelManager.addXp(player.uniqueId, addedXp)
             val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
             val onlinePlayer = Bukkit.getPlayer(player.uniqueId) ?: return
             val levelUpMessage =
@@ -155,7 +159,7 @@ class PartyListener(
                     // if there are no additional squares, that means we've only earned very little progress
                     // in that case, the last progress square should always be green to indicate that
                     var additionalSquares = filledSquares - previousFilledSquares
-                    if (additionalSquares == 0) {
+                    if (additionalSquares == 0 && (newLevel.xp - oldLevel.xp) > 0) {
                         previousFilledSquares -= 1
                         additionalSquares = 1
                     }
@@ -169,6 +173,8 @@ class PartyListener(
                         append("<gray>■")
                     }
                     append("<dark_gray>] <green>${newLevel.xpToNextLevel}\n")
+                    append("<yellow>+${data.score} XP <gray>(Points Gained)\n")
+                    append("<yellow>+$xpFromPlayTime XP <gray>(Time Played)\n")
                     append("<dark_gray>${"-".repeat(30)}")
                 }
             onlinePlayer.sendMessage(mm.deserialize(levelUpMessage))
@@ -178,7 +184,13 @@ class PartyListener(
     @EventHandler
     fun onPlayerRejoined(event: PlayerRejoinedEvent) {
         val player = event.player
-        plugin.sidebarManager.openGameSidebar(player)
+        Bukkit.getScheduler().runTaskLater(
+            plugin,
+            Runnable {
+                plugin.sidebarManager.openGameSidebar(player)
+            },
+            1,
+        )
     }
 
     @EventHandler
@@ -188,5 +200,6 @@ class PartyListener(
             plugin.sidebarManager.openLobbySidebar(player)
             player.teleport(plugin.spawnLocation)
         }
+        plugin.playingPlaceholder.removePlaying(event.game.bundle.name, 1)
     }
 }

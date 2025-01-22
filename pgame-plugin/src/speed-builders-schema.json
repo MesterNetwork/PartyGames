@@ -17,10 +17,15 @@
                 "HARD",
                 "INSANE"
               ]
+            },
+            "display_name": {
+              "type": "string",
+              "description": "Display name of the structure."
             }
           },
           "required": [
-            "difficulty"
+            "difficulty",
+            "display_name"
           ],
           "additionalProperties": false
         }

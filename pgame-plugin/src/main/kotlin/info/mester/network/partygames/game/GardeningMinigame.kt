@@ -64,6 +64,7 @@ private enum class ObjectType {
     LILAC,
 }
 
+@Suppress("Unused")
 class GardeningMinigame(
     game: Game,
 ) : Minigame(game, "gardening") {
@@ -88,8 +89,8 @@ class GardeningMinigame(
         // set the player's xp progress to the tap's water level
         player.exp = tap.getFullness().toFloat()
         val power = hosePowers[player.uniqueId]!!
-        // power goes from 0 to 10, so we divide by 10 to get a value between 0 and 1
-        val normalPower = power / 10.0
+        // power goes from 0 to 10
+        val normalPower = power / 6.5
         val direction =
             player.location.direction
                 .normalize()
@@ -257,13 +258,16 @@ class GardeningMinigame(
 
     private fun getPlayersFromTap(tap: GardenTap): List<Player> = game.onlinePlayers.filter { getTap(it) == tap }
 
-    override fun start() {
-        super.start()
-        fetchAllGrassBlocks()
-        val worldBorder = startPos.world.worldBorder
+    override fun onLoad() {
+        val worldBorder = game.world.worldBorder
         worldBorder.center = startPos
         worldBorder.size = 2 * MAP_RADIUS + 1.0
         worldBorder.warningDistance = 0
+    }
+
+    override fun start() {
+        super.start()
+        fetchAllGrassBlocks()
         // start a timer that triggers the hose shooting
         Bukkit.getScheduler().runTaskTimer(plugin, { t ->
             if (!running) {

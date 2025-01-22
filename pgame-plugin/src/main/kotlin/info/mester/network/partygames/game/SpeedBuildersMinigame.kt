@@ -13,6 +13,7 @@ import io.papermc.paper.event.block.BlockBreakProgressUpdateEvent
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.title.Title
+import net.kyori.adventure.title.TitlePart
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
@@ -64,6 +65,7 @@ enum class SpeedBuildersState {
 data class StructureData(
     val name: String,
     val difficulty: StructureDifficulty,
+    val displayName: String,
 ) {
     val fileName = "${name.lowercase()}.nbt"
 }
@@ -88,7 +90,7 @@ const val AREA_OFFSET = 5
 
 class SpeedBuildersMinigame(
     game: Game,
-) : Minigame(game, "speed_builders") {
+) : Minigame(game, "speedbuilders") {
     companion object {
         val plugin = PartyGames.plugin
         private val structures = mutableListOf<StructureData>()
@@ -102,7 +104,8 @@ class SpeedBuildersMinigame(
                 try {
                     val structureConfig = config.getConfigurationSection("structures.$key")!!
                     val difficulty = structureConfig.getString("difficulty")!!
-                    structures.add(StructureData(key, StructureDifficulty.valueOf(difficulty.uppercase())))
+                    val displayName = structureConfig.getString("display_name", "Unknown")!!
+                    structures.add(StructureData(key, StructureDifficulty.valueOf(difficulty.uppercase()), displayName))
                 } catch (e: Exception) {
                     plugin.logger.warning("Failed to load structure $key")
                     plugin.logger.log(Level.WARNING, e.message, e)
@@ -138,7 +141,7 @@ class SpeedBuildersMinigame(
         }
         val structureData = currentStructureData!!
         val structureFile = structureData.fileName
-        return structureManager.loadStructure(File(plugin.dataFolder, "speedbuilders/$structureFile"))
+        return structureManager.loadStructure(File(originalPlugin.dataFolder, "speedbuilders/$structureFile"))
     }
 
     private fun selectStructure(difficulty: StructureDifficulty?): StructureData {
@@ -478,7 +481,7 @@ class SpeedBuildersMinigame(
     private fun startMemorise() {
         state = SpeedBuildersState.MEMORISE
         // make sure that every player who became a spectator the last game due to perfect build is in survival again
-        for (player in game.onlinePlayers.filter { it.gameMode == GameMode.SPECTATOR && playerAreas.containsKey(it.uniqueId) }) {
+        for (player in game.onlinePlayers.filter { playerAreas.containsKey(it.uniqueId) }) {
             player.gameMode = GameMode.SURVIVAL
             player.allowFlight = true
             player.isFlying = true
@@ -500,9 +503,14 @@ class SpeedBuildersMinigame(
         currentStructureData = selectStructure(difficulty)
         val structure = getStructure()
         currentStructure = structure
+        audience.sendTitlePart(
+            TitlePart.TIMES,
+            Title.Times.times(Duration.ofSeconds(0), Duration.ofSeconds(2), Duration.ofSeconds(0)),
+        )
+        audience.sendTitlePart(TitlePart.TITLE, mm.deserialize("<yellow>${currentStructureData!!.displayName}"))
+        audience.sendMessage(Component.text("Memorise the structure!", NamedTextColor.GREEN))
         for ((playerUUID, playerArea) in playerAreas) {
             val player = Bukkit.getPlayer(playerUUID) ?: continue
-            player.sendMessage(Component.text("Memorise the structure!", NamedTextColor.GREEN))
             // place down the structure in the play area
             val location = playerArea.toLocation(startPos.world)
             structure.place(

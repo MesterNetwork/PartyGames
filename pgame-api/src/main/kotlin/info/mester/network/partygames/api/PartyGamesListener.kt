@@ -38,6 +38,7 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerJoinEvent
+import org.bukkit.event.player.PlayerKickEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerSwapHandItemsEvent
@@ -325,5 +326,14 @@ class PartyGamesListener(
     @EventHandler
     fun onAnvilDamaged(event: AnvilDamagedEvent) {
         event.isCancelled = true
+    }
+
+    @EventHandler
+    fun onPlayerKicked(event: PlayerKickEvent) {
+        val game = core.gameRegistry.getGameOf(event.player) ?: return
+        // hacky way to fix this weird bug where the player gets kicked during the introduction
+        if (game.state == GameState.PRE_GAME && event.cause == PlayerKickEvent.Cause.FLYING_PLAYER) {
+            event.isCancelled = true
+        }
     }
 }

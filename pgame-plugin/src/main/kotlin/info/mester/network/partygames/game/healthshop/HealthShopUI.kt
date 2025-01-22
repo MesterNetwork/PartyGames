@@ -481,7 +481,7 @@ class HealthShopUI(
         }
         // process oak planks
         if (purchasedItems.any { it.key == "oak_planks" }) {
-            player.inventory.addItem(ItemStack.of(Material.OAK_PLANKS, 24))
+            player.inventory.addItem(ItemStack.of(Material.OAK_PLANKS, 64))
         }
     }
 }

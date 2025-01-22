@@ -32,7 +32,7 @@ enum class SnifferHuntState {
 
 class SnifferHuntMinigame(
     game: Game,
-) : Minigame(game, "sniffer_hunt") {
+) : Minigame(game, "snifferhunt") {
     companion object {
         lateinit var config: SnifferHuntConfig
             private set

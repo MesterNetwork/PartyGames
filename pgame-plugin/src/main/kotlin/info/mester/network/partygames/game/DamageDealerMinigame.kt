@@ -137,9 +137,10 @@ data class DamageDealerItem(
     }
 }
 
-class DamageDealer(
+@Suppress("Unused")
+class DamageDealerMinigame(
     game: Game,
-) : Minigame(game, "damage_dealer") {
+) : Minigame(game, "damagedealer") {
     private val levelItems = mutableListOf<DamageDealerItem>()
 
     init {
@@ -176,9 +177,12 @@ class DamageDealer(
             entity.isCustomNameVisible = true
         }
 
+    override fun onLoad() {
+        game.world.setGameRule(GameRule.NATURAL_REGENERATION, false)
+    }
+
     override fun start() {
         super.start()
-        startPos.world.setGameRule(GameRule.NATURAL_REGENERATION, false)
         val posSpider = startPos.clone().add(2.0, 0.0, 0.0)
         val posZombie = startPos.clone().add(-2.0, 0.0, 0.0)
         spawnTarget(posSpider, Spider::class.java)

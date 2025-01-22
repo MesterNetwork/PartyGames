@@ -7,25 +7,14 @@ import org.bukkit.entity.Player
 import java.util.UUID
 
 enum class GameType(
-    val minigames: List<String>,
     val displayName: String,
 ) {
-    HEALTH_SHOP(listOf("healthshop"), "Health Shop"),
-    SPEED_BUILDERS(listOf("speedbuilders"), "Speed Builders"),
-    GARDENING(listOf("gardening"), "Gardening"),
-    FAMILY_NIGHT(
-        listOf(
-            "healthshop",
-            "speedbuilders",
-            "gardening",
-            "damagedealer",
-        ),
-        "Family Night",
-    ),
-    DAMAGE_DEALER(
-        listOf("damagedealer"),
-        "Damage Dealer",
-    ),
+    HEALTHSHOP("Health Shop"),
+    SPEEDBUILDERS("Speed Builders"),
+    GARDENING("Gardening"),
+    FAMILYNIGHT("Family Night"),
+    DAMAGEDEALER("Damage Dealer"),
+    MINEGUESSR("Mineguessr"),
 }
 
 private val mm = MiniMessage.miniMessage()

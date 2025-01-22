@@ -22,8 +22,10 @@ dependencies {
     compileOnly(project(":pgame-api"))
 
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
-    // WorldEdit
-    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.10-SNAPSHOT")
+    // FAWE
+    implementation(platform("com.intellectualsites.bom:bom-newest:1.52"))
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit") { isTransitive = false }
     // AdvancedSlimePaper
     compileOnly("com.infernalsuite.aswm:api:3.0.0-SNAPSHOT")
     // Testing

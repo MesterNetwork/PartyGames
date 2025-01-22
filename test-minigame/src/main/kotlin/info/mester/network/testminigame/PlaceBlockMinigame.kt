@@ -11,12 +11,15 @@ import org.bukkit.inventory.ItemStack
 class PlaceBlockMinigame(
     game: Game,
 ) : Minigame(game, "place_block") {
-    override fun start() {
-        super.start()
+    override fun onLoad() {
         // access the world using game.world
         val world = game.world
         world.worldBorder.size = 30.0
         world.worldBorder.center = startPos
+    }
+
+    override fun start() {
+        super.start()
 
         audience.sendMessage(Component.text("Place blocks to win!", NamedTextColor.AQUA))
         // get every player in the game with onlinePlayers

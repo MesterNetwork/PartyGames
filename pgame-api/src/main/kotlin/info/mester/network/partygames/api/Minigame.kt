@@ -30,6 +30,7 @@ import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerToggleFlightEvent
 import org.bukkit.inventory.Inventory
+import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import java.util.function.Consumer
@@ -53,10 +54,12 @@ abstract class Minigame(
         }
     val rootWorldName: String
     val worldIndex: Int
+    val originalPlugin: JavaPlugin
 
     init {
         val core = PartyGamesCore.getInstance()
         val minigameConfig = core.gameRegistry.getMinigame(name)!!
+        originalPlugin = minigameConfig.plugin
         worldIndex = Random.nextInt(0, minigameConfig.worlds.size)
         rootWorldName = minigameConfig.worlds[worldIndex].name
         startPos = minigameConfig.worlds[worldIndex].startPos.toLocation(Bukkit.getWorld(rootWorldName)!!)
@@ -75,13 +78,19 @@ abstract class Minigame(
     }
 
     /**
+     * Executed when the minigame is loaded and we already have a world ready
+     * Can be used to set up the world (unlike in the constructor, where a world is not yet ready)
+     */
+    open fun onLoad() {}
+
+    /**
      * A function to finish the minigame (roll back any changes, handle scores, etc.)
      * This will always run, regardless if the minigame was gracefully ended or not
      */
     open fun finish() {}
 
     /**
-     * Function to stop the minigame (score calculation happens in [finish]
+     * Function to stop the minigame
      */
     private fun end(nextGame: Boolean) {
         _running = false

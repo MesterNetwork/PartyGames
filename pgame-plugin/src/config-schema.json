@@ -2,60 +2,53 @@
   "$schema": "https://json-schema.org/draft-07/schema",
   "type": "object",
   "properties": {
-    "locations": {
+    "minigames": {
       "type": "object",
-      "properties": {
-        "minigames": {
+      "patternProperties": {
+        "^[a-zA-Z0-9_]+$": {
           "type": "object",
-          "patternProperties": {
-            "^[a-zA-Z0-9_]+$": {
-              "type": "object",
-              "properties": {
-                "worlds": {
-                  "type": "array",
-                  "items": {
+          "properties": {
+            "worlds": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "world": {
                     "type": "string"
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
                   }
                 },
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "worlds",
-                "x",
-                "y",
-                "z"
-              ]
+                "required": [
+                  "world",
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "class": {
+              "type": "string"
+            },
+            "display-name": {
+              "type": "string"
             }
           },
+          "required": [
+            "worlds",
+            "class"
+          ],
           "additionalProperties": false
         }
-      },
-      "required": [
-        "minigames"
-      ]
-    },
-    "steve-skin": {
-      "type": "object",
-      "properties": {
-        "value": {
-          "type": "string"
-        },
-        "signature": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "value",
-        "signature"
-      ]
+      }
     },
     "save-interval": {
       "type": "integer",
@@ -91,13 +84,32 @@
         "yaw",
         "pitch"
       ]
+    },
+    "mineguessr": {
+      "type": "object",
+      "properties": {
+        "world": {
+          "type": "string"
+        },
+        "max-size": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "world",
+        "max-size"
+      ]
+    },
+    "replace-config": {
+      "type": "boolean"
     }
   },
   "required": [
-    "locations",
-    "steve-skin",
+    "minigames",
     "save-interval",
-    "spawn-location"
+    "spawn-location",
+    "mineguessr"
   ],
   "additionalProperties": false
 }

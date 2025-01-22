@@ -1,39 +1,56 @@
-locations:
-  minigames:
-    healthshop:
-      worlds:
-        - mg-healthshop
-        - mg-healthshop2
-      x: 0.5
-      y: 63.0
-      z: 0.5
-    speedbuilders:
-      worlds:
-        - mg-speedbuilders
-      x: 0.5
-      y: 60.0
-      z: 0.5
-    gardening:
-      worlds:
-        - mg-gardening
-      x: 0.5
-      y: 65.0
-      z: 0.5
-    snifferhunt:
-      worlds:
-        - mg-snifferhunt
-      x: 0.5
-      y: 65.0
-      z: 0.5
-    damagedealer:
-      worlds:
-        - mg-damagedealer
-      x: 0.5
-      y: 62.0
-      z: 0.5
-steve-skin:
-  value: ewogICJ0aW1lc3RhbXAiIDogMTcyMTU3OTU0NDE2NCwKICAicHJvZmlsZUlkIiA6ICIwNDA0MjM4NGNmNWU0ZjU4YTEyODZhODdlZGU0NjFiNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJCZWRsZXNzTm9vYiIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9kOWE1OWVhYTgyYTE4OWI0ZWU3NGY4ODExYWE5NmEwM2EwMzJhMzY0ZjkwNWRlNzFlMTY0NTZiYmZjYWY2ZWM5IgogICAgfSwKICAgICJDQVBFIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9jZDlkODJhYjE3ZmQ5MjAyMmRiZDRhODZjZGU0YzM4MmE3NTQwZTExN2ZhZTdiOWEyODUzNjU4NTA1YTgwNjI1IgogICAgfQogIH0KfQ==
-  signature: YXLlxY1qA7zONTGDDqreFYtLJry7IIDg2xFyQx8mL9YOGtT0x6dD3KCq/L0qpTsoH2z4G5JnY1LwQpLzZ4+o4pMUsuacDbRaNooygloSudUO9BLqtbA8jj0aQvXcNcSJ7+9wkDtEdeHZaiRN8uRRx/zWBf0hEKNKcCyyHvUMNjDhJ97McmTg3quTMxeW6WZRTIDPreQ4IttRy4JeyrA+YesqBmII/94G4f6/AGJsJm29U4GnHtgSiWKrw5yHc1CACA+fEUGj4Amv7+w8N9XMXQguySY9OivU0a9eKZQ7fxGtGSfzdSt4FSj5AtvG31MLhmmWwQLlI5i6xkQsjbtiRtdGoITjs/kTzxFxt8KfuJPXSMEpOpzkuBZmfiwTnD049c3npsZyXoqgYERcDSj8AbEDNlaoTpE9+zsdEVjEKzIreRYffK/wLcg8pwUcCf5iSWQ5WE6ML4OuzDT2+Agj2Dw97xIc2ErYP5hmtYFv6pFIZIFFppKBlrrI0f29uIXYSZ2wA48fnZzhe3dpw/GBRGBJQPctIqK/E//FOE0CtGXHMcBSY5WQR0YFHSYA6iTH9KqaVej/sT1JF1ImVi2ue92iODtPSsJerlFonstW29J3mATUO5kg1TgYsghASdjjI9+5r6EbfVF53C5AsvdKHN4Wg8QABbzkseLGXMOR4Js=
+minigames:
+  healthshop:
+    worlds:
+      - world: mg-healthshop
+        x: 0.5
+        y: 63.0
+        z: 0.5
+      - world: mg-healthshop2
+        x: 0.5
+        y: 65.0
+        z: 0.5
+    class: info.mester.network.partygames.game.HealthShopMinigame
+    display-name: Health Shop
+  speedbuilders:
+    worlds:
+      - world: mg-speedbuilders
+        x: 0.5
+        y: 60.0
+        z: 0.5
+    class: info.mester.network.partygames.game.SpeedBuildersMinigame
+    display-name: Speed Builders
+  gardening:
+    worlds:
+      - world: mg-gardening
+        x: 0.5
+        y: 65.0
+        z: 0.5
+    class: info.mester.network.partygames.game.GardeningMinigame
+    display-name: Gardening
+  damagedealer:
+    worlds:
+      - world: mg-damagedealer
+        x: 0.5
+        y: 62.0
+        z: 0.5
+    class: info.mester.network.partygames.game.DamageDealerMinigame
+    display-name: Damage Dealer
+  snifferhunt:
+    worlds:
+      - world: mg-snifferhunt
+        x: 0.5
+        y: 65.0
+        z: 0.5
+    class: info.mester.network.partygames.game.SnifferHuntMinigame
+    display-name: Sniffer Hunt
+  mineguessr:
+    worlds:
+      - world: mg-mineguessr
+        x: 8.0
+        y: 35.0
+        z: 4.0
+    class: info.mester.network.partygames.game.MineguessrMinigame
+    display-name: Mine Guesser
 save-interval: 10
 spawn-location:
   ==: org.bukkit.Location
@@ -43,3 +60,6 @@ spawn-location:
   z: 40.5
   yaw: 90.0
   pitch: 0.0
+mineguessr:
+  world: world
+  max-size: 1000

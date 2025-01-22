@@ -2,40 +2,58 @@ structures:
   # Easy difficulty
   portal:
     difficulty: EASY
+    display_name: Portal
   bed:
     difficulty: EASY
+    display_name: Bed
   farm:
     difficulty: EASY
+    display_name: Farm
   japanese_idk:
     difficulty: EASY
+    display_name: Japanese Arch Thingy (?)
   mushroom:
     difficulty: EASY
+    display_name: Mushroom
   well:
     difficulty: EASY
+    display_name: Well, well, well
   # Medium difficulty
   bookshelves:
     difficulty: MEDIUM
+    display_name: Bookshelves & Enchanting Table
   dragon:
     difficulty: MEDIUM
+    display_name: Dragon
   enchanting:
     difficulty: MEDIUM
+    display_name: Enchanting Room
   bigportal:
     difficulty: MEDIUM
+    display_name: Big Portal
   warrior:
     difficulty: MEDIUM
+    display_name: Warrior
   # Hard difficulty
   tree:
     difficulty: HARD
+    display_name: Tree
   arcade:
     difficulty: HARD
+    display_name: Arcade
   boat:
     difficulty: HARD
+    display_name: Boat
   car:
     difficulty: HARD
+    display_name: Car
   graveyard:
     difficulty: HARD
+    display_name: Graveyard
   # Insane difficulty
   outpost:
     difficulty: INSANE
+    display_name: Outpost
   end_city:
     difficulty: INSANE
+    display_name: End City

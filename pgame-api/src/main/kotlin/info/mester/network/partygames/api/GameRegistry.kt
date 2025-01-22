@@ -65,9 +65,14 @@ class GameRegistry(
         bundles.add(MinigameBundle(plugin, minigames, name.uppercase(), displayName))
     }
 
+    fun unregisterPlugin(plugin: JavaPlugin) {
+        minigames.removeIf { it.plugin.name == plugin.name }
+        bundles.removeIf { it.plugin.name == plugin.name }
+    }
+
     fun getMinigame(name: String): RegisteredMinigame? = minigames.firstOrNull { it.name == name.uppercase() }
 
-    private fun getBundle(name: String): MinigameBundle? = bundles.firstOrNull { it.name == name }
+    private fun getBundle(name: String): MinigameBundle? = bundles.firstOrNull { it.name == name.uppercase() }
 
     fun getBundles(): List<MinigameBundle> = bundles
 
@@ -75,8 +80,7 @@ class GameRegistry(
         players: List<Player>,
         bundleName: String,
     ) {
-        val bundle =
-            getBundle(bundleName.uppercase()) ?: throw IllegalArgumentException("Bundle $bundleName not found!")
+        val bundle = getBundle(bundleName) ?: throw IllegalArgumentException("Bundle $bundleName not found!")
         val game = Game(core, bundle, players)
         games[game.id] = game
     }

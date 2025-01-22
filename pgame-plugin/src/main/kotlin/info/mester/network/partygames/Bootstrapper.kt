@@ -2,8 +2,10 @@ package info.mester.network.partygames
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
+import info.mester.network.partygames.api.PartyGamesCore
 import info.mester.network.partygames.game.GameType
 import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.game.MineguessrMinigame
 import info.mester.network.partygames.game.SnifferHuntMinigame
 import info.mester.network.partygames.game.SpeedBuildersMinigame
 import io.papermc.paper.command.brigadier.Commands
@@ -38,11 +40,11 @@ class Bootstrapper : PluginBootstrap {
                             .literal("reload")
                             .executes { ctx ->
                                 val sender = ctx.source.sender
+                                PartyGames.plugin.reload()
                                 HealthShopMinigame.reload()
                                 SpeedBuildersMinigame.reload()
                                 SnifferHuntMinigame.reload()
-                                PartyGames.plugin.reloadConfig()
-                                PartyGames.plugin.reload()
+                                MineguessrMinigame.reload()
                                 sender.sendMessage(Component.text("Reloaded the configuration!", NamedTextColor.GREEN))
                                 Command.SINGLE_SUCCESS
                             },
@@ -56,15 +58,23 @@ class Bootstrapper : PluginBootstrap {
                         Commands
                             .argument("game", StringArgumentType.word())
                             .suggests { ctx, builder ->
+                                val plugin = PartyGames.plugin
+                                val bundles =
+                                    PartyGamesCore
+                                        .getInstance()
+                                        .gameRegistry
+                                        .getBundles()
+                                        .filter { it.plugin.name == plugin.name }
+                                        .map { it.name.lowercase() }
                                 kotlin
                                     .runCatching {
-                                        val type = StringArgumentType.getString(ctx, "game").uppercase()
-                                        for (game in GameType.entries.filter { it.name.uppercase().startsWith(type) }) {
-                                            builder.suggest(game.name.lowercase())
+                                        val type = StringArgumentType.getString(ctx.child, "game").lowercase()
+                                        for (game in bundles.filter { it.startsWith(type) }) {
+                                            builder.suggest(game.lowercase())
                                         }
                                     }.onFailure {
-                                        for (game in GameType.entries) {
-                                            builder.suggest(game.name.lowercase())
+                                        for (game in bundles) {
+                                            builder.suggest(game.lowercase())
                                         }
                                     }
                                 builder.buildFuture()
