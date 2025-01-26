@@ -27,7 +27,7 @@ class PlaceBlockMinigame(
             player.inventory.addItem(ItemStack.of(Material.OBSIDIAN, 64))
         }
 
-        startCountdown(20 * 1000, false) {
+        startCountdown(20 * 20, false) {
             end()
         }
     }

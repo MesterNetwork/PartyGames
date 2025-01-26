@@ -2,10 +2,14 @@ package info.mester.network.partygames.sidebar
 
 import info.mester.network.partygames.level.LevelData
 import info.mester.network.partygames.mm
+import me.clip.placeholderapi.PlaceholderAPI
+import net.kyori.adventure.text.Component
 import net.megavex.scoreboardlibrary.api.sidebar.component.LineDrawable
 import net.megavex.scoreboardlibrary.api.sidebar.component.SidebarComponent
+import org.bukkit.entity.Player
 
 class LobbySidebarComponent(
+    private val player: Player,
     private val levelData: LevelData,
 ) : SidebarComponent {
     override fun draw(drawable: LineDrawable) {
@@ -28,5 +32,36 @@ class LobbySidebarComponent(
                 }
             }
         drawable.drawLine(mm.deserialize(" <#777777>[$progressBar]"))
+        drawable.drawLine(Component.empty())
+        drawable.drawLine(
+            mm.deserialize(
+                "<white>Games Won: <gold>${
+                    PlaceholderAPI.setPlaceholders(
+                        player,
+                        "%pgstat_gameswon%",
+                    )
+                }",
+            ),
+        )
+        drawable.drawLine(
+            mm.deserialize(
+                "<white>Points Gained: <gold>${
+                    PlaceholderAPI.setPlaceholders(
+                        player,
+                        "%pgstat_pointsgained%",
+                    )
+                }",
+            ),
+        )
+        drawable.drawLine(
+            mm.deserialize(
+                "<white>Time Played: <gold>${
+                    PlaceholderAPI.setPlaceholders(
+                        player,
+                        "%pgstat_timeplayed_formatted%",
+                    )
+                }",
+            ),
+        )
     }
 }

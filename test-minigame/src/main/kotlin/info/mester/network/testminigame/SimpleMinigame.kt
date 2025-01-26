@@ -13,7 +13,8 @@ class SimpleMinigame(
         // use audience to send messages to all players in the game
         audience.sendMessage(Component.text("Welcome to Simple Minigame!", NamedTextColor.YELLOW))
         // use startCountdown to create a countdown timer with a bar on top of the screen
-        startCountdown(20 * 1000) {
+        // it takes in a tick duration, so 20 seconds is 20 * 20 = 400 ticks
+        startCountdown(20 * 20) {
             end()
         }
     }

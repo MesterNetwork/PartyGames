@@ -356,7 +356,7 @@ class GardeningMinigame(
             }
         }, 0, 5)
         // start a 2,5-minute countdown for the game
-        startCountdown((2.5 * 60 * 1000).toLong()) {
+        startCountdown((2.5 * 60 * 20).toInt()) {
             end()
         }
         // setup players
@@ -574,8 +574,6 @@ class GardeningMinigame(
         }
     }
 
-    override val name: Component
-        get() = Component.text("Gardening", NamedTextColor.AQUA)
-    override val description: Component
-        get() = Component.text("Use your tools to grow plants and remove weeds!", NamedTextColor.AQUA)
+    override val name = Component.text("Gardening", NamedTextColor.AQUA)
+    override val description = Component.text("Use your tools to grow plants and remove weeds!", NamedTextColor.AQUA)
 }

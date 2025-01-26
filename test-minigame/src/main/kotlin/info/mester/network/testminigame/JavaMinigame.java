@@ -61,7 +61,7 @@ public class JavaMinigame extends Minigame {
         }
 
         // create a countdown without the bar on top of the screen
-        startCountdown(20 * 1000, false, this::end);
+        startCountdown(20 * 20, false, this::end);
     }
 
     @Override

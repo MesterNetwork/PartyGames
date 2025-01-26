@@ -220,7 +220,6 @@ class Game(
         // add all players to the game
         players.forEach { addPlayer(it) }
         // set up the game
-        audience.sendMessage(Component.text("Starting the game...", NamedTextColor.GREEN))
         readyMinigames =
             bundle.minigames
                 .shuffled()
@@ -395,15 +394,14 @@ class Game(
      * End the game and announce the winners
      */
     private fun end() {
-        audience.sendMessage(Component.text("The game has ended!", NamedTextColor.GREEN))
         // create a sorted list of player data based on their score
         val topList = topPlayers()
         // display the top 3 players
         val messageLength = 30
         val topListMessage =
             buildString {
-                append("<dark_gray>${"-".repeat(messageLength)}\n")
-                append("<yellow><bold>Top players:</bold>\n")
+                appendLine("<dark_gray>${"-".repeat(messageLength)}")
+                appendLine("<yellow><bold>Top players:</bold>")
 
                 for (i in topList.indices) {
                     val topPlayer = topList.getOrNull(i)
@@ -418,8 +416,8 @@ class Game(
                         } else {
                             "<gray>"
                         }
-                    append(
-                        "${color}${i + 1}. ${topPlayer?.player?.name ?: "<gray>Nobody"} <gray>- <green>${topPlayer?.data?.score ?: 0}\n",
+                    appendLine(
+                        "${color}${i + 1}. ${topPlayer?.player?.name ?: "<gray>Nobody"} <gray>- <green>${topPlayer?.data?.score ?: 0}",
                     )
                 }
 

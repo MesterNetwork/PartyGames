@@ -33,7 +33,7 @@ class SidebarManager(
     private val plugin: PartyGames,
 ) {
     companion object {
-        private val title = SidebarComponent.staticLine(mm.deserialize("<aqua><bold>Party Games <red>BETA"))
+        private val title = SidebarComponent.staticLine(mm.deserialize("<aqua><bold>Party Games"))
         private val dtf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
         private fun applyFooter(builder: SidebarComponent.Builder) {
@@ -71,7 +71,7 @@ class SidebarManager(
         val builder =
             SidebarComponent
                 .builder()
-                .addComponent(LobbySidebarComponent(plugin.levelManager.levelDataOf(player.uniqueId)))
+                .addComponent(LobbySidebarComponent(player, plugin.levelManager.levelDataOf(player.uniqueId)))
         applyFooter(builder)
         return ComponentSidebarLayout(title, builder.build())
     }
@@ -112,7 +112,7 @@ class SidebarManager(
     }
 
     fun openQueueSidebar(player: Player) {
-        val queue = plugin.gameManager.getQueueOf(player) ?: return
+        val queue = plugin.queueManager.getQueueOf(player) ?: return
         createSidebar(player, createQueueLayout(queue))
     }
 

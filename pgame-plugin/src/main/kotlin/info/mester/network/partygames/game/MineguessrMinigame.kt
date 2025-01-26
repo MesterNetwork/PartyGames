@@ -16,6 +16,7 @@ import org.bukkit.World
 import org.bukkit.block.Biome
 import org.bukkit.event.block.BlockPhysicsEvent
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import kotlin.random.Random
 
 private fun levenshteinDistance(
@@ -54,7 +55,7 @@ class MineguessrMinigame(
     companion object {
         private var sourceWorld: World = Bukkit.getWorld("world")!!
         private var maxSize = 1000
-        private val disallowedBiomes = emptyList<Biome>()
+        private val disallowedBiomes = listOf(Biome.DRIPSTONE_CAVES)
 
         init {
             reload()
@@ -76,14 +77,17 @@ class MineguessrMinigame(
     private val guessed = mutableListOf<UUID>()
     private var selectedBiomeIndex = 0
 
-    private fun getRandomChunk(): ChunkSnapshot {
+    private fun getRandomChunkAsync(): CompletableFuture<ChunkSnapshot> {
         var worldSize = sourceWorld.worldBorder.size
         worldSize -= sourceWorld.worldBorder.size % 16
         worldSize /= 32 // 16 blocks per chunk, and an extra 2 division to make it a radius
         val worldSizeInt = worldSize.toInt().coerceAtMost(maxSize)
         val chunkX = Random.nextInt(-worldSizeInt, worldSizeInt)
         val chunkZ = Random.nextInt(-worldSizeInt, worldSizeInt)
-        return sourceWorld.getChunkAt(chunkX, chunkZ, true).getChunkSnapshot(true, true, false, false)
+        val future = sourceWorld.getChunkAtAsync(chunkX, chunkZ, true)
+        return future.thenApply { chunk ->
+            chunk.getChunkSnapshot(true, true, false, false)
+        }
     }
 
     private fun copyChunk(chunk: ChunkSnapshot) {
@@ -119,42 +123,47 @@ class MineguessrMinigame(
         game.world.refreshChunk(0, 0)
     }
 
-    private fun loadChunk() {
+    private fun loadChunk(): CompletableFuture<Void> {
         audience.sendActionBar(Component.text("Loading chunk...", NamedTextColor.YELLOW))
         biomeList.clear()
-        val chunk = getRandomChunk()
-        copyChunk(chunk)
-        audience.sendMessage(
-            MiniMessage.miniMessage().deserialize(
-                "<dark_gray>${"-".repeat(30)}\n" +
-                    "<yellow>Loading finished, time to guess!\n" +
-                    "This chunk contains <aqua>${biomeList.size}</aqua> biomes.",
-            ),
-        )
-        selectedBiomeIndex = Random.nextInt(0, biomeList.size)
-        // turn biome text into underscores, "EXAMPLE_BIOME" -> "_______ _____"
-        val biomeText =
-            biomeList[selectedBiomeIndex]
-                .name()
-                .map {
-                    if (it == '_') {
-                        ' '
-                    } else {
-                        "_"
-                    }
-                }.joinToString("")
-        audience.sendMessage(
-            MiniMessage.miniMessage().deserialize("<gray>Hint for one biome: <yellow>$biomeText"),
-        )
+        val future = getRandomChunkAsync()
+        return future.thenCompose { chunk ->
+            copyChunk(chunk)
+            audience.sendMessage(
+                MiniMessage.miniMessage().deserialize(
+                    "<dark_gray>${"-".repeat(30)}\n" +
+                        "<yellow>Loading finished, time to guess!\n" +
+                        "This chunk contains <aqua>${biomeList.size}</aqua> biomes.",
+                ),
+            )
+            selectedBiomeIndex = Random.nextInt(0, biomeList.size)
+            // turn biome text into underscores, "EXAMPLE_BIOME" -> "_______ _____"
+            val biomeText =
+                biomeList[selectedBiomeIndex]
+                    .name()
+                    .map {
+                        if (it == '_') {
+                            ' '
+                        } else {
+                            "_"
+                        }
+                    }.joinToString("")
+            audience.sendMessage(
+                MiniMessage.miniMessage().deserialize("<gray>Hint for one biome: <yellow>$biomeText"),
+            )
+
+            CompletableFuture.completedFuture(null)
+        }
     }
 
     private fun startRound() {
         state = MineguessrState.LOADING
-        loadChunk()
-        guessed.clear()
-        state = MineguessrState.GUESSING
-        startCountdown(15 * 1000) {
-            finishRound()
+        loadChunk().thenRun {
+            guessed.clear()
+            state = MineguessrState.GUESSING
+            startCountdown(15 * 20) {
+                finishRound()
+            }
         }
     }
 
@@ -193,10 +202,12 @@ class MineguessrMinigame(
         guessed.clear()
     }
 
+    override fun onLoad() {
+        game.world.setGameRule(GameRule.REDUCED_DEBUG_INFO, true)
+    }
+
     override fun start() {
         super.start()
-
-        game.world.setGameRule(GameRule.REDUCED_DEBUG_INFO, true)
 
         for (player in game.onlinePlayers) {
             player.gameMode = GameMode.SPECTATOR

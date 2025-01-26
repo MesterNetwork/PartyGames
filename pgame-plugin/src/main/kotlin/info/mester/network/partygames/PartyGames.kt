@@ -2,9 +2,11 @@ package info.mester.network.partygames
 
 import info.mester.network.partygames.api.MinigameWorld
 import info.mester.network.partygames.api.PartyGamesCore
-import info.mester.network.partygames.game.GameManager
+import info.mester.network.partygames.game.QueueManager
 import info.mester.network.partygames.level.LevelManager
-import info.mester.network.partygames.level.LevelPlaceholder
+import info.mester.network.partygames.placeholder.LevelPlaceholder
+import info.mester.network.partygames.placeholder.PlayingPlaceholder
+import info.mester.network.partygames.placeholder.StatisticsPlaceholder
 import info.mester.network.partygames.sidebar.SidebarManager
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.megavex.scoreboardlibrary.api.ScoreboardLibrary
@@ -12,7 +14,6 @@ import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableExcep
 import net.megavex.scoreboardlibrary.api.noop.NoopScoreboardLibrary
 import org.bukkit.Bukkit
 import org.bukkit.GameRule
-import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
@@ -65,13 +66,14 @@ fun Int.pow(power: Int): Double = this.toDouble().pow(power)
 
 class PartyGames : JavaPlugin() {
     lateinit var core: PartyGamesCore
-    lateinit var gameManager: GameManager
+    lateinit var queueManager: QueueManager
     lateinit var scoreboardLibrary: ScoreboardLibrary
     lateinit var playingPlaceholder: PlayingPlaceholder
     lateinit var databaseManager: DatabaseManager
     lateinit var levelManager: LevelManager
-    lateinit var spawnLocation: Location
+    val spawnLocation get() = config.getLocation("spawn-location")!!
     lateinit var sidebarManager: SidebarManager
+    lateinit var boosterManager: BoosterManager
 
     companion object {
         private var _plugin: PartyGames? = null
@@ -100,7 +102,6 @@ class PartyGames : JavaPlugin() {
 
     fun reload() {
         reloadConfig()
-        spawnLocation = config.getLocation("spawn-location")!!
         registerMinigames()
     }
 
@@ -122,12 +123,14 @@ class PartyGames : JavaPlugin() {
         // register managers
         databaseManager = DatabaseManager(File(dataFolder, "partygames.db"))
         levelManager = LevelManager(this)
-        gameManager = GameManager(this)
+        boosterManager = BoosterManager()
+        queueManager = QueueManager(this)
         sidebarManager = SidebarManager(this)
         // register placeholders
         playingPlaceholder = PlayingPlaceholder()
         playingPlaceholder.register()
         LevelPlaceholder(levelManager).register()
+        StatisticsPlaceholder(databaseManager).register()
         // set up event listeners
         server.pluginManager.registerEvents(PartyListener(this), this)
         // init all worlds
@@ -167,7 +170,7 @@ class PartyGames : JavaPlugin() {
         // register bundles for each minigame, then family night
         core.gameRegistry.registerBundle(
             this,
-            listOf("healthshop", "speedbuilders", "gardening", "damagedealer"),
+            listOf("healthshop", "speedbuilders", "gardening", "damagedealer", "mineguessr"),
             "familynight",
             "Family Night",
         )

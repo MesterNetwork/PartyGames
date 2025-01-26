@@ -9,7 +9,9 @@ import info.mester.network.partygames.mm
 import info.mester.network.partygames.pow
 import info.mester.network.partygames.util.WeightedItem
 import info.mester.network.partygames.util.selectWeightedRandom
+import info.mester.network.partygames.util.snapTo90
 import io.papermc.paper.event.block.BlockBreakProgressUpdateEvent
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.title.Title
@@ -18,6 +20,7 @@ import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.block.Banner
 import org.bukkit.block.BlockState
@@ -30,15 +33,20 @@ import org.bukkit.block.data.type.TrapDoor
 import org.bukkit.block.structure.Mirror
 import org.bukkit.block.structure.StructureRotation
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BannerMeta
+import org.bukkit.inventory.meta.SpawnEggMeta
+import org.bukkit.persistence.PersistentDataType
 import org.bukkit.structure.Structure
 import java.io.File
 import java.time.Duration
@@ -77,7 +85,7 @@ private fun Location.toBlockVector(): BlockVector3 = BlockVector3.at(blockX, blo
 private fun Location.toPlayerArea(): CuboidRegion {
     val corner1 = clone()
     val corner2 =
-        clone().add(PLAYER_AREA_SIZE.toDouble(), PLAYER_AREA_SIZE.toDouble(), PLAYER_AREA_SIZE.toDouble())
+        clone().add((PLAYER_AREA_SIZE - 1).toDouble(), PLAYER_AREA_SIZE.toDouble(), (PLAYER_AREA_SIZE - 1).toDouble())
     return CuboidRegion(corner1.toBlockVector(), corner2.toBlockVector())
 }
 
@@ -148,7 +156,7 @@ class SpeedBuildersMinigame(
         // select a random structure based on the difficulty
         // if difficulty is null, select a random structure
         val structureData =
-            difficulty?.let { structures.filter { it.difficulty == difficulty }.random() } ?: structures.random()
+            difficulty?.let { structures.filter { it.difficulty == difficulty }.randomOrNull() } ?: structures.random()
         return structureData
     }
 
@@ -229,7 +237,32 @@ class SpeedBuildersMinigame(
             }
             correctBlocks++
         }
-        return correctBlocks.toDouble() / originalBlocks.size
+        val originalEntities = original.entities
+        val copyEntities = copy.entities
+        var correctEntities = 0
+        // go through every entity in the copy structure
+        for (copyEntity in copyEntities) {
+            val originalEntity =
+                originalEntities.firstOrNull { originalEntity ->
+                    if (originalEntity.type != copyEntity.type) {
+                        return@firstOrNull false
+                    }
+                    val originalLocation = originalEntity.location
+                    val copyLocation = copyEntity.location
+                    originalLocation.blockX == copyLocation.blockX &&
+                        originalLocation.blockY == copyLocation.blockY &&
+                        originalLocation.blockZ == copyLocation.blockZ
+                }
+            if (originalEntity == null) {
+                continue
+            }
+            // check if the rotation is the same
+            if (originalEntity.location.yaw != copyEntity.location.yaw) {
+                continue
+            }
+            correctEntities++
+        }
+        return (correctBlocks + correctEntities).toDouble() / (originalBlocks.size + originalEntities.size)
     }
 
     private fun calculateAccuracy(
@@ -247,6 +280,31 @@ class SpeedBuildersMinigame(
         return calculateAccuracy(original, copy)
     }
 
+    private fun giveItemFromEntity(
+        entity: Entity,
+        player: Player,
+    ) {
+        val entityType = entity.type
+        if (!entityType.isSpawnable || !entityType.isAlive) {
+            return
+        }
+        // attempt to get the spawn egg material
+        val spawnEggMaterialName = "${entityType.name}_SPAWN_EGG"
+        val spawnEggMaterial = Material.matchMaterial(spawnEggMaterialName)
+        if (spawnEggMaterial != null) {
+            player.inventory.addItem(ItemStack.of(spawnEggMaterial))
+        } else {
+            // just create a polar spawn egg that spawns the entity
+            val spawnEgg = ItemStack.of(Material.POLAR_BEAR_SPAWN_EGG)
+            spawnEgg.editMeta { meta ->
+                meta as SpawnEggMeta
+                meta.displayName(Component.text("${entityType.name} Spawn Egg"))
+                meta.customSpawnedType = entityType
+            }
+            player.inventory.addItem(spawnEgg)
+        }
+    }
+
     private fun giveItemsFromStructure(
         structure: Structure,
         player: Player,
@@ -254,6 +312,10 @@ class SpeedBuildersMinigame(
         val blocks = structure.palettes[0].blocks.filter { it.type != Material.AIR && it.location.y > 0 }
         blocks.forEach { block ->
             giveItemFromBlock(block, player)
+        }
+        val entities = structure.entities
+        entities.forEach { entity ->
+            giveItemFromEntity(entity, player)
         }
     }
 
@@ -273,6 +335,15 @@ class SpeedBuildersMinigame(
         for (vec in clearRegion) {
             val location = Location(startPos.world, vec.x().toDouble(), vec.y().toDouble(), vec.z().toDouble())
             location.block.type = Material.AIR
+        }
+        for (entity in startPos.world.entities.filter { entity ->
+            playerArea.contains(entity.location.toBlockVector()) &&
+                entity.persistentDataContainer.has(
+                    NamespacedKey(originalPlugin, "spawned"),
+                    PersistentDataType.BOOLEAN,
+                )
+        }) {
+            entity.remove()
         }
     }
 
@@ -400,8 +471,7 @@ class SpeedBuildersMinigame(
         // check if the block's coordinates are in the player area
         val playerArea = playerAreas[player.uniqueId] ?: return
         val blockPos = event.block.location
-        val blockVector = BlockVector3.at(blockPos.x, blockPos.y, blockPos.z)
-        if (!playerArea.contains(blockVector)) {
+        if (!playerArea.contains(blockPos.toBlockVector())) {
             event.isCancelled = true
             player.sendMessage(Component.text("You can only place blocks in your play area!", NamedTextColor.RED))
             return
@@ -462,9 +532,22 @@ class SpeedBuildersMinigame(
     override fun handlePlayerInteract(event: PlayerInteractEvent) {
         // no interactions during the memorise phase
         if (state == SpeedBuildersState.MEMORISE) {
-            event.isCancelled = true
+            event.setUseInteractedBlock(Event.Result.DENY)
+            event.setUseItemInHand(Event.Result.DENY)
         }
         if (state == SpeedBuildersState.BUILD) {
+            // check if the player tried to place a spawn egg and cancel the event if it was in a wrong position
+            kotlin.run {
+                val item = event.item ?: return@run
+                if (item.itemMeta !is SpawnEggMeta) return@run
+                val block = event.clickedBlock ?: return@run
+                val finalBlock = block.getRelative(event.blockFace)
+                val playerArea = playerAreas[event.player.uniqueId] ?: return@run
+                if (!playerArea.contains(finalBlock.location.toBlockVector())) {
+                    event.setUseInteractedBlock(Event.Result.DENY)
+                    event.setUseItemInHand(Event.Result.DENY)
+                }
+            }
             Bukkit.getScheduler().runTaskLater(
                 plugin,
                 Runnable {
@@ -476,6 +559,41 @@ class SpeedBuildersMinigame(
                 1,
             )
         }
+    }
+
+    override fun handleCreatureSpawn(
+        event: CreatureSpawnEvent,
+        player: Player,
+    ) {
+        val snappedAngle = snapTo90(player.location.yaw)
+        event.entity.setRotation(snappedAngle, 0.0f)
+        event.entity.setAI(false)
+        event.entity.persistentDataContainer.set(
+            NamespacedKey(originalPlugin, "spawned"),
+            PersistentDataType.BOOLEAN,
+            true,
+        )
+    }
+
+    override fun handlePrePlayerAttack(event: PrePlayerAttackEntityEvent) {
+        val player = event.player
+        val target = event.attacked
+        if (state != SpeedBuildersState.BUILD) {
+            return
+        }
+        if (!target.persistentDataContainer.has(
+                NamespacedKey(originalPlugin, "spawned"),
+                PersistentDataType.BOOLEAN,
+            )
+        ) {
+            return
+        }
+        val playerArea = playerAreas[player.uniqueId] ?: return
+        if (!playerArea.contains(target.location.toBlockVector())) {
+            return
+        }
+        target.remove()
+        giveItemFromEntity(target, player)
     }
 
     private fun startMemorise() {
@@ -510,6 +628,7 @@ class SpeedBuildersMinigame(
         audience.sendTitlePart(TitlePart.TITLE, mm.deserialize("<yellow>${currentStructureData!!.displayName}"))
         audience.sendMessage(Component.text("Memorise the structure!", NamedTextColor.GREEN))
         for ((playerUUID, playerArea) in playerAreas) {
+            clearPlayerArea(playerArea, false)
             val player = Bukkit.getPlayer(playerUUID) ?: continue
             // place down the structure in the play area
             val location = playerArea.toLocation(startPos.world)
@@ -526,7 +645,7 @@ class SpeedBuildersMinigame(
             player.teleport(location.clone().add(-0.5, 1.0, -0.5))
             player.isFlying = true
         }
-        startCountdown(10000) {
+        startCountdown(10 * 20) {
             startBuild()
         }
     }
@@ -541,8 +660,21 @@ class SpeedBuildersMinigame(
             player.inventory.clear()
             giveItemsFromStructure(currentStructure!!, player)
         }
+        // remove every entity spawned by the structure
+        for (entity in game.world.entities.filter {
+            it.persistentDataContainer.has(
+                NamespacedKey(
+                    originalPlugin,
+                    "spawned",
+                ),
+                PersistentDataType.BOOLEAN,
+            )
+        }) {
+            entity.remove()
+        }
         audience.sendMessage(Component.text("Build the structure!", NamedTextColor.GREEN))
-        startCountdown(30000) {
+
+        startCountdown(30 * 20) {
             startJudge()
         }
     }
@@ -581,7 +713,7 @@ class SpeedBuildersMinigame(
             }
         }
         // start a 5-second countdown and eliminate the worst players
-        startCountdown(5000, false) {
+        startCountdown(5 * 20, false) {
             // we may only eliminate max 1/5th of the playing players
             // a player is considered playing if they are in the playerAreas map
             val alivePlayers = game.onlinePlayers.filter { player -> playerAreas.containsKey(player.uniqueId) }
@@ -603,11 +735,7 @@ class SpeedBuildersMinigame(
                 win()
             } else {
                 // start a 3-second countdown to start the next round
-                startCountdown(3000, false) {
-                    // clear every player area
-                    for (playerArea in playerAreas.values) {
-                        clearPlayerArea(playerArea, false)
-                    }
+                startCountdown(3 * 20, false) {
                     startMemorise()
                 }
             }
@@ -617,6 +745,9 @@ class SpeedBuildersMinigame(
     private fun win() {
         val winner = game.onlinePlayers.firstOrNull { player -> playerAreas.containsKey(player.uniqueId) }
         audience.sendMessage(Component.text("The winner is ${winner?.name ?: "Nobody"}!", NamedTextColor.GREEN))
+        if (winner != null) {
+            game.addScore(winner, 25, "You won!")
+        }
         end()
     }
 
@@ -637,13 +768,11 @@ class SpeedBuildersMinigame(
         startMemorise()
     }
 
-    override val name: Component
-        get() = Component.text("Speed builders", NamedTextColor.AQUA)
-    override val description: Component
-        get() =
-            Component.text(
-                "You will be given a random structure you have to memorise in 10 seconds.\n" +
-                    "After the time runs out, you will have 30 seconds to replicate the structure.",
-                NamedTextColor.AQUA,
-            )
+    override val name = Component.text("Speed builders", NamedTextColor.AQUA)
+    override val description =
+        Component.text(
+            "You will be given a random structure you have to memorise in 10 seconds.\n" +
+                "After the time runs out, you will have 30 seconds to replicate the structure.",
+            NamedTextColor.AQUA,
+        )
 }

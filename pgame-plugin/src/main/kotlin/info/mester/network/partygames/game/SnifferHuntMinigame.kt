@@ -160,12 +160,10 @@ class SnifferHuntMinigame(
         }
     }
 
-    override val name: Component
-        get() = Component.text("Sniffer Hunt", NamedTextColor.AQUA)
-    override val description: Component
-        get() =
-            Component.text(
-                "Use your sniffer to hunt for items.\nTrade the items and use them to craft weapons and upgrades for the final battle!",
-                NamedTextColor.AQUA,
-            )
+    override val name = Component.text("Sniffer Hunt", NamedTextColor.AQUA)
+    override val description =
+        Component.text(
+            "Use your sniffer to hunt for items.\nTrade the items and use them to craft weapons and upgrades for the final battle!",
+            NamedTextColor.AQUA,
+        )
 }

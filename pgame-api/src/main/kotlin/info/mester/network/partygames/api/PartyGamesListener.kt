@@ -14,12 +14,14 @@ import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.Arrow
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.ArrowBodyCountChangeEvent
+import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityCombustEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
@@ -44,11 +46,14 @@ import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerSwapHandItemsEvent
 import org.bukkit.event.player.PlayerToggleFlightEvent
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.meta.SpawnEggMeta
+import java.util.UUID
 
 class PartyGamesListener(
     private val core: PartyGamesCore,
 ) : Listener {
     private val gameRegistry = core.gameRegistry
+    private val spawnEggUseMap: MutableMap<UUID, Long> = mutableMapOf()
 
     private fun getMinigameFromWorld(world: World) = gameRegistry.getGameByWorld(world)?.runningMinigame
 
@@ -274,6 +279,16 @@ class PartyGamesListener(
             return
         }
         getMinigameFromWorld(event.player.world)?.handlePlayerInteract(event)
+        if (event.useItemInHand() == Event.Result.DENY) {
+            return
+        }
+        // look for spawn eggs
+        val item = event.item ?: return
+        if (item.itemMeta !is SpawnEggMeta) return
+        // Ensure the player is using the item in their main hand
+        if (event.hand != EquipmentSlot.HAND) return
+        // Track the player using the spawn egg
+        spawnEggUseMap[event.player.uniqueId] = System.currentTimeMillis()
     }
 
     @EventHandler
@@ -335,5 +350,19 @@ class PartyGamesListener(
         if (game.state == GameState.PRE_GAME && event.cause == PlayerKickEvent.Cause.FLYING_PLAYER) {
             event.isCancelled = true
         }
+    }
+
+    @EventHandler
+    fun onCreatureSpawn(event: CreatureSpawnEvent) {
+        val minigame = getMinigameFromWorld(event.location.world) ?: return
+        // We only care about spawns caused by spawn eggs
+        if (event.spawnReason != CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) return
+        // Find the player responsible for this spawn
+        val player =
+            spawnEggUseMap.entries
+                .firstOrNull { System.currentTimeMillis() - it.value < 1000 } // Within 1 second
+                ?.key
+                ?.let { Bukkit.getPlayer(it) } ?: return
+        minigame.handleCreatureSpawn(event, player)
     }
 }

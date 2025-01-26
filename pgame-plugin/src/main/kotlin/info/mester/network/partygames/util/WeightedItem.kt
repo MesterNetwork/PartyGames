@@ -9,7 +9,7 @@ data class WeightedItem<T>(
 
 fun <T> List<WeightedItem<T>>.selectWeightedRandom(): T {
     val totalWeight = this.sumOf { it.weight }
-    val randomValue = Random(System.currentTimeMillis()).nextInt(totalWeight)
+    val randomValue = Random.nextInt(totalWeight)
     var currentWeight = 0
     for (item in this) {
         currentWeight += item.weight

@@ -93,9 +93,9 @@ private class CountdownTask(
 }
 
 class Queue(
-    val type: GameType,
+    val type: QueueType,
     val maxPlayers: Int,
-    private val manager: GameManager,
+    private val manager: QueueManager,
 ) {
     private val players = mutableListOf<Player>()
     private val countdownTask = CountdownTask(this)
@@ -232,7 +232,7 @@ class Queue(
             event.setUseInteractedBlock(Event.Result.DENY)
             if (readyCooldown.containsKey(event.player.uniqueId)) {
                 val diff = System.currentTimeMillis() - readyCooldown[event.player.uniqueId]!!
-                // 100 milliseconds is enough to fix a player instantly readying then leaving when they double click on the item
+                // 100 milliseconds is enough to fix a player instantly readying then leaving when they double-click on the item
                 if (diff < 100) {
                     return
                 }
@@ -256,7 +256,7 @@ class Queue(
             event.setUseInteractedBlock(Event.Result.DENY)
             if (readyCooldown.containsKey(event.player.uniqueId)) {
                 val diff = System.currentTimeMillis() - readyCooldown[event.player.uniqueId]!!
-                // 100 milliseconds is enough to fix a player instantly readying then leaving when they double click on the item
+                // 100 milliseconds is enough to fix a player instantly readying then leaving when they double-click on the item
                 if (diff < 100) {
                     return
                 }

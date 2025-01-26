@@ -113,3 +113,17 @@ fun spreadPlayers(
         }
     }
 }
+
+fun snapTo90(angle: Float): Float {
+    // Normalize to -180 to 180 range
+    var normalized = ((angle + 180) % 360) - 180
+    if (normalized < -180) normalized += 360
+    // Snap to nearest 90
+    return when {
+        normalized > 135 -> 180f
+        normalized > 45 -> 90f
+        normalized > -45 -> 0f
+        normalized > -135 -> -90f
+        else -> -180f
+    }
+}

@@ -6,7 +6,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
 import java.util.UUID
 
-enum class GameType(
+enum class QueueType(
     val displayName: String,
 ) {
     HEALTHSHOP("Health Shop"),
@@ -19,7 +19,7 @@ enum class GameType(
 
 private val mm = MiniMessage.miniMessage()
 
-class GameManager(
+class QueueManager(
     plugin: PartyGames,
 ) {
     private val core = plugin.core
@@ -27,7 +27,7 @@ class GameManager(
     private val queues = mutableMapOf<UUID, Queue>()
 
     private fun createQueue(
-        type: GameType,
+        type: QueueType,
         maxPlayers: Int = 8,
     ): Queue {
         val queue = Queue(type, maxPlayers, this)
@@ -36,7 +36,7 @@ class GameManager(
     }
 
     private fun getQueueForPlayers(
-        type: GameType,
+        type: QueueType,
         players: List<Player>,
     ): Queue {
         // either return the first queue that can still fit the players, or create a new queue
@@ -52,7 +52,7 @@ class GameManager(
     }
 
     fun joinQueue(
-        type: GameType,
+        type: QueueType,
         players: List<Player>,
     ) {
         // check if there is a player that is already in a game

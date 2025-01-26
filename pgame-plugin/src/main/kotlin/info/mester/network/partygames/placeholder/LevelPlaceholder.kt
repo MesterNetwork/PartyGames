@@ -1,5 +1,7 @@
-package info.mester.network.partygames.level
+package info.mester.network.partygames.placeholder
 
+import info.mester.network.partygames.level.LevelData
+import info.mester.network.partygames.level.LevelManager
 import me.clip.placeholderapi.expansion.PlaceholderExpansion
 import org.bukkit.entity.Player
 
@@ -8,7 +10,7 @@ class LevelPlaceholder(
 ) : PlaceholderExpansion() {
     override fun getIdentifier() = "level"
 
-    override fun getAuthor() = "MesterNetwork"
+    override fun getAuthor() = "Party Games"
 
     override fun getVersion() = "1.0"
 

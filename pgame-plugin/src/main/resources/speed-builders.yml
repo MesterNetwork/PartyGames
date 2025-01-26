@@ -12,12 +12,18 @@ structures:
   japanese_idk:
     difficulty: EASY
     display_name: Japanese Arch Thingy (?)
-  mushroom:
-    difficulty: EASY
-    display_name: Mushroom
   well:
     difficulty: EASY
     display_name: Well, well, well
+  first_house:
+    difficulty: EASY
+    display_name: First House
+  herobrine:
+    difficulty: EASY
+    display_name: Herobrine
+  kitchen:
+    difficulty: EASY
+    display_name: Kitchen
   # Medium difficulty
   bookshelves:
     difficulty: MEDIUM
@@ -34,6 +40,12 @@ structures:
   warrior:
     difficulty: MEDIUM
     display_name: Warrior
+  cart:
+    difficulty: MEDIUM
+    display_name: Cart
+  colors:
+    difficulty: MEDIUM
+    display_name: Colors
   # Hard difficulty
   tree:
     difficulty: HARD
@@ -50,6 +62,9 @@ structures:
   graveyard:
     difficulty: HARD
     display_name: Graveyard
+  icecaps:
+    difficulty: HARD
+    display_name: Ice Caps
   # Insane difficulty
   outpost:
     difficulty: INSANE

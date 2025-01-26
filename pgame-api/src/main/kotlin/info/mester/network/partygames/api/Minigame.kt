@@ -13,6 +13,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityCombustEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
@@ -38,7 +39,7 @@ import kotlin.random.Random
 
 abstract class Minigame(
     protected val game: Game,
-    name: String,
+    val minigameName: String,
 ) {
     private var _running = false
     private var countdownUUID = UUID.randomUUID()
@@ -58,7 +59,7 @@ abstract class Minigame(
 
     init {
         val core = PartyGamesCore.getInstance()
-        val minigameConfig = core.gameRegistry.getMinigame(name)!!
+        val minigameConfig = core.gameRegistry.getMinigame(minigameName)!!
         originalPlugin = minigameConfig.plugin
         worldIndex = Random.nextInt(0, minigameConfig.worlds.size)
         rootWorldName = minigameConfig.worlds[worldIndex].name
@@ -79,12 +80,14 @@ abstract class Minigame(
 
     /**
      * Executed when the minigame is loaded and we already have a world ready
+     *
      * Can be used to set up the world (unlike in the constructor, where a world is not yet ready)
      */
     open fun onLoad() {}
 
     /**
      * A function to finish the minigame (roll back any changes, handle scores, etc.)
+     *
      * This will always run, regardless if the minigame was gracefully ended or not
      */
     open fun finish() {}
@@ -118,29 +121,30 @@ abstract class Minigame(
     }
 
     private fun updateRemainingTime(
-        startTime: Long,
-        duration: Long,
+        startTime: Int,
+        duration: Int,
     ): Boolean {
         val bar = game.remainingBossBar
-        val remainingTime = startTime + duration - System.currentTimeMillis()
+        val remainingTimeTick = startTime + duration - Bukkit.getCurrentTick()
+        val remainingTime = remainingTimeTick * 0.05
         if (remainingTime < 0) {
             audience.hideBossBar(bar)
             return false
         }
-        val time = remainingTime / 1000
-        val minutes = time / 60
-        val seconds = time % 60
+        val timeSeconds = remainingTime.toInt()
+        val minutes = timeSeconds / 60
+        val seconds = timeSeconds % 60
         val name =
             "<green>Time remaining: <red>$minutes<gray>:</gray>${seconds.toString().padStart(2, '0')}"
 
         bar.name(MiniMessage.miniMessage().deserialize(name))
-        bar.progress(remainingTime.toFloat() / duration.toFloat())
+        bar.progress(remainingTimeTick.toFloat() / duration.toFloat())
 
         return true
     }
 
     fun startCountdown(
-        duration: Long,
+        duration: Int,
         showBar: Boolean,
         onEnd: Runnable,
     ) {
@@ -150,7 +154,7 @@ abstract class Minigame(
             audience.hideBossBar(game.remainingBossBar)
         }
         countdownUUID = UUID.randomUUID()
-        val startTime = System.currentTimeMillis()
+        val startTime = Bukkit.getCurrentTick()
         Bukkit.getScheduler().runTaskTimer(
             plugin,
             object : Consumer<BukkitTask> {
@@ -173,7 +177,7 @@ abstract class Minigame(
     }
 
     fun startCountdown(
-        duration: Long,
+        duration: Int,
         onEnd: Runnable,
     ) {
         startCountdown(duration, true, onEnd)
@@ -199,6 +203,12 @@ abstract class Minigame(
     open fun handleEntityRegainHealth(event: EntityRegainHealthEvent) {}
 
     open fun handleEntityShootBow(event: EntityShootBowEvent) {}
+
+    open fun handleCreatureSpawn(
+        event: CreatureSpawnEvent,
+        player: Player,
+    ) {
+    }
 
     // block events
     open fun handleBlockPhysics(event: BlockPhysicsEvent) {}
@@ -233,6 +243,12 @@ abstract class Minigame(
 
     open fun handleInventoryOpen(event: InventoryOpenEvent) {}
 
+    open fun handleInventoryClick(
+        event: InventoryClickEvent,
+        clickedInventory: Inventory,
+    ) {
+    }
+
     // game events
     open fun handleDisconnect(
         player: Player,
@@ -241,12 +257,6 @@ abstract class Minigame(
     }
 
     open fun handleRejoin(player: Player) {}
-
-    open fun handleInventoryClick(
-        event: InventoryClickEvent,
-        clickedInventory: Inventory,
-    ) {
-    }
 
     abstract val name: Component
     abstract val description: Component

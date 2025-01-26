@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.1.0" apply false
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.14" apply false
     id("org.sonarqube") version "4.2.1.3168"
 }
 

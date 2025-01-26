@@ -1,6 +1,6 @@
-package info.mester.network.partygames
+package info.mester.network.partygames.placeholder
 
-import info.mester.network.partygames.game.GameType
+import info.mester.network.partygames.game.QueueType
 import me.clip.placeholderapi.expansion.PlaceholderExpansion
 import org.bukkit.entity.Player
 import java.util.concurrent.ConcurrentHashMap
@@ -9,15 +9,15 @@ class PlayingPlaceholder : PlaceholderExpansion() {
     private val playingMap: MutableMap<String, Int> = ConcurrentHashMap()
 
     init {
-        val gameTypes = GameType.entries.map { it.name }
-        for (gameType in gameTypes) {
+        val queueTypes = QueueType.entries.map { it.name }
+        for (gameType in queueTypes) {
             addPlaying(gameType, 0)
         }
     }
 
     override fun getIdentifier(): String = "playing"
 
-    override fun getAuthor(): String = "MesterNetwork"
+    override fun getAuthor(): String = "Party Games"
 
     override fun getVersion(): String = "1.0"
 

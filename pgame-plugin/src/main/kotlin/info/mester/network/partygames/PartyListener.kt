@@ -7,22 +7,32 @@ import info.mester.network.partygames.api.events.GameTerminatedEvent
 import info.mester.network.partygames.api.events.PlayerRejoinedEvent
 import info.mester.network.partygames.api.events.PlayerRemovedFromGameEvent
 import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.util.snapTo90
 import io.papermc.paper.event.player.AsyncChatEvent
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
+import org.bukkit.GameMode
+import org.bukkit.NamespacedKey
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.ArrowBodyCountChangeEvent
+import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
+import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.world.WorldLoadEvent
+import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.meta.SpawnEggMeta
+import org.bukkit.persistence.PersistentDataType
+import java.util.UUID
 import kotlin.math.floor
 
 class PartyListener(
     private val plugin: PartyGames,
 ) : Listener {
-    private val gameManager = plugin.gameManager
+    private val gameManager = plugin.queueManager
     private val core = plugin.core
     private val sidebarManager = plugin.sidebarManager
 
@@ -70,7 +80,7 @@ class PartyListener(
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
-        gameManager.getQueueOf(event.player)?.removePlayer(event.player)
+        gameManager.removePlayerFromQueue(event.player)
         plugin.sidebarManager.unregisterPlayer(event.player)
     }
 
@@ -91,7 +101,7 @@ class PartyListener(
         if (plugin.core.isAdmin(event.player)) {
             return
         }
-        plugin.gameManager.getQueueOf(event.player)?.handlePlayerInteract(event)
+        plugin.queueManager.getQueueOf(event.player)?.handlePlayerInteract(event)
     }
 
     @EventHandler
@@ -129,24 +139,30 @@ class PartyListener(
     @EventHandler
     fun onGameEnded(event: GameEndedEvent) {
         val timeElapsed = (Bukkit.getCurrentTick() - event.game.startTime) * 0.05
-        // increase everyone's xp based on the score
+        // increase the xp of players
         for ((player, data) in event.topList) {
-            val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId)
             // XP is points gained + 15 per half a minute
             val xpFromPlayTime = (timeElapsed.toInt() / 30) * 15
-            val addedXp = data.score.coerceAtLeast(0) + xpFromPlayTime
-            plugin.levelManager.addXp(player.uniqueId, addedXp)
-            val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
+            val xpFromScore = data.score.coerceAtLeast(0)
+            plugin.databaseManager.addPointsGained(player.uniqueId, event.game.bundle.name, xpFromScore)
+            plugin.databaseManager.addTimePlayed(player.uniqueId, event.game.bundle.name, timeElapsed.toInt())
+            // process boosters
+            val boosters = plugin.boosterManager.getBooster(player)
+            val boosterMultiplier = boosters.fold(1.0) { acc, booster -> acc * booster.multiplier }
+            val finalXp = ((xpFromScore + xpFromPlayTime) * boosterMultiplier).toInt()
+            val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId)
+            plugin.levelManager.addXp(player.uniqueId, finalXp)
             val onlinePlayer = Bukkit.getPlayer(player.uniqueId) ?: return
+            val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
             val levelUpMessage =
                 buildString {
                     val levelString = "<gray>Level: <yellow>${oldLevel.level}"
                     append(levelString)
                     val leveledUp = newLevel.level > oldLevel.level
                     if (leveledUp) {
-                        append(" <dark_gray>-> <green>${newLevel.level} <green><bold>LEVEL UP!</bold>\n")
+                        appendLine(" <dark_gray>-> <green>${newLevel.level} <green><bold>LEVEL UP!</bold>")
                     } else {
-                        append("\n")
+                        appendLine()
                     }
                     append("<gray>Progress: ")
                     append("<yellow>${newLevel.xp} <dark_gray>[")
@@ -172,13 +188,26 @@ class PartyListener(
                     for (i in 0 until maxSquares - filledSquares) {
                         append("<gray>■")
                     }
-                    append("<dark_gray>] <green>${newLevel.xpToNextLevel}\n")
-                    append("<yellow>+${data.score} XP <gray>(Points Gained)\n")
-                    append("<yellow>+$xpFromPlayTime XP <gray>(Time Played)\n")
+                    appendLine("<dark_gray>] <green>${newLevel.xpToNextLevel}")
+                    appendLine("<yellow>+${data.score} XP <gray>(Points Gained)")
+                    appendLine("<yellow>+$xpFromPlayTime XP <gray>(Time Played)")
+                    for (booster in boosters) {
+                        append(
+                            "<yellow>+${((booster.multiplier - 1) * 100).toInt()}% <gray>(${booster.name})\n",
+                        )
+                    }
+                    appendLine("<gold>= <yellow>$finalXp XP")
                     append("<dark_gray>${"-".repeat(30)}")
                 }
             onlinePlayer.sendMessage(mm.deserialize(levelUpMessage))
         }
+        // increase games won stat
+        plugin.databaseManager.addGameWon(
+            event.topList
+                .first()
+                .player.uniqueId,
+            event.game.bundle.name,
+        )
     }
 
     @EventHandler
@@ -201,5 +230,76 @@ class PartyListener(
             player.teleport(plugin.spawnLocation)
         }
         plugin.playingPlaceholder.removePlaying(event.game.bundle.name, 1)
+    }
+
+    @EventHandler
+    fun onPlayerMove(event: PlayerMoveEvent) {
+        val player = event.player
+        if (core.isAdmin(player)) {
+            return
+        }
+        if (player.world.name == "world" && event.to.y < 50 && player.gameMode == GameMode.SURVIVAL) {
+            player.teleport(plugin.spawnLocation)
+        }
+    }
+
+    private val spawnEggUseMap: MutableMap<UUID, Long> = mutableMapOf()
+
+    @EventHandler
+    fun playerUsesSpawnEgg(event: PlayerInteractEvent) {
+        val player = event.player
+        if (!player.hasPermission("partygames.spawnegg")) {
+            return
+        }
+        if (core.gameRegistry.getGameOf(player) != null) {
+            return
+        }
+        val item = event.item ?: return
+        // Check if the item is a spawn egg
+        if (item.itemMeta !is SpawnEggMeta) return
+        // Ensure the player is using the item in their main hand
+        if (event.hand != EquipmentSlot.HAND) return
+        // Track the player using the spawn egg
+        spawnEggUseMap[player.uniqueId] = System.currentTimeMillis()
+    }
+
+    @EventHandler
+    fun onCreatureSpawn(event: CreatureSpawnEvent) {
+        // We only care about spawns caused by spawn eggs
+        if (event.spawnReason != CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) return
+        // Find the player responsible for this spawn
+        val player =
+            spawnEggUseMap.entries
+                .firstOrNull { System.currentTimeMillis() - it.value < 1000 } // Within 1 second
+                ?.key
+                ?.let { Bukkit.getPlayer(it) } ?: return
+        val snappedAngle = snapTo90(player.location.yaw)
+        val spawnee = event.entity
+        spawnee.setRotation(snappedAngle, 0.0f)
+        spawnee.setAI(false)
+        spawnee.persistentDataContainer.set(
+            NamespacedKey(plugin, "spawned"),
+            PersistentDataType.BOOLEAN,
+            true,
+        )
+    }
+
+    @EventHandler
+    fun onPrePlayerAttack(event: PrePlayerAttackEntityEvent) {
+        val player = event.player
+        if (core.gameRegistry.getGameOf(player) != null) {
+            return
+        }
+        if (!player.hasPermission("partygames.spawnegg")) {
+            return
+        }
+        val target = event.attacked
+        if (target.persistentDataContainer.has(
+                NamespacedKey(plugin, "spawned"),
+                PersistentDataType.BOOLEAN,
+            )
+        ) {
+            target.remove()
+        }
     }
 }

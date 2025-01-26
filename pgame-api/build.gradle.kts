@@ -1,6 +1,7 @@
 plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
-    id("io.papermc.paperweight.userdev") version "2.0.0-beta.13"
+    id("io.papermc.paperweight.userdev")
+    id("org.jetbrains.dokka") version "2.0.0"
     java
 }
 
@@ -39,6 +40,7 @@ tasks {
 
     build {
         dependsOn("shadowJar")
+        dependsOn("dokkaGenerateModuleHtml")
     }
 
     test {

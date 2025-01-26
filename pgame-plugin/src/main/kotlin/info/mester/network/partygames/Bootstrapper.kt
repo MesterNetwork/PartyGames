@@ -3,9 +3,9 @@ package info.mester.network.partygames
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
 import info.mester.network.partygames.api.PartyGamesCore
-import info.mester.network.partygames.game.GameType
 import info.mester.network.partygames.game.HealthShopMinigame
 import info.mester.network.partygames.game.MineguessrMinigame
+import info.mester.network.partygames.game.QueueType
 import info.mester.network.partygames.game.SnifferHuntMinigame
 import info.mester.network.partygames.game.SpeedBuildersMinigame
 import io.papermc.paper.command.brigadier.Commands
@@ -89,11 +89,11 @@ class Bootstrapper : PluginBootstrap {
                                     return@executes 1
                                 }
                                 val typeRaw = StringArgumentType.getString(ctx, "game").uppercase()
-                                if (!GameType.entries.any { it.name.uppercase() == typeRaw }) {
+                                if (!QueueType.entries.any { it.name.uppercase() == typeRaw }) {
                                     return@executes 1
                                 }
-                                val type = GameType.valueOf(typeRaw)
-                                val currentQueue = PartyGames.plugin.gameManager.getQueueOf(sender)
+                                val type = QueueType.valueOf(typeRaw)
+                                val currentQueue = PartyGames.plugin.queueManager.getQueueOf(sender)
                                 if (currentQueue != null && currentQueue.type == type) {
                                     sender.sendMessage(
                                         Component.text(
@@ -103,7 +103,7 @@ class Bootstrapper : PluginBootstrap {
                                     )
                                     return@executes 1
                                 }
-                                PartyGames.plugin.gameManager.joinQueue(type, listOf(sender))
+                                PartyGames.plugin.queueManager.joinQueue(type, listOf(sender))
                                 Command.SINGLE_SUCCESS
                             },
                     ).build(),

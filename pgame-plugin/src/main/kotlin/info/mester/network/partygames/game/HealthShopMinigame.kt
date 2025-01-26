@@ -281,7 +281,7 @@ class HealthShopMinigame(
             )
         }
         // start a 30-second countdown for the shop state
-        startCountdown(30000) {
+        startCountdown(30 * 20) {
             startFight()
         }
     }
@@ -315,7 +315,7 @@ class HealthShopMinigame(
             }
         }
         // start a 3-minute countdown for the fight
-        startCountdown(3 * 60 * 1000) {
+        startCountdown(3 * 60 * 20) {
             end()
         }
         // start the supply chest timer
@@ -782,12 +782,10 @@ class HealthShopMinigame(
         player.playSound(sound, Sound.Emitter.self())
     }
 
-    override val name: Component
-        get() = Component.text("Health Shop", NamedTextColor.AQUA)
-    override val description: Component
-        get() =
-            Component.text(
-                "Buy items and weapons to fight in a free for all battleground.\nWatch out, the items cost not money, but your own health!",
-                NamedTextColor.AQUA,
-            )
+    override val name = Component.text("Health Shop", NamedTextColor.AQUA)
+    override val description =
+        Component.text(
+            "Buy items and weapons to fight in a free for all battleground.\nWatch out, the items cost not money, but your own health!",
+            NamedTextColor.AQUA,
+        )
 }

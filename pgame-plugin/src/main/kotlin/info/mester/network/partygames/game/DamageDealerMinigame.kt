@@ -16,6 +16,7 @@ import org.bukkit.GameRule
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.enchantments.Enchantment
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Monster
 import org.bukkit.entity.Player
 import org.bukkit.entity.Spider
@@ -186,8 +187,7 @@ class DamageDealerMinigame(
         val posSpider = startPos.clone().add(2.0, 0.0, 0.0)
         val posZombie = startPos.clone().add(-2.0, 0.0, 0.0)
         spawnTarget(posSpider, Spider::class.java)
-        val zombie = spawnTarget(posZombie, Zombie::class.java)
-        zombie.equipment.helmet = ItemStack.of(Material.IRON_HELMET)
+        spawnTarget(posZombie, Zombie::class.java)
         game.onlinePlayers.forEach { player ->
             giveItems(player, 0)
         }
@@ -198,7 +198,7 @@ class DamageDealerMinigame(
                 "- You only have 20 tries!"
         audience.sendMessage(mm.deserialize(introductionMessage))
 
-        startCountdown(3 * 60 * 1000) {
+        startCountdown(3 * 60 * 20) {
             end()
         }
     }
@@ -209,14 +209,15 @@ class DamageDealerMinigame(
     }
 
     override fun handleEntityDamageByEntity(event: EntityDamageByEntityEvent) {
-        if (event.entity is Player) {
-            event.isCancelled = true
-        }
         val damage = event.finalDamage
         event.damage = 0.0
         val player = event.damager
         if (player !is Player) {
             return
+        }
+        val target = event.entity
+        if (target is LivingEntity) {
+            target.noDamageTicks = 0
         }
         val level = 20 - player.health.toInt()
         val multiplier = 1.5 - level * 0.02
@@ -232,8 +233,8 @@ class DamageDealerMinigame(
             }
             audience.sendMessage(mm.deserialize("<yellow>${player.name} has finished!"))
         } else {
-            player.damage(1.0)
-            giveItems(player, 20 - player.health.toInt())
+            player.health -= 1
+            giveItems(player, level + 1)
         }
     }
 
@@ -241,12 +242,10 @@ class DamageDealerMinigame(
         event.isCancelled = false
     }
 
-    override val name: Component
-        get() = Component.text("Damage Dealer", NamedTextColor.AQUA)
-    override val description: Component
-        get() =
-            Component.text(
-                "Deal as much damage as possible!\nAfter each hit, you lose 1 health and get new items!",
-                NamedTextColor.AQUA,
-            )
+    override val name = Component.text("Damage Dealer", NamedTextColor.AQUA)
+    override val description =
+        Component.text(
+            "Deal as much damage as possible!\nAfter each hit, you lose 1 health and get new items!",
+            NamedTextColor.AQUA,
+        )
 }
