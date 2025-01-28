@@ -12,13 +12,13 @@ data class Booster(
 class BoosterManager {
     private fun getRankBooster(player: Player): Booster? {
         if (player.hasPermission("group.insane")) {
-            return Booster("<dark_red><bold>Insane <gold>Booster</gold></bold></dark_red>", 1.5)
+            return Booster("<dark_red><bold>Insane <gold>Booster</gold></bold></dark_red>", 1.75)
         }
         if (player.hasPermission("group.pro")) {
-            return Booster("<red>Pro <gold>Booster</gold></red>", 1.2)
+            return Booster("<red>Pro <gold>Booster</gold></red>", 1.3)
         }
         if (player.hasPermission("group.advanced")) {
-            return Booster("<aqua>Advanced <gold>Booster</gold></aqua>", 1.1)
+            return Booster("<aqua>Advanced <gold>Booster</gold></aqua>", 1.15)
         }
         if (player.hasPermission("group.beginner")) {
             return Booster("<green>Beginner <gold>Booster</gold></green>", 1.05)
