@@ -122,8 +122,8 @@ abstract class Plant(
     fun killWeed(player: Player): Boolean {
         val score = getWeedKillScore()
         if (score == 0) {
-            // punish the player with -10 points for killing a non-weed
-            game.addScore(player, -10, "Killed non-weed")
+            // punish the player for killing a non-weed
+            game.addScore(player, -5, "Killed non-weed")
             return false
         }
         // give points to player

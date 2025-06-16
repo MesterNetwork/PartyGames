@@ -33,6 +33,7 @@ import org.bukkit.entity.EntityType
 import org.bukkit.entity.FallingBlock
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
+import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityRegainHealthEvent
@@ -137,7 +138,7 @@ class HealthShopMinigame(
 
     private val arrowRegenerating = mutableListOf<UUID>()
     private var state = HealthShopMinigameState.STARTING
-    private var fightStartedTime = -1L
+    private var fightStartedTime = -1
     private var readyPlayers = 0
 
     /*
@@ -216,9 +217,13 @@ class HealthShopMinigame(
         player: Player,
         didSurvive: Boolean,
     ) {
+        if (fightStartedTime == -1) {
+            return
+        }
+        val survivedTicks = Bukkit.getCurrentTick() - fightStartedTime
+        val survivedSeconds = survivedTicks * 20
         // for every 20th second the player has survived, give them a point
-        val survivedTime = System.currentTimeMillis() - fightStartedTime
-        val survivedSeconds = survivedTime / 1000
+        // 1 point every 10th second if the player is still alive (last player standing, time is up)
         val survivedPoints = floor((survivedSeconds / 20).toDouble()).toInt() * (if (didSurvive) 2 else 1)
         if (survivedPoints > 0) {
             game.addScore(player, survivedPoints, "Survived $survivedSeconds seconds")
@@ -264,26 +269,18 @@ class HealthShopMinigame(
             player.health = startingHealth
             player.sendHealthUpdate()
             // reset perks
-            player.persistentDataContainer.set(
-                NamespacedKey(plugin, "steal_perk"),
-                PersistentDataType.BOOLEAN,
-                false,
-            )
-            player.persistentDataContainer.set(
-                NamespacedKey(plugin, "heal_perk"),
-                PersistentDataType.BOOLEAN,
-                false,
-            )
-            player.persistentDataContainer.set(
-                NamespacedKey(plugin, "double_jump"),
-                PersistentDataType.BOOLEAN,
-                false,
-            )
+            resetPerks(player)
         }
         // start a 30-second countdown for the shop state
         startCountdown(30 * 20) {
             startFight()
         }
+    }
+
+    private fun resetPerks(player: Player) {
+        player.persistentDataContainer.remove(NamespacedKey(plugin, "steal_perk"))
+        player.persistentDataContainer.remove(NamespacedKey(plugin, "heal_perk"))
+        player.persistentDataContainer.remove(NamespacedKey(plugin, "double_jump"))
     }
 
     private fun startFight() {
@@ -292,7 +289,7 @@ class HealthShopMinigame(
         }
 
         state = HealthShopMinigameState.FIGHT
-        fightStartedTime = System.currentTimeMillis()
+        fightStartedTime = Bukkit.getCurrentTick()
 
         for (player in game.onlinePlayers) {
             // close the shop UI
@@ -326,6 +323,7 @@ class HealthShopMinigame(
 
     override fun finish() {
         for (player in game.onlinePlayers) {
+            resetPerks(player)
             // give every alive player survive points
             if (player.gameMode == GameMode.SURVIVAL) {
                 giveSurvivePoints(player, true)
@@ -333,6 +331,7 @@ class HealthShopMinigame(
             // reset max health
             val attribute = player.getAttribute(Attribute.MAX_HEALTH)!!
             attribute.baseValue = attribute.defaultValue
+            player.sendHealthUpdate()
         }
     }
 
@@ -639,10 +638,11 @@ class HealthShopMinigame(
         // check for double jump perk
         val player = event.player
         if (player.persistentDataContainer.get(
-                NamespacedKey(PartyGames.plugin, "double_jump"),
+                NamespacedKey(plugin, "double_jump"),
                 PersistentDataType.BOOLEAN,
             ) == true &&
-            player.gameMode != GameMode.CREATIVE
+            player.gameMode != GameMode.CREATIVE &&
+            state == HealthShopMinigameState.FIGHT
         ) {
             // check if the player is on the ground and allow
             if (player.location.block
@@ -688,6 +688,12 @@ class HealthShopMinigame(
                 0,
                 1,
             )
+        }
+    }
+
+    override fun handleBlockPhysics(event: BlockPhysicsEvent) {
+        if (event.block.type == Material.OAK_PLANKS) {
+            event.isCancelled = true
         }
     }
 
@@ -746,12 +752,11 @@ class HealthShopMinigame(
         if (player.gameMode == GameMode.CREATIVE) {
             return
         }
-        val perk =
-            player.persistentDataContainer.get(
-                NamespacedKey(PartyGames.plugin, "double_jump"),
+        if (!player.persistentDataContainer.has(
+                NamespacedKey(plugin, "double_jump"),
                 PersistentDataType.BOOLEAN,
             )
-        if (perk != true) {
+        ) {
             return
         }
         // check for last double jump

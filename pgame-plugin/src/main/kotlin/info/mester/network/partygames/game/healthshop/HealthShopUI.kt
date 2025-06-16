@@ -480,8 +480,9 @@ class HealthShopUI(
             player.inventory.addItem(ItemStack.of(Material.FLINT_AND_STEEL, 1))
         }
         // process oak planks
-        if (purchasedItems.any { it.key == "oak_planks" }) {
-            player.inventory.addItem(ItemStack.of(Material.OAK_PLANKS, 64))
+        val oakPlanks = purchasedItems.firstOrNull { it.key == "oak_planks" }
+        if (oakPlanks != null) {
+            player.inventory.addItem(ItemStack.of(Material.OAK_PLANKS, oakPlanks.amount))
         }
     }
 }

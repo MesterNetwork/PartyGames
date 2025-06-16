@@ -28,14 +28,16 @@ class ZombieWeed(
 
     private fun spawnEnemy() {
         // spawn an invisible zombie that'll act as the weed enemy
-        location.world.spawn(location.clone().add(0.5, 0.0, 0.5), Zombie::class.java) { entity ->
-            entity.isInvisible = true
-            entity.isCollidable = false
-            entity.isSilent = true
-            entity.isInvulnerable = true
-            entity.addPotionEffect(PotionEffect(PotionEffectType.INVISIBILITY, -1, 255, false, false, false))
-            entity.getAttribute(Attribute.FOLLOW_RANGE)?.baseValue = 64.0
-            entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = 2.0
+        location.world.spawn(location.clone().add(0.5, 0.0, 0.5), Zombie::class.java) { zombie ->
+            zombie.isInvisible = true
+            zombie.isCollidable = false
+            zombie.isSilent = true
+            zombie.isInvulnerable = true
+            zombie.addPotionEffect(PotionEffect(PotionEffectType.INVISIBILITY, -1, 255, false, false, false))
+            zombie.getAttribute(Attribute.FOLLOW_RANGE)?.baseValue = 64.0
+            zombie.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = 2.0
+            zombie.setShouldBurnInDay(false)
+            zombie.target = location.world.getNearbyPlayers(zombie.location, 16.0).firstOrNull()
             // spawn a block display to act as the weed
             location.world.spawn(location, BlockDisplay::class.java) { blockDisplay ->
                 blockDisplay.block = Material.DEAD_BUSH.createBlockData()
@@ -52,12 +54,12 @@ class ZombieWeed(
                 Bukkit
                     .getScheduler()
                     .runTaskTimer(PartyGames.plugin, { t ->
-                        if (entity.isDead) {
+                        if (!zombie.isValid) {
                             t.cancel()
                             blockDisplay.remove()
                             return@runTaskTimer
                         }
-                        blockDisplay.teleport(entity.location)
+                        blockDisplay.teleport(zombie.location)
                     }, 0, 1)
             }
         }

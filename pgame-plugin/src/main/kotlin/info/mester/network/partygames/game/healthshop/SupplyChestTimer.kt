@@ -6,7 +6,7 @@ import java.util.function.Consumer
 import kotlin.math.exp
 import kotlin.random.Random
 
-private const val STEEPNESS = 2.2
+private const val STEEPNESS = 2.05
 
 class SupplyChestTimer(
     private val minigame: HealthShopMinigame,

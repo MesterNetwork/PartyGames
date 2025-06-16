@@ -24,6 +24,21 @@ structures:
   kitchen:
     difficulty: EASY
     display_name: Kitchen
+  drug_farm:
+    difficulty: EASY
+    display_name: Drug Farm (very legal, trust)
+  animal_farm:
+    difficulty: EASY
+    display_name: Animal Farm
+  village:
+    difficulty: EASY
+    display_name: Village
+  stronghold:
+    difficulty: EASY
+    display_name: Stronghold
+  bordem:
+    difficulty: EASY
+    display_name: Bordem
   # Medium difficulty
   bookshelves:
     difficulty: MEDIUM
@@ -31,9 +46,6 @@ structures:
   dragon:
     difficulty: MEDIUM
     display_name: Dragon
-  enchanting:
-    difficulty: MEDIUM
-    display_name: Enchanting Room
   bigportal:
     difficulty: MEDIUM
     display_name: Big Portal
@@ -43,10 +55,19 @@ structures:
   cart:
     difficulty: MEDIUM
     display_name: Cart
-  colors:
+  botanic:
     difficulty: MEDIUM
-    display_name: Colors
+    display_name: Botanic Garden
+  witch_hut:
+    difficulty: MEDIUM
+    display_name: Witch Hut
   # Hard difficulty
+  enchanting:
+    difficulty: HARD
+    display_name: Enchanting Room
+  colors:
+    difficulty: HARD
+    display_name: Colors
   tree:
     difficulty: HARD
     display_name: Tree
@@ -72,3 +93,8 @@ structures:
   end_city:
     difficulty: INSANE
     display_name: End City
+scores:
+  EASY: 10
+  MEDIUM: 15
+  HARD: 25
+  INSANE: 40

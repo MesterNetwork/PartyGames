@@ -39,7 +39,7 @@ import kotlin.random.Random
 
 abstract class Minigame(
     protected val game: Game,
-    val minigameName: String,
+    minigameName: String,
 ) {
     private var _running = false
     private var countdownUUID = UUID.randomUUID()
@@ -98,6 +98,7 @@ abstract class Minigame(
     private fun end(nextGame: Boolean) {
         _running = false
 
+        stopCountdown()
         audience.hideBossBar(game.remainingBossBar)
         finish()
 
@@ -248,15 +249,22 @@ abstract class Minigame(
         clickedInventory: Inventory,
     ) {
     }
-
     // game events
+
+    /**
+     * Triggers when a player disconnects from the game.
+     *
+     * @param player The player who disconnected.
+     * @param didLeave Indicates if the player left the game (true) or temporarily disconnected (false).
+     */
     open fun handleDisconnect(
         player: Player,
         didLeave: Boolean,
     ) {
     }
 
-    open fun handleRejoin(player: Player) {}
+    open fun handleRejoin(player: Player) {
+    }
 
     abstract val name: Component
     abstract val description: Component

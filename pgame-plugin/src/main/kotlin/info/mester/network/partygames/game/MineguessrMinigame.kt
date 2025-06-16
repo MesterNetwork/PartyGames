@@ -8,6 +8,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import net.kyori.adventure.translation.GlobalTranslator
 import org.bukkit.Bukkit
 import org.bukkit.ChunkSnapshot
 import org.bukkit.GameMode
@@ -15,6 +16,7 @@ import org.bukkit.GameRule
 import org.bukkit.World
 import org.bukkit.block.Biome
 import org.bukkit.event.block.BlockPhysicsEvent
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import kotlin.random.Random
@@ -42,6 +44,15 @@ private fun levenshteinDistance(
 
     return dp[a.length][b.length]
 }
+
+private fun Biome.getBiomeName(locale: Locale): String =
+    PlainTextComponentSerializer
+        .plainText()
+        .serialize(GlobalTranslator.render(Component.translatable(translationKey()), locale))
+        .split(" ")
+        .joinToString(" ") { word ->
+            word.replaceFirstChar { letter -> letter.uppercase() }
+        }
 
 enum class MineguessrState {
     LOADING,
@@ -75,7 +86,6 @@ class MineguessrMinigame(
     private var state = MineguessrState.LOADING
     private val biomeList = mutableListOf<Biome>()
     private val guessed = mutableListOf<UUID>()
-    private var selectedBiomeIndex = 0
 
     private fun getRandomChunkAsync(): CompletableFuture<ChunkSnapshot> {
         var worldSize = sourceWorld.worldBorder.size
@@ -136,22 +146,6 @@ class MineguessrMinigame(
                         "This chunk contains <aqua>${biomeList.size}</aqua> biomes.",
                 ),
             )
-            selectedBiomeIndex = Random.nextInt(0, biomeList.size)
-            // turn biome text into underscores, "EXAMPLE_BIOME" -> "_______ _____"
-            val biomeText =
-                biomeList[selectedBiomeIndex]
-                    .name()
-                    .map {
-                        if (it == '_') {
-                            ' '
-                        } else {
-                            "_"
-                        }
-                    }.joinToString("")
-            audience.sendMessage(
-                MiniMessage.miniMessage().deserialize("<gray>Hint for one biome: <yellow>$biomeText"),
-            )
-
             CompletableFuture.completedFuture(null)
         }
     }
@@ -167,21 +161,15 @@ class MineguessrMinigame(
         }
     }
 
-    private fun formatBiomeName(biome: Biome): String =
-        biome
-            .name()
-            .split('_') // Split by underscores
-            .joinToString(" ") { word ->
-                word.lowercase().replaceFirstChar { it.uppercase() } // Capitalize first letter
-            }
-
     private fun finishRound() {
         stopCountdown()
         // turn biomes into this: "Biome Name, "Biome Name2", "Biome Name3"
-        val biomeText = biomeList.joinToString("<gray>,</gray> ") { formatBiomeName(it) }
-        audience.sendMessage(
-            MiniMessage.miniMessage().deserialize("<yellow>The chunk had these biomes: <aqua>$biomeText"),
-        )
+        for (player in game.onlinePlayers) {
+            val biomeText = biomeList.joinToString("<gray>,</gray> ") { it.getBiomeName(player.locale()) }
+            player.sendMessage(
+                MiniMessage.miniMessage().deserialize("<yellow>The chunk had these biomes: <aqua>$biomeText"),
+            )
+        }
         guessed.clear()
         // delay the new round by 1 tick, to give time for the end message to appear
         Bukkit.getScheduler().runTaskLater(
@@ -221,13 +209,19 @@ class MineguessrMinigame(
     }
 
     override fun handlePlayerChat(event: AsyncChatEvent) {
+        if (!running) {
+            return
+        }
         if (guessed.contains(event.player.uniqueId)) {
             event.player.sendMessage(Component.text("You already guessed!", NamedTextColor.RED))
             event.isCancelled = true
             return
         }
         val plainText = PlainTextComponentSerializer.plainText().serialize(event.message())
-        val biomes = biomeList.map { it.name().replace("_", " ").uppercase() }
+        val biomes =
+            biomeList.map {
+                it.getBiomeName(event.player.locale()).uppercase()
+            }
         if (plainText.uppercase() in biomes) {
             audience.sendMessage(
                 MiniMessage
@@ -236,10 +230,10 @@ class MineguessrMinigame(
             )
             val score =
                 when (guessed.size) {
-                    0 -> 15
-                    1 -> 10
-                    2 -> 5
-                    else -> 3
+                    0 -> 5
+                    1 -> 3
+                    2 -> 2
+                    else -> 1
                 }
             game.addScore(event.player, score, "Correct guess")
             guessed.add(event.player.uniqueId)
@@ -253,7 +247,6 @@ class MineguessrMinigame(
         val minDistance = biomes.minOfOrNull { levenshteinDistance(it, plainText.uppercase()) } ?: Int.MAX_VALUE
         if (minDistance <= 3) {
             event.player.sendMessage(Component.text("You are close!", NamedTextColor.YELLOW))
-            event.isCancelled = true
         }
     }
 

@@ -31,10 +31,39 @@
         }
       },
       "additionalProperties": false
+    },
+    "scores": {
+      "type": "object",
+      "properties": {
+        "EASY": {
+          "type": "integer",
+          "description": "Score for an EASY difficulty minigame."
+        },
+        "MEDIUM": {
+          "type": "integer",
+          "description": "Score for a MEDIUM difficulty minigame."
+        },
+        "HARD": {
+          "type": "integer",
+          "description": "Score for a HARD difficulty minigame."
+        },
+        "INSANE": {
+          "type": "integer",
+          "description": "Score for an INSANE difficulty minigame."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "EASY",
+        "MEDIUM",
+        "HARD",
+        "INSANE"
+      ]
     }
   },
   "required": [
-    "structures"
+    "structures",
+    "scores"
   ],
   "additionalProperties": false
 }

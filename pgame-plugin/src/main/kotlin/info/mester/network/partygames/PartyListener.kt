@@ -7,13 +7,13 @@ import info.mester.network.partygames.api.events.GameTerminatedEvent
 import info.mester.network.partygames.api.events.PlayerRejoinedEvent
 import info.mester.network.partygames.api.events.PlayerRemovedFromGameEvent
 import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.game.SpeedBuildersMinigame
 import info.mester.network.partygames.util.snapTo90
 import io.papermc.paper.event.player.AsyncChatEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
-import org.bukkit.NamespacedKey
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.ArrowBodyCountChangeEvent
@@ -62,6 +62,10 @@ class PartyListener(
         // special code for saying "gg"
         if (game.state == GameState.POST_GAME && !game.hasNextMinigame() && plainText.lowercase() == "gg") {
             game.awardPhrase(event.player, "gg", 15, "Good Game")
+        }
+        // remove points for saying "ez" when the game is ending
+        if (game.state == GameState.POST_GAME && !game.hasNextMinigame() && plainText.lowercase() == "ez") {
+            game.awardPhrase(event.player, "ez", -30, "Disrespectful behaviour")
         }
         // special code for saying "i wanna lose"
         if (plainText.lowercase() == "i wanna lose") {
@@ -277,8 +281,9 @@ class PartyListener(
         val spawnee = event.entity
         spawnee.setRotation(snappedAngle, 0.0f)
         spawnee.setAI(false)
+        spawnee.isSilent = true
         spawnee.persistentDataContainer.set(
-            NamespacedKey(plugin, "spawned"),
+            SpeedBuildersMinigame.SPAWNED_ENTITY_KEY,
             PersistentDataType.BOOLEAN,
             true,
         )
@@ -294,11 +299,7 @@ class PartyListener(
             return
         }
         val target = event.attacked
-        if (target.persistentDataContainer.has(
-                NamespacedKey(plugin, "spawned"),
-                PersistentDataType.BOOLEAN,
-            )
-        ) {
+        if (target.persistentDataContainer.has(SpeedBuildersMinigame.SPAWNED_ENTITY_KEY, PersistentDataType.BOOLEAN)) {
             target.remove()
         }
     }

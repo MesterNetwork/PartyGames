@@ -1,5 +1,6 @@
 package info.mester.network.partygames.game.snifferhunt
 
+import info.mester.network.partygames.game.snifferhunt.TreasureMap.Companion.DAMPING_RADIUS
 import org.bukkit.util.noise.PerlinNoiseGenerator
 import kotlin.math.pow
 import kotlin.math.sqrt

@@ -103,13 +103,20 @@
     },
     "replace-config": {
       "type": "boolean"
+    },
+    "family-night": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
     "minigames",
     "save-interval",
     "spawn-location",
-    "mineguessr"
+    "mineguessr",
+    "family-night"
   ],
   "additionalProperties": false
 }

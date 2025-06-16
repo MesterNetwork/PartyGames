@@ -170,7 +170,7 @@ class PartyGames : JavaPlugin() {
         // register bundles for each minigame, then family night
         core.gameRegistry.registerBundle(
             this,
-            listOf("healthshop", "speedbuilders", "gardening", "damagedealer", "mineguessr"),
+            config.getStringList("family-night"),
             "familynight",
             "Family Night",
         )

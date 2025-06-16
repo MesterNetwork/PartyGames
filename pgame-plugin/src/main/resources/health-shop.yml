@@ -330,7 +330,7 @@ items:
     lore:
       - <white>Gives you the ability to jump twice.
       - <white>The perk is kept after use and has a 3 second cooldown.
-    price: 7
+    price: 10
     slot: 39
     category: perk
   flint_and_steel:
@@ -348,7 +348,7 @@ items:
     lore:
       - <white>A basic oak plank.
       - <white>Good for building.
-    price: 4
+    price: 3
     slot: 44
     amount: 32
 spawn-locations:

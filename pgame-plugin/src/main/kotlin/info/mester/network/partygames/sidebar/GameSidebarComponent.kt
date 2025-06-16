@@ -17,7 +17,7 @@ class GameSidebarComponent(
         drawable.drawLine(Component.empty())
         val topList = game.topPlayers(8)
         drawable.drawLine(mm.deserialize("<white>Top players:"))
-        for (i in 0 until 8) {
+        for (i in 0 until 3) {
             if (i >= topList.size) {
                 break
             }
@@ -27,7 +27,7 @@ class GameSidebarComponent(
             drawable.drawLine(
                 mm.deserialize(
                     // display the player's name in gray if they're offline
-                    "<yellow>${i + 1}. ${if (player.isOnline) player.name else "<gray>${player.name}"} <gray>- <green>${playerData.score}",
+                    "<gold><bold>${i + 1}#</bold> <aqua>${if (player.isOnline) player.name else "<gray>${player.name}"} <gray>- <green>${playerData.score}",
                 ),
             )
         }

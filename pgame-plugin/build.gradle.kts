@@ -1,6 +1,9 @@
+import com.diffplug.spotless.LineEnding
+
 plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("io.papermc.paperweight.userdev")
+    id("com.diffplug.spotless") version "7.0.2"
     java
 }
 
@@ -44,6 +47,16 @@ dependencies {
 val targetJavaVersion = 21
 kotlin {
     jvmToolchain(targetJavaVersion)
+}
+
+spotless {
+    kotlin {
+        targetExclude("build/generated/**/*")
+        targetExclude("build/generated-src/**/*")
+        toggleOffOn()
+        ktlint("1.5.0")
+        lineEndings = LineEnding.GIT_ATTRIBUTES
+    }
 }
 
 tasks {

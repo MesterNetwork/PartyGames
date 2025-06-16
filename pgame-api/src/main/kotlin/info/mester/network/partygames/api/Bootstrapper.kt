@@ -111,6 +111,22 @@ class Bootstrapper : PluginBootstrap {
                                         Command.SINGLE_SUCCESS
                                     },
                             ),
+                    ).then(
+                        // skip
+                        Commands.literal("skip").executes { ctx ->
+                            val sender = ctx.source.sender
+                            if (sender !is Player) {
+                                return@executes 1
+                            }
+                            val core = PartyGamesCore.getInstance()
+                            val game = core.gameRegistry.getGameByWorld(sender.world)
+                            if (game == null) {
+                                sender.sendMessage(Component.text("You are not in a game!", NamedTextColor.RED))
+                                return@executes 1
+                            }
+                            game.runningMinigame?.end()
+                            Command.SINGLE_SUCCESS
+                        },
                     ).build(),
                 "Main function for managing tournaments",
             )

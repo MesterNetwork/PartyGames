@@ -38,7 +38,6 @@ import org.bukkit.entity.Player
 import org.bukkit.entity.Rabbit
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPhysicsEvent
-import org.bukkit.event.entity.EntityCombustEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
@@ -318,8 +317,8 @@ class GardeningMinigame(
             val spawnedObject =
                 listOf(
                     WeightedItem(ObjectType.WEED, 25),
-                    WeightedItem(ObjectType.ZOMBIE_WEED, 2),
-                    WeightedItem(ObjectType.RAINBOW_FLOWER, 5),
+                    WeightedItem(ObjectType.ZOMBIE_WEED, 5),
+                    WeightedItem(ObjectType.RAINBOW_FLOWER, 1),
                     WeightedItem(ObjectType.OAK_TREE, 15),
                     WeightedItem(ObjectType.CACTUS, 35),
                     WeightedItem(ObjectType.SUNFLOWER, 80),
@@ -546,17 +545,11 @@ class GardeningMinigame(
         }
     }
 
-    override fun handleEntityCombust(event: EntityCombustEvent) {
-        if (event.entity.type == EntityType.ZOMBIE) {
-            event.isCancelled = true
-        }
-    }
-
     override fun handlePlayerDeath(event: PlayerDeathEvent) {
         event.isCancelled = true
         val player = event.player
         player.teleport(startPos)
-        game.addScore(player, -100, "dying... seriously, how?")
+        game.addScore(player, -50, "dying... seriously, how?")
     }
 
     override fun handleBlockBreak(event: BlockBreakEvent) {

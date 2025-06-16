@@ -51,6 +51,11 @@ minigames:
         z: 4.0
     class: info.mester.network.partygames.game.MineguessrMinigame
     display-name: Mine Guesser
+family-night:
+  - healthshop
+  - speedbuilders
+  - damagedealer
+  - mineguessr
 save-interval: 10
 spawn-location:
   ==: org.bukkit.Location
