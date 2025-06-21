@@ -24,12 +24,17 @@ class GameSidebarComponent(
             val data = topList[i]
             val player = data.player
             val playerData = data.data
-            drawable.drawLine(
-                mm.deserialize(
-                    // display the player's name in gray if they're offline
-                    "<gold><bold>${i + 1}#</bold> <aqua>${if (player.isOnline) player.name else "<gray>${player.name}"} <gray>- <green>${playerData.score}",
-                ),
-            )
+
+            val text =
+                buildString {
+                    append("<gold><bold>${i + 1}#</bold> <aqua>${if (player.isOnline) player.name else "<gray>${player.name}"} <gray>- ")
+                    if (game.state == GameState.PLAYING) {
+                        append("<green>${playerData.score} <gray>(<yellow>${playerData.stars}★</yellow>)")
+                    } else {
+                        append("<yellow>${playerData.stars}★")
+                    }
+                }
+            drawable.drawLine(mm.deserialize(text))
         }
     }
 
@@ -53,7 +58,8 @@ class GameSidebarComponent(
                 val minigame = game.runningMinigame!!
                 drawable.drawLine(mm.deserialize("<white>Playing: ").append(minigame.name))
                 drawable.drawLine(Component.empty())
-                drawable.drawLine(mm.deserialize("<white>Your score: <yellow>${game.playerData(player)!!.score}"))
+                drawable.drawLine(mm.deserialize("<white>Your stars: <yellow>${game.playerData(player)!!.stars}★"))
+                drawable.drawLine(mm.deserialize("<white>Your current score: <yellow>${game.playerData(player)!!.score}"))
                 renderLeaderboard(drawable)
             }
 

@@ -18,6 +18,9 @@ dependencies:
       load: BEFORE
       required: true
       join-classpath: true
+    My_Worlds:
+      load: BEFORE
+      required: false
 authors:
   - Mester
 description: The paper plugin for MesterNetwork's Party Games

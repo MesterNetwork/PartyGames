@@ -1,21 +1,11 @@
 package info.mester.network.partygames.game
 
 import info.mester.network.partygames.PartyGames
+import info.mester.network.partygames.api.MinigameBundle
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
 import java.util.UUID
-
-enum class QueueType(
-    val displayName: String,
-) {
-    HEALTHSHOP("Health Shop"),
-    SPEEDBUILDERS("Speed Builders"),
-    GARDENING("Gardening"),
-    FAMILYNIGHT("Family Night"),
-    DAMAGEDEALER("Damage Dealer"),
-    MINEGUESSR("Mineguessr"),
-}
 
 private val mm = MiniMessage.miniMessage()
 
@@ -27,24 +17,24 @@ class QueueManager(
     private val queues = mutableMapOf<UUID, Queue>()
 
     private fun createQueue(
-        type: QueueType,
+        bundle: MinigameBundle,
         maxPlayers: Int = 8,
     ): Queue {
-        val queue = Queue(type, maxPlayers, this)
+        val queue = Queue(bundle, maxPlayers, this)
         queues[queue.id] = queue
         return queue
     }
 
     private fun getQueueForPlayers(
-        type: QueueType,
+        bundle: MinigameBundle,
         players: List<Player>,
     ): Queue {
         // either return the first queue that can still fit the players, or create a new queue
-        val queue = queues.values.firstOrNull { it.type == type && it.maxPlayers - it.playerCount >= players.size }
+        val queue = queues.values.firstOrNull { it.bundle == bundle && it.maxPlayers - it.playerCount >= players.size }
         if (queue != null) {
             return queue
         }
-        return createQueue(type)
+        return createQueue(bundle)
     }
 
     fun removeQueue(id: UUID) {
@@ -52,7 +42,7 @@ class QueueManager(
     }
 
     fun joinQueue(
-        type: QueueType,
+        bundle: MinigameBundle,
         players: List<Player>,
     ) {
         // check if there is a player that is already in a game
@@ -69,7 +59,7 @@ class QueueManager(
         for (player in players) {
             removePlayerFromQueue(player)
         }
-        val queue = getQueueForPlayers(type, players)
+        val queue = getQueueForPlayers(bundle, players)
         queue.addPlayers(players)
     }
 
@@ -82,6 +72,6 @@ class QueueManager(
     fun startGame(queue: Queue) {
         queues.remove(queue.id)
         val players = queue.getPlayers()
-        gameRegistry.startGame(players, queue.type.name)
+        gameRegistry.startGame(players, queue.bundle.name)
     }
 }

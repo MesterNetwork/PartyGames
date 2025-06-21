@@ -34,9 +34,9 @@
               "minimum": 0,
               "description": "Inventory slot number for the item."
             },
-            "category": {
+            "group": {
               "type": "string",
-              "description": "Category of the item (e.g., sword, sharpness, armor).",
+              "description": "The group this item belongs to. Only one item of a group can be purchased at a time.",
               "enum": [
                 "sword",
                 "sharpness",
@@ -46,7 +46,24 @@
                 "arrow",
                 "power",
                 "punch",
-                "perk"
+                "perk",
+                "ender_pearl",
+                "tnt",
+                "fireball",
+                "offhand",
+                "regen_ii",
+                "splash_healing_ii",
+                "splash_healing"
+              ]
+            },
+            "category": {
+              "type": "string",
+              "description": "The category of the item, used for pagination.",
+              "enum": [
+                "combat",
+                "utility",
+                "potion",
+                "miscellaneous"
               ]
             },
             "amount": {
@@ -91,6 +108,14 @@
               "z": {
                 "type": "number",
                 "description": "The z coordinate of the spawn location."
+              },
+              "yaw": {
+                "type": "number",
+                "description": "The yaw rotation of the spawn location."
+              },
+              "pitch": {
+                "type": "number",
+                "description": "The pitch rotation of the spawn location."
               }
             },
             "required": [

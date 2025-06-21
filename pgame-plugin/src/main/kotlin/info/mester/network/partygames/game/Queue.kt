@@ -1,7 +1,8 @@
 package info.mester.network.partygames.game
 
 import info.mester.network.partygames.PartyGames
-import info.mester.network.partygames.util.createBasicItem
+import info.mester.network.partygames.api.MinigameBundle
+import info.mester.network.partygames.api.createBasicItem
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
@@ -93,7 +94,7 @@ private class CountdownTask(
 }
 
 class Queue(
-    val type: QueueType,
+    val bundle: MinigameBundle,
     val maxPlayers: Int,
     private val manager: QueueManager,
 ) {

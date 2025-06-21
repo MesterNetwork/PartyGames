@@ -10,7 +10,18 @@ import kotlin.reflect.KClass
 data class MinigameWorld(
     val name: String,
     val startPos: Vector,
-)
+    val yaw: Float,
+    val pitch: Float,
+) {
+    constructor(name: String, startPos: Vector) : this(
+        name,
+        startPos,
+        0f,
+        0f,
+    )
+
+    fun toLocation(world: World) = startPos.toLocation(world, yaw, pitch)
+}
 
 data class RegisteredMinigame(
     val plugin: JavaPlugin,
@@ -72,7 +83,7 @@ class GameRegistry(
 
     fun getMinigame(name: String): RegisteredMinigame? = minigames.firstOrNull { it.name == name.uppercase() }
 
-    private fun getBundle(name: String): MinigameBundle? = bundles.firstOrNull { it.name == name.uppercase() }
+    fun getBundle(name: String): MinigameBundle? = bundles.firstOrNull { it.name == name.uppercase() }
 
     fun getBundles(): List<MinigameBundle> = bundles
 

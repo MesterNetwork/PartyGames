@@ -17,6 +17,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.OfflinePlayer
+import org.bukkit.Statistic
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.logging.Level
@@ -24,7 +25,26 @@ import java.util.logging.Level
 private val mm = MiniMessage.miniMessage()
 
 data class PlayerData(
-    var score: Int,
+    /**
+     * Current score of the player. They are used to award stars at the end of the minigame.
+     *
+     * Top player = 3 stars
+     * Second player = 2 stars
+     * Third player = 1 star
+     *
+     * Scores are only stored for a single minigame, and are reset after each minigame.
+     */
+    var score: Int = 0,
+    /**
+     * Stars of the player. They are used to determine the winner of the game.
+     *
+     * Stars are accumulated over the course of the game, and are not reset after each minigame.
+     */
+    var stars: Int = 0,
+    /**
+     * Total score of the player. Not used for anything, custom plugins may use it for their own purposes.
+     */
+    var totalScore: Int = 0,
 )
 
 data class TopPlayerData(
@@ -44,7 +64,7 @@ enum class GameState {
     PLAYING,
 
     /**
-     * A minigame has just ended, but the tournament is still running, ready to load the next minigame
+     * A minigame has just ended, but the game is still running, ready to load the next minigame
      */
     POST_GAME,
 
@@ -167,15 +187,26 @@ class Game(
     fun playerData(player: Player) = playerData(player.uniqueId)
 
     /**
-     * Get the top n players in the game
+     * Get the top n players in the game.
+     *
+     * The top players are determined by their stars. The total score is used as a tiebreaker.
+     * A secret secondary tiebreaker is their total played time statistic. The person who has played less time wins.
+     *
      * @param n the number of players to get
      * @return a list of pairs of the player and their data
      */
     fun topPlayers(n: Int): List<TopPlayerData> =
         playerDatas
             .toList()
-            .sortedByDescending { it.second.score }
-            .take(n)
+            .sortedWith(
+                compareByDescending<Pair<UUID, PlayerData>> { it.second.stars }
+                    .thenByDescending { it.second.totalScore }
+                    .thenBy {
+                        Bukkit.getOfflinePlayer(it.first).getStatistic(
+                            Statistic.PLAY_ONE_MINUTE,
+                        )
+                    },
+            ).take(n)
             .map { TopPlayerData(Bukkit.getOfflinePlayer(it.first), it.second) }
 
     fun topPlayers() = topPlayers(playerDatas.size)
@@ -189,12 +220,13 @@ class Game(
         if (playerDatas.containsKey(player.uniqueId)) {
             return
         }
-        playerDatas[player.uniqueId] = PlayerData(0)
+        playerDatas[player.uniqueId] = PlayerData()
     }
 
     /**
-     * Function to remove a player from the game
-     * @param player the player to remove
+     * Fully removes a player from the game, calls [Minigame.handleDisconnect].
+     *
+     * @param player the player to remove.
      */
     fun removePlayer(player: Player) {
         playerDatas.remove(player.uniqueId)
@@ -210,9 +242,14 @@ class Game(
     }
 
     /**
-     * Get all currently online players in the game
+     * Gets all currently online players in the game.
      */
     val onlinePlayers get() = playerDatas.keys.toList().mapNotNull { Bukkit.getPlayer(it) }
+
+    /**
+     * Gets all players that are part of the game, including offline players.
+     */
+    val players get() = playerDatas.keys.toList().map { Bukkit.getOfflinePlayer(it) }
 
     fun hasPlayer(player: Player) = playerDatas.contains(player.uniqueId)
 
@@ -246,7 +283,7 @@ class Game(
     }
 
     /**
-     * Begin the async process of loading the next minigame
+     * Begin the async process of loading the next minigame.
      */
     private fun loadNextMinigame() {
         if (readyMinigames.isEmpty()) {
@@ -334,6 +371,33 @@ class Game(
             player.gameMode = GameMode.SPECTATOR
             player.teleport(runningMinigame!!.startPos)
         }
+
+        val topScores = playerDatas.toList().sortedByDescending { it.second.score }.take(3)
+        // award stars based on the top scores
+        repeat(3) { i ->
+            if (i < topScores.size) {
+                val (uuid, data) = topScores[i]
+                val player = Bukkit.getOfflinePlayer(uuid)
+                val newStars =
+                    when (i) {
+                        0 -> 3
+                        1 -> 2
+                        2 -> 1
+                        else -> 0
+                    }
+                data.stars += newStars
+                audience.sendMessage(
+                    mm.deserialize(
+                        "<gold><bold>${player.name}</bold> <gray>has been awarded <yellow>$newStars★</yellow>!",
+                    ),
+                )
+            }
+        }
+        playerDatas.forEach { (_, data) ->
+            data.totalScore += data.score
+            data.score = 0
+        }
+
         // wait for 5 seconds and load the new minigame
         Bukkit.getScheduler().runTaskLater(
             core,
@@ -417,7 +481,7 @@ class Game(
                             "<gray>"
                         }
                     appendLine(
-                        "${color}${i + 1}. ${topPlayer?.player?.name ?: "<gray>Nobody"} <gray>- <green>${topPlayer?.data?.score ?: 0}",
+                        "${color}${i + 1}. ${topPlayer?.player?.name ?: "<gray>Nobody"} <gray>- <yellow>${topPlayer?.data?.stars ?: 0}★",
                     )
                 }
 

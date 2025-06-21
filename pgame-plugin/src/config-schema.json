@@ -24,6 +24,12 @@
                   },
                   "z": {
                     "type": "number"
+                  },
+                  "yaw": {
+                    "type": "number"
+                  },
+                  "pitch": {
+                    "type": "number"
                   }
                 },
                 "required": [

@@ -28,6 +28,7 @@ import org.bukkit.inventory.meta.SpawnEggMeta
 import org.bukkit.persistence.PersistentDataType
 import java.util.UUID
 import kotlin.math.floor
+import kotlin.math.roundToInt
 
 class PartyListener(
     private val plugin: PartyGames,
@@ -64,7 +65,12 @@ class PartyListener(
             game.awardPhrase(event.player, "gg", 15, "Good Game")
         }
         // remove points for saying "ez" when the game is ending
-        if (game.state == GameState.POST_GAME && !game.hasNextMinigame() && plainText.lowercase() == "ez") {
+        if (game.state == GameState.POST_GAME &&
+            !game.hasNextMinigame() &&
+            plainText
+                .split(" ")
+                .any { it.lowercase() == "ez" }
+        ) {
             game.awardPhrase(event.player, "ez", -30, "Disrespectful behaviour")
         }
         // special code for saying "i wanna lose"
@@ -142,21 +148,52 @@ class PartyListener(
 
     @EventHandler
     fun onGameEnded(event: GameEndedEvent) {
-        val timeElapsed = (Bukkit.getCurrentTick() - event.game.startTime) * 0.05
-        // increase the xp of players
-        for ((player, data) in event.topList) {
-            // XP is points gained + 15 per half a minute
-            val xpFromPlayTime = (timeElapsed.toInt() / 30) * 15
-            val xpFromScore = data.score.coerceAtLeast(0)
-            plugin.databaseManager.addPointsGained(player.uniqueId, event.game.bundle.name, xpFromScore)
-            plugin.databaseManager.addTimePlayed(player.uniqueId, event.game.bundle.name, timeElapsed.toInt())
+        /**
+         * Time played in seconds.
+         */
+        val timeElapsed = (Bukkit.getCurrentTick() - event.game.startTime) / 20
+
+        for ((placement, topList) in event.topList.withIndex()) {
+            val player = topList.player
+            val data = topList.data
+
+            // 0.8 * total points gained
+            val xpFromScore = (data.totalScore.coerceAtLeast(0) * 0.8).roundToInt()
+            // 15 xp every 30 seconds of playtime
+            val xpFromPlayTime = (timeElapsed / 30) * 15
+            // 50 xp for top 1
+            // 40 xp for top 2
+            // 30 xp for top 3
+            // 10 xp for top 5
+            val xpFromPlacement =
+                when (placement) {
+                    0 -> 50
+                    1 -> 40
+                    2 -> 30
+                    in 3..4 -> 10
+                    else -> 0
+                }
+            // 20 xp for each star
+            val xpFromStars = data.stars * 20
+            val totalXp = xpFromScore + xpFromPlayTime + xpFromPlacement + xpFromStars
+
+            plugin.databaseManager.addPointsGained(
+                player.uniqueId,
+                event.game.bundle.name,
+                data.totalScore.coerceAtLeast(0),
+            )
+            plugin.databaseManager.addTimePlayed(player.uniqueId, event.game.bundle.name, timeElapsed)
+
             // process boosters
             val boosters = plugin.boosterManager.getBooster(player)
             val boosterMultiplier = boosters.fold(1.0) { acc, booster -> acc * booster.multiplier }
-            val finalXp = ((xpFromScore + xpFromPlayTime) * boosterMultiplier).toInt()
+            val finalXp = (totalXp * boosterMultiplier).toInt()
+
             val oldLevel = plugin.levelManager.levelDataOf(player.uniqueId)
             plugin.levelManager.addXp(player.uniqueId, finalXp)
             val onlinePlayer = Bukkit.getPlayer(player.uniqueId) ?: return
+
+            // send level up message
             val newLevel = plugin.levelManager.levelDataOf(player.uniqueId)
             val levelUpMessage =
                 buildString {
@@ -183,17 +220,14 @@ class PartyListener(
                         previousFilledSquares -= 1
                         additionalSquares = 1
                     }
-                    for (i in 0 until previousFilledSquares) {
-                        append("<yellow>■")
-                    }
-                    for (i in 0 until additionalSquares) {
-                        append("<green>■")
-                    }
-                    for (i in 0 until maxSquares - filledSquares) {
-                        append("<gray>■")
-                    }
+                    append("<yellow>" + "■".repeat(previousFilledSquares))
+                    append("<green>" + "■".repeat(additionalSquares))
+                    append("<gray>" + "■".repeat(maxSquares - filledSquares))
                     appendLine("<dark_gray>] <green>${newLevel.xpToNextLevel}")
-                    appendLine("<yellow>+${data.score} XP <gray>(Points Gained)")
+
+                    appendLine("<yellow>+$xpFromStars XP <gray>(Stars Earned)")
+                    appendLine("<yellow>+$xpFromScore XP <gray>(Points Gained)")
+                    appendLine("<yellow>+$xpFromPlacement XP <gray>(Placement)")
                     appendLine("<yellow>+$xpFromPlayTime XP <gray>(Time Played)")
                     for (booster in boosters) {
                         append(
@@ -205,6 +239,7 @@ class PartyListener(
                 }
             onlinePlayer.sendMessage(mm.deserialize(levelUpMessage))
         }
+
         // increase games won stat
         plugin.databaseManager.addGameWon(
             event.topList

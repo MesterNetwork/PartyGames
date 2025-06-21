@@ -1,8 +1,13 @@
 package info.mester.network.partygames.game.healthshop
 
 import info.mester.network.partygames.PartyGames
+import info.mester.network.partygames.api.createBasicItem
+import info.mester.network.partygames.game.HealthShopMinigame
 import info.mester.network.partygames.game.ShopFailedException
+import info.mester.network.partygames.mm
 import info.mester.network.partygames.toRomanNumeral
+import io.papermc.paper.datacomponent.DataComponentTypes
+import io.papermc.paper.datacomponent.item.UseCooldown
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
@@ -23,36 +28,30 @@ import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.inventory.meta.PotionMeta
-import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.potion.PotionType
 import java.util.UUID
 
 class HealthShopUI(
-    playerUUID: UUID,
-    private val items: List<HealthShopItem>,
+    private val playerUUID: UUID,
     private var money: Double,
+    private var category: HealthShopItemCategory = HealthShopItemCategory.COMBAT,
 ) : InventoryHolder {
     private val inventory = Bukkit.createInventory(this, 5 * 9, Component.text("Health Shop"))
     private val purchasedItems: MutableList<HealthShopItem> = mutableListOf()
-    private val player = Bukkit.getPlayer(playerUUID)!!
+    private val databaseManager = PartyGames.plugin.databaseManager
+    private val kits = databaseManager.getHealthShopKits(playerUUID).toMutableList()
+
+    /**
+     * Get the player
+     */
+    private val player get() = Bukkit.getPlayer(playerUUID)!!
+    val playerData = HealthShopPlayerData()
 
     companion object {
-        private val maxArrows: MutableMap<UUID, Int> = mutableMapOf()
-
-        fun maxArrows(uuid: UUID): Int = maxArrows[uuid] ?: 0
-
-        fun setHealthPotion(
-            item: ItemStack,
-            strong: Boolean,
-        ) {
-            item.editMeta { meta ->
-                val potionMeta = meta as PotionMeta
-                potionMeta.basePotionType = if (strong) PotionType.STRONG_HEALING else PotionType.HEALING
-                applyGenericItemMeta(meta)
-            }
-        }
+        private val shopItems get() = HealthShopMinigame.getShopItems()
+        private val INF_GAP_COOLDOWN_KEY = NamespacedKey(PartyGames.plugin, "inf_gap_cooldown")
 
         private fun setCustomPotion(
             item: ItemStack,
@@ -60,13 +59,16 @@ class HealthShopUI(
             color: Color,
             potionName: String?,
         ) {
-            item.editMeta { meta ->
-                val potionMeta = meta as PotionMeta
-                potionMeta.addCustomEffect(potionEffect, true)
-                potionMeta.color = color
+            item.editMeta(PotionMeta::class.java) { meta ->
+                applyGenericItemMeta(meta)
+
+                meta.addCustomEffect(potionEffect, true)
+                meta.color = color
+
                 val duration = potionEffect.duration / 20
                 val minutes = duration / 60
                 val seconds = String.format("%02d", duration % 60)
+
                 if (potionName != null) {
                     val name =
                         MiniMessage
@@ -76,7 +78,23 @@ class HealthShopUI(
                             )
                     meta.displayName(name)
                 }
+            }
+        }
+
+        fun setHealthPotion(
+            item: ItemStack,
+            strong: Boolean,
+        ) {
+            item.editMeta(PotionMeta::class.java) { meta ->
+                meta.basePotionType = if (strong) PotionType.STRONG_HEALING else PotionType.HEALING
                 applyGenericItemMeta(meta)
+            }
+        }
+
+        fun setRegen2Potion(item: ItemStack) {
+            item.editMeta(PotionMeta::class.java) { meta ->
+                applyGenericItemMeta(meta)
+                meta.basePotionType = PotionType.STRONG_REGENERATION
             }
         }
 
@@ -121,29 +139,82 @@ class HealthShopUI(
     }
 
     init {
-        // init maxarrows to 0
-        maxArrows[playerUUID] = 0
-        for (item in items) {
-            inventory.setItem(item.slot, item.item)
-        }
+        renderInventory()
     }
 
     override fun getInventory(): Inventory = inventory
 
     fun onInventoryClick(event: InventoryClickEvent) {
+        val player = event.whoClicked
         val slot = event.slot
-        val index = items.indexOfFirst { it.slot == slot }
-        if (index == -1) {
+
+        // check if we clicked on a page selector
+        if (slot in 27..35) {
+            when (slot) {
+                29 -> category = HealthShopItemCategory.COMBAT
+                30 -> category = HealthShopItemCategory.UTILITY
+                32 -> category = HealthShopItemCategory.POTION
+                33 -> category = HealthShopItemCategory.MISCELLANEOUS
+            }
+            renderInventory()
             return
         }
-        val shopItem = items[index]
-        val item = inventory.getItem(slot)!!
+
+        // check if we clicked on a kit item
+        if (slot >= 36) {
+            val kitIndex = slot - 36
+            val kit = kits.firstOrNull { it.index == kitIndex }
+
+            if (!player.hasPermission("partygames.healthshop.kit.$kitIndex")) {
+                player.sendMessage(
+                    mm.deserialize("<red>You do not have permission to use this kit!"),
+                )
+                player.playSound(
+                    Sound.sound(Key.key("entity.villager.no"), Sound.Source.MASTER, 1.0f, 1.0f),
+                    Sound.Emitter.self(),
+                )
+                return
+            }
+
+            if (kit == null &&
+                purchasedItems.isNotEmpty() &&
+                // don't save last used kit (index 8)
+                kitIndex != 8
+            ) {
+                // save the kit
+                val kit = HealthShopKit(purchasedItems.toList(), kitIndex)
+                kits.add(kit)
+                databaseManager.saveHealthShopKit(playerUUID, kit)
+                renderKits()
+            } else if (kit != null) {
+                if (event.click.isRightClick && kitIndex != 8) {
+                    // delete the kit
+                    kits.remove(kit)
+                    databaseManager.deleteHealthShopKit(playerUUID, kitIndex)
+                    renderKits()
+                    return
+                }
+                // load the kit
+                val currentItems = purchasedItems.toList()
+                for (item in currentItems) {
+                    removeItem(item)
+                }
+                for (item in kit.items) {
+                    addItem(item)
+                }
+            }
+        }
+
+        val shopItem =
+            shopItems.firstOrNull { it.slot == slot && it.category == category }
+                ?: return // if the item is not found, do nothing
+
         // toggle purchased state
         if (purchasedItems.contains(shopItem)) {
-            removeItem(shopItem, item)
+            removeItem(shopItem)
         } else {
             try {
-                addItem(shopItem, item)
+                addItem(shopItem)
             } catch (e: ShopFailedException) {
                 val message =
                     when (e.message) {
@@ -151,7 +222,7 @@ class HealthShopUI(
                         "no_bow" -> "You must first buy a bow before purchasing this item!"
                         else -> "An error occurred while trying to purchase this item!"
                     }
-                event.whoClicked.sendMessage(
+                player.sendMessage(
                     Component.text(
                         message,
                         NamedTextColor.RED,
@@ -170,40 +241,112 @@ class HealthShopUI(
         )
     }
 
-    private fun removeItem(
-        shopItem: HealthShopItem,
-        inventoryItem: ItemStack,
-    ) {
-        purchasedItems.remove(shopItem)
+    private fun renderInventory() {
+        inventory.clear()
+        for (item in shopItems.filter { it.category == category }) {
+            inventory.setItem(
+                item.slot,
+                item.item.clone().apply {
+                    editMeta { meta ->
+                        if (purchasedItems.contains(item)) {
+                            meta.setEnchantmentGlintOverride(true)
+                            val decorations =
+                                mapOf(
+                                    TextDecoration.UNDERLINED to TextDecoration.State.TRUE,
+                                    TextDecoration.BOLD to TextDecoration.State.TRUE,
+                                )
+                            meta.displayName((meta.displayName() ?: meta.itemName()).decorations(decorations))
+                        }
+                    }
+                },
+            )
+        }
+
+        // set up page selector
+        repeat(9) { i ->
+            val inventoryIndex = 27 + i
+            val item =
+                createBasicItem(Material.GRAY_STAINED_GLASS_PANE, "").apply {
+                    editMeta { meta ->
+                        meta.isHideTooltip = true
+                    }
+                }
+            inventory.setItem(inventoryIndex, item)
+        }
+        for (category in HealthShopItemCategory.entries) {
+            val inventoryIndex =
+                when (category) {
+                    HealthShopItemCategory.COMBAT -> 29
+                    HealthShopItemCategory.UTILITY -> 30
+                    HealthShopItemCategory.POTION -> 32
+                    HealthShopItemCategory.MISCELLANEOUS -> 33
+                }
+            val item =
+                createBasicItem(
+                    category.displayItem,
+                    "<green>${category.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                )
+            item.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP, ItemFlag.HIDE_ATTRIBUTES)
+            inventory.setItem(inventoryIndex, item)
+        }
+
+        renderKits()
+    }
+
+    private fun renderKits() {
+        repeat(9) { i ->
+            val inventoryIndex = 36 + i
+            if (i != 8 && !player.hasPermission("partygames.healthshop.kit.$i")) {
+                val noPerms =
+                    createBasicItem(
+                        Material.BARRIER,
+                        "<red>Locked kit",
+                        1,
+                        "<gray>You do not have permission to use this kit!",
+                    )
+                inventory.setItem(inventoryIndex, noPerms)
+                return@repeat
+            }
+
+            val kit = kits.firstOrNull { it.index == i }
+            if (kit == null) {
+                val emptyKit =
+                    createBasicItem(
+                        Material.PAPER,
+                        "<red>Empty Kit",
+                        1,
+                        if (i == 8) "<gray>Your last used kit will show up here" else "<gray>Click to save your current items as a kit!",
+                    ).apply {
+                        addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+                    }
+                inventory.setItem(inventoryIndex, emptyKit)
+            } else {
+                inventory.setItem(inventoryIndex, kit.getDisplayItem())
+            }
+        }
+    }
+
+    private fun removeItem(shopItem: HealthShopItem) {
+        if (!purchasedItems.remove(shopItem)) {
+            return
+        }
         money += shopItem.price
 
-        inventoryItem.editMeta { meta ->
-            // remove the enchantment glint from the item in the ui
-            meta.setEnchantmentGlintOverride(false)
-            // remove underlined and bold from name
-            val decorations =
-                mapOf(
-                    TextDecoration.UNDERLINED to TextDecoration.State.FALSE,
-                    TextDecoration.BOLD to TextDecoration.State.FALSE,
-                )
-            meta.displayName(meta.displayName()!!.decorations(decorations))
-        }
+        renderInventory()
+
         // special case: if we remove a bow, remove all arrows
         if (shopItem.key == "bow") {
-            val arrowItem = purchasedItems.firstOrNull { it.category == "arrow" }
+            val arrowItem = purchasedItems.firstOrNull { it.group == "arrow" }
             if (arrowItem != null) {
-                removeItem(arrowItem, inventory.getItem(arrowItem.slot)!!)
+                removeItem(arrowItem)
             }
         }
 
         player.health = money
     }
 
-    private fun addItem(
-        shopItem: HealthShopItem,
-        inventoryItem: ItemStack,
-    ) {
-        val sameCategory = purchasedItems.filter { it.category != "none" && it.category == shopItem.category }
+    private fun addItem(shopItem: HealthShopItem) {
+        val sameCategory = purchasedItems.filter { it.group != "none" && it.group == shopItem.group }
         // calculate how much money we'd have if we removed all the items in the same category
         val moneyToAdd = sameCategory.sumOf { it.price }
         // check if we have enough money
@@ -211,7 +354,7 @@ class HealthShopUI(
             throw ShopFailedException("no_health")
         }
         // check if we're trying to buy an arrow
-        if (shopItem.category == "arrow") {
+        if (shopItem.group == "arrow") {
             // check if we have a bow
             if (!purchasedItems.any { it.key == "bow" }) {
                 throw ShopFailedException("no_bow")
@@ -225,19 +368,9 @@ class HealthShopUI(
             Sound.Emitter.self(),
         )
         // remove all the items in the same category
-        sameCategory.forEach { removeItem(it, inventory.getItem(it.slot)!!) }
+        sameCategory.forEach { removeItem(it) }
 
-        inventoryItem.editMeta { meta ->
-            // add an enchantment glint to the item in the ui
-            meta.setEnchantmentGlintOverride(true)
-            // make name underlined and bold
-            val decorations =
-                mapOf(
-                    TextDecoration.UNDERLINED to TextDecoration.State.TRUE,
-                    TextDecoration.BOLD to TextDecoration.State.TRUE,
-                )
-            meta.displayName(meta.displayName()!!.decorations(decorations))
-        }
+        renderInventory()
 
         player.health = money
     }
@@ -299,6 +432,12 @@ class HealthShopUI(
                 if (purchasedItems.any { it.key == "protection_ii" }) {
                     meta.addEnchant(Enchantment.PROTECTION, 2, true)
                 }
+                if (purchasedItems.any { it.key == "protection_iii" }) {
+                    meta.addEnchant(Enchantment.PROTECTION, 3, true)
+                }
+                if (purchasedItems.any { it.key == "protection_iv" }) {
+                    meta.addEnchant(Enchantment.PROTECTION, 4, true)
+                }
                 if (purchasedItems.any { it.key == "thorns" }) {
                     meta.addEnchant(Enchantment.THORNS, 2, true)
                 }
@@ -331,7 +470,7 @@ class HealthShopUI(
         }
         kotlin
             .runCatching {
-                purchasedItems.first { it.category == "sword" }.item.type
+                purchasedItems.first { it.group == "sword" }.item.type
             }.onSuccess { material ->
                 addSword(material)
             }.onFailure {
@@ -355,23 +494,28 @@ class HealthShopUI(
             player.inventory.setItem(EquipmentSlot.OFF_HAND, shield)
         }
         // process golden apples
-        purchasedItems.filter { it.category == "gap" }.forEach { item ->
+        purchasedItems.filter { it.group == "gap" }.forEach { item ->
             val apple = ItemStack.of(Material.GOLDEN_APPLE, item.amount)
+            @Suppress("UnstableApiUsage")
             if (item.key == "golden_apple_inf") {
-                apple.editMeta { meta ->
-                    // add a fake enchantment to make it look like an enchanted golden apple
-                    // the enchantment is also used to determine if the item is an infinite golden apple
-                    meta.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true)
-                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS)
-                }
+                // use the cooldown component for infinite golden apples
+                val cooldown = UseCooldown.useCooldown(10f).cooldownGroup(INF_GAP_COOLDOWN_KEY)
+                apple.setData(DataComponentTypes.USE_COOLDOWN, cooldown)
             }
             player.inventory.addItem(apple)
         }
         // process regeneration potion
-        purchasedItems.firstOrNull { it.key == "regen_potion" }?.let { shopItem ->
+        purchasedItems.firstOrNull { it.group == "regen_ii" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.POTION)
+            setRegen2Potion(potion)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+        purchasedItems.firstOrNull { it.key == "regen_v" }?.let { shopItem ->
             val potion = ItemStack.of(Material.POTION)
             setRegenPotion(potion)
-            for (i in 1..shopItem.amount) {
+            repeat(shopItem.amount) {
                 player.inventory.addItem(potion)
             }
         }
@@ -379,7 +523,7 @@ class HealthShopUI(
         purchasedItems.firstOrNull { it.key == "speed_potion" }?.let { shopItem ->
             val potion = ItemStack.of(Material.POTION)
             setSpeedPotion(potion)
-            for (i in 1..shopItem.amount) {
+            repeat(shopItem.amount) {
                 player.inventory.addItem(potion)
             }
         }
@@ -387,20 +531,20 @@ class HealthShopUI(
         purchasedItems.firstOrNull { it.key == "jump_potion" }?.let { shopItem ->
             val potion = ItemStack.of(Material.POTION)
             setJumpPotion(potion)
-            for (i in 1..shopItem.amount) {
+            repeat(shopItem.amount) {
                 player.inventory.addItem(potion)
             }
         }
         // process healing potions
-        for (purchasedPotion in purchasedItems.filter { it.key == "splash_healing_i" || it.key == "splash_healing_ii" }) {
+        for (purchasedPotion in purchasedItems.filter { it.key == "splash_healing" || it.key == "splash_healing_ii" }) {
             val potion = ItemStack.of(Material.SPLASH_POTION, purchasedPotion.amount)
-            setHealthPotion(potion, purchasedPotion.key == "splash_healing_ii")
+            setHealthPotion(potion, purchasedPotion.key == "splash_healing")
             player.inventory.addItem(potion)
         }
         // process armor
         kotlin
             .runCatching {
-                purchasedItems.first { it.category == "armor" }
+                purchasedItems.first { it.group == "armor" }
             }.onSuccess { shopItem ->
                 when (shopItem.key) {
                     "chainmail_armor" -> addArmor(player, ArmorType.CHAINMAIL)
@@ -433,15 +577,14 @@ class HealthShopUI(
                 }
             }
             player.inventory.addItem(bow)
-            // an arrow is included with the bow
-            maxArrows[player.uniqueId] = 1
         }
         // process arrows
         kotlin
             .runCatching {
-                purchasedItems.first { it.category == "arrow" }
+                purchasedItems.first { it.group == "arrow" }
             }.onSuccess { shopItem ->
-                maxArrows[player.uniqueId] = maxArrows[player.uniqueId]!! + shopItem.amount
+                // 1 free arrow is included with the bow (which you need to buy an arrow)
+                playerData.maxArrows = shopItem.amount + 1
             }
         // process tracker
         if (purchasedItems.any { it.key == "tracker" }) {
@@ -453,27 +596,15 @@ class HealthShopUI(
         }
         // process steal perk
         if (purchasedItems.any { it.key == "steal_perk" }) {
-            player.persistentDataContainer.set(
-                NamespacedKey(PartyGames.plugin, "steal_perk"),
-                PersistentDataType.BOOLEAN,
-                true,
-            )
+            playerData.stealPerk = true
         }
         // process heal perk
         if (purchasedItems.any { it.key == "heal_perk" }) {
-            player.persistentDataContainer.set(
-                NamespacedKey(PartyGames.plugin, "heal_perk"),
-                PersistentDataType.BOOLEAN,
-                true,
-            )
+            playerData.healPerk = true
         }
         // process double jump
         if (purchasedItems.any { it.key == "double_jump" }) {
-            player.persistentDataContainer.set(
-                NamespacedKey(PartyGames.plugin, "double_jump"),
-                PersistentDataType.BOOLEAN,
-                true,
-            )
+            playerData.doubleJump = true
         }
         // process flint and steel
         if (purchasedItems.any { it.key == "flint_and_steel" }) {
@@ -484,5 +615,63 @@ class HealthShopUI(
         if (oakPlanks != null) {
             player.inventory.addItem(ItemStack.of(Material.OAK_PLANKS, oakPlanks.amount))
         }
+        // process fishing rod
+        if (purchasedItems.any { it.key == "fishing_rod" }) {
+            val fishingRod = ItemStack.of(Material.FISHING_ROD)
+            fishingRod.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
+            player.inventory.addItem(fishingRod)
+        }
+        // process fireballs
+        val fireballItem = purchasedItems.firstOrNull { it.group == "fireball" }
+        if (fireballItem != null) {
+            val fireball = ItemStack.of(Material.FIRE_CHARGE, fireballItem.amount)
+            fireball.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
+            player.inventory.addItem(fireball)
+        }
+        // process tnt
+        val tntItem = purchasedItems.firstOrNull { it.group == "tnt" }
+        if (tntItem != null) {
+            val tnt = ItemStack.of(Material.TNT, tntItem.amount)
+            tnt.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
+            player.inventory.addItem(tnt)
+        }
+        // process totem of undying
+        if (purchasedItems.any { it.key == "totem_of_undying" }) {
+            val totem = ItemStack.of(Material.TOTEM_OF_UNDYING)
+            totem.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
+            player.inventory.setItem(EquipmentSlot.OFF_HAND, totem)
+        }
+        // process ender pearls
+        val enderPearlItem = purchasedItems.firstOrNull { it.group == "ender_pearl" }
+        if (enderPearlItem != null) {
+            val enderPearl = ItemStack.of(Material.ENDER_PEARL, enderPearlItem.amount)
+            enderPearl.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
+            player.inventory.addItem(enderPearl)
+        }
+        // process snow balls
+        if (purchasedItems.any { it.key == "snowball" }) {
+            val snowBall = ItemStack.of(Material.SNOWBALL, 16)
+            snowBall.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
+            player.inventory.addItem(snowBall)
+        }
+
+        // save this kit (index 8 is the last used kit)
+        if (purchasedItems.isEmpty()) {
+            return
+        }
+        val kit = HealthShopKit(purchasedItems.toList(), 8)
+        databaseManager.saveHealthShopKit(playerUUID, kit)
     }
 }

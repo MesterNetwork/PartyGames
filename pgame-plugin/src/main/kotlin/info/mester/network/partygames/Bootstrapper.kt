@@ -3,11 +3,7 @@ package info.mester.network.partygames
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
 import info.mester.network.partygames.api.PartyGamesCore
-import info.mester.network.partygames.game.HealthShopMinigame
-import info.mester.network.partygames.game.MineguessrMinigame
-import info.mester.network.partygames.game.QueueType
-import info.mester.network.partygames.game.SnifferHuntMinigame
-import info.mester.network.partygames.game.SpeedBuildersMinigame
+import info.mester.network.partygames.game.GravjumpMinigame
 import io.papermc.paper.command.brigadier.Commands
 import io.papermc.paper.plugin.bootstrap.BootstrapContext
 import io.papermc.paper.plugin.bootstrap.PluginBootstrap
@@ -41,10 +37,6 @@ class Bootstrapper : PluginBootstrap {
                             .executes { ctx ->
                                 val sender = ctx.source.sender
                                 PartyGames.plugin.reload()
-                                HealthShopMinigame.reload()
-                                SpeedBuildersMinigame.reload()
-                                SnifferHuntMinigame.reload()
-                                MineguessrMinigame.reload()
                                 sender.sendMessage(Component.text("Reloaded the configuration!", NamedTextColor.GREEN))
                                 Command.SINGLE_SUCCESS
                             },
@@ -88,13 +80,23 @@ class Bootstrapper : PluginBootstrap {
                                     )
                                     return@executes 1
                                 }
-                                val typeRaw = StringArgumentType.getString(ctx, "game").uppercase()
-                                if (!QueueType.entries.any { it.name.uppercase() == typeRaw }) {
-                                    return@executes 1
-                                }
-                                val type = QueueType.valueOf(typeRaw)
+                                val bundleRaw = StringArgumentType.getString(ctx, "game").uppercase()
+                                val bundle =
+                                    PartyGamesCore
+                                        .getInstance()
+                                        .gameRegistry
+                                        .getBundle(bundleRaw)
+                                        ?: run {
+                                            sender.sendMessage(
+                                                MiniMessage
+                                                    .miniMessage()
+                                                    .deserialize("<red>Game $bundleRaw not found!"),
+                                            )
+                                            return@executes 1
+                                        }
+
                                 val currentQueue = PartyGames.plugin.queueManager.getQueueOf(sender)
-                                if (currentQueue != null && currentQueue.type == type) {
+                                if (currentQueue != null && currentQueue.bundle == bundle) {
                                     sender.sendMessage(
                                         Component.text(
                                             "You are already in a queue for this game!",
@@ -103,9 +105,29 @@ class Bootstrapper : PluginBootstrap {
                                     )
                                     return@executes 1
                                 }
-                                PartyGames.plugin.queueManager.joinQueue(type, listOf(sender))
+                                PartyGames.plugin.queueManager.joinQueue(bundle, listOf(sender))
                                 Command.SINGLE_SUCCESS
                             },
+                    ).build(),
+            )
+
+            // gravjump
+            commands.register(
+                Commands
+                    .literal("gravjump")
+                    .requires { it.sender.hasPermission("partygames.gravjump") }
+                    .then(
+                        Commands.literal("flip").executes { ctx ->
+                            // get the game
+                            val sender = ctx.source.sender as? Player ?: return@executes 1
+                            val game =
+                                PartyGamesCore.getInstance().gameRegistry.getGameByWorld(sender.world)
+                                    ?: return@executes 1
+                            val minigame = game.runningMinigame as? GravjumpMinigame ?: return@executes 1
+
+                            minigame.flip()
+                            Command.SINGLE_SUCCESS
+                        },
                     ).build(),
             )
         }

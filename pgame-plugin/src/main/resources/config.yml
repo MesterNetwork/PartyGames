@@ -9,6 +9,10 @@ minigames:
         x: 0.5
         y: 65.0
         z: 0.5
+      - world: mg-healthshop3
+        x: 0.5
+        y: 62.0
+        z: 0.5
     class: info.mester.network.partygames.game.HealthShopMinigame
     display-name: Health Shop
   speedbuilders:
@@ -51,6 +55,15 @@ minigames:
         z: 4.0
     class: info.mester.network.partygames.game.MineguessrMinigame
     display-name: Mine Guesser
+  gravjump:
+    worlds:
+      - world: mg-gravjump
+        x: 0.5
+        y: 65.0
+        z: 0.5
+        yaw: -90.0
+    class: info.mester.network.partygames.game.GravjumpMinigame
+    display-name: Gravjump
 family-night:
   - healthshop
   - speedbuilders

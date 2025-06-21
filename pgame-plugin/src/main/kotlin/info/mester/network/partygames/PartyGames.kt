@@ -2,7 +2,12 @@ package info.mester.network.partygames
 
 import info.mester.network.partygames.api.MinigameWorld
 import info.mester.network.partygames.api.PartyGamesCore
+import info.mester.network.partygames.game.GravjumpMinigame
+import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.game.MineguessrMinigame
 import info.mester.network.partygames.game.QueueManager
+import info.mester.network.partygames.game.SnifferHuntMinigame
+import info.mester.network.partygames.game.SpeedBuildersMinigame
 import info.mester.network.partygames.level.LevelManager
 import info.mester.network.partygames.placeholder.LevelPlaceholder
 import info.mester.network.partygames.placeholder.PlayingPlaceholder
@@ -17,6 +22,7 @@ import org.bukkit.GameRule
 import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.util.Vector
 import java.io.File
 import java.util.UUID
 import kotlin.math.pow
@@ -103,6 +109,12 @@ class PartyGames : JavaPlugin() {
     fun reload() {
         reloadConfig()
         registerMinigames()
+        // reload minigame configs
+        HealthShopMinigame.reload()
+        SpeedBuildersMinigame.reload()
+        SnifferHuntMinigame.reload()
+        MineguessrMinigame.reload()
+        GravjumpMinigame.reload()
     }
 
     override fun onEnable() {
@@ -112,6 +124,7 @@ class PartyGames : JavaPlugin() {
         saveResource("health-shop.yml", false)
         saveResource("speed-builders.yml", false)
         saveResource("sniffer-hunt.yml", false)
+        saveResource("gravjump.yml", false)
         reload()
         // register low-level APIs
         try {
@@ -127,7 +140,7 @@ class PartyGames : JavaPlugin() {
         queueManager = QueueManager(this)
         sidebarManager = SidebarManager(this)
         // register placeholders
-        playingPlaceholder = PlayingPlaceholder()
+        playingPlaceholder = PlayingPlaceholder(this)
         playingPlaceholder.register()
         LevelPlaceholder(levelManager).register()
         StatisticsPlaceholder(databaseManager).register()
@@ -152,7 +165,9 @@ class PartyGames : JavaPlugin() {
                         val x = entry["x"] as Double
                         val y = entry["y"] as Double
                         val z = entry["z"] as Double
-                        MinigameWorld(world, org.bukkit.util.Vector(x, y, z))
+                        val yaw = entry["yaw"] as? Double ?: 0.0
+                        val pitch = entry["pitch"] as? Double ?: 0.0
+                        MinigameWorld(world, Vector(x, y, z), yaw.toFloat(), pitch.toFloat())
                     } else {
                         null
                     }
@@ -178,6 +193,8 @@ class PartyGames : JavaPlugin() {
 
     override fun onDisable() {
         // Plugin shutdown logic
-        levelManager.stop()
+        if (::levelManager.isInitialized) {
+            levelManager.stop()
+        }
     }
 }

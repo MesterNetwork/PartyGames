@@ -2,20 +2,33 @@ package info.mester.network.partygames.api
 
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.minimessage.MiniMessage
+import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitTask
+import org.bukkit.util.Vector
 import java.util.function.Consumer
-import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.sqrt
 
 private const val INTRODUCTION_TIME = 8
+
+enum class IntroductionType {
+    /**
+     * The introduction will be a circle around the start position.
+     * Players will be teleported to the circle and rotated around the start position.
+     */
+    CIRCLE,
+
+    /**
+     * The introduction will be at the start position.
+     * The players will be locked to the start position and will only be able to look around.
+     */
+    STATIC,
+}
 
 class IntroductionTimer(
     private val game: Game,
 ) : Consumer<BukkitTask> {
     private var rotation = 0.0
-    private var lastTime = System.currentTimeMillis()
     private var remainingTime = INTRODUCTION_TIME * 20
 
     private fun generateProgressBar(): String {
@@ -45,19 +58,30 @@ class IntroductionTimer(
         val actionBar = "<dark_gray>[${generateProgressBar()}]"
         val players = game.onlinePlayers
         Audience.audience(players).sendActionBar(MiniMessage.miniMessage().deserialize(actionBar))
+
         remainingTime--
         if (remainingTime <= 0) {
             t.cancel()
             game.begin()
             return
         }
-        val deltaTime = System.currentTimeMillis() - lastTime
-        lastTime = System.currentTimeMillis()
-        // rotate so that a full revolution takes 20 seconds
-        rotation += deltaTime * 360.0 / 20000.0
-        if (rotation > 360.0) {
-            rotation = 0.0
+
+        when (minigame.introductionType) {
+            IntroductionType.CIRCLE -> circleIntroduction(minigame, players)
+            IntroductionType.STATIC -> staticIntroduction(minigame, players)
         }
+    }
+
+    private fun circleIntroduction(
+        minigame: Minigame,
+        players: List<Player>,
+    ) {
+        // rotate so that a full revolution takes 20 seconds (400 ticks)
+        rotation += 360 / 400.0
+        if (rotation > 360.0) {
+            rotation = rotation % 360.0
+        }
+
         for (player in players) {
             // we want to "spread" the players out along the circle, which we can do by
             // manipulating the degree before calculating the hit position
@@ -71,23 +95,35 @@ class IntroductionTimer(
             // to construct the final location for all players, take the x and z coordinates and set y to startPos.y + 15
             val finalPos =
                 minigame.startPos.apply {
-                    val finalX = x + hitX
-                    val finalY = y + 15.0
-                    val finalZ = z + hitZ
-                    // calculate the yaw and pitch from the final coordinates to the startpos
-                    val dx = x - finalX
-                    val dy = y - (finalY + player.eyeHeight)
-                    val dz = z - finalZ
-                    val distanceXZ = sqrt(dx * dx + dz * dz)
-                    yaw = Math.toDegrees(atan2(dz, dx)).toFloat() - 90
-                    pitch = -Math.toDegrees(atan2(dy, distanceXZ)).toFloat()
-
-                    x = finalX
-                    z = finalZ
-                    y = finalY
+                    x += hitX
+                    y += 15.0
+                    z += hitZ
+                    val direction = minigame.startPos.toVector().subtract(Vector(x, y, z))
+                    setDirection(direction)
                 }
 
             player.teleportAsync(finalPos)
+        }
+    }
+
+    private fun staticIntroduction(
+        minigame: Minigame,
+        players: List<Player>,
+    ) {
+        for (player in players) {
+            // teleport the player to the start position and lock their rotation
+            val playerLocation = player.location
+            if (playerLocation.world != minigame.startPos.world) {
+                continue
+            }
+            if (playerLocation.distance(minigame.startPos) > 0.01) {
+                player.teleportAsync(
+                    minigame.startPos.apply {
+                        yaw = player.location.yaw
+                        pitch = player.location.pitch
+                    },
+                )
+            }
         }
     }
 }

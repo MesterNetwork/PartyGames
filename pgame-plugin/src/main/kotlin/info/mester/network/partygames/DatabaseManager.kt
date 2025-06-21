@@ -1,5 +1,7 @@
 package info.mester.network.partygames
 
+import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.game.healthshop.HealthShopKit
 import info.mester.network.partygames.level.LevelData
 import java.io.File
 import java.sql.Connection
@@ -51,6 +53,16 @@ class DatabaseManager(
                     amount INTEGER,
                     PRIMARY KEY (uuid, game)
                 );
+                """.trimIndent(),
+            )
+            statement.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS healthshop_kits (
+                uuid CHAR(32),
+                "index" INTEGER,
+                items TEXT,
+                PRIMARY KEY (uuid, "index")
+                )
                 """.trimIndent(),
             )
         }
@@ -209,5 +221,47 @@ class DatabaseManager(
         }
 
         return totalTimePlayed
+    }
+
+    fun saveHealthShopKit(
+        uuid: UUID,
+        kit: HealthShopKit,
+    ) {
+        val statement =
+            connection.prepareStatement(
+                """
+                INSERT OR REPLACE INTO healthshop_kits (uuid, items, "index")
+                VALUES (?, ?, ?)
+                """.trimIndent(),
+            )
+        statement.setString(1, uuid.shorten())
+        statement.setString(2, kit.items.joinToString(",") { it.key })
+        statement.setInt(3, kit.index)
+        statement.executeUpdate()
+    }
+
+    fun getHealthShopKits(uuid: UUID): List<HealthShopKit> {
+        val statement = connection.prepareStatement("SELECT * FROM healthshop_kits WHERE uuid = ?")
+        statement.setString(1, uuid.shorten())
+        val resultSet = statement.executeQuery()
+        val kits = mutableListOf<HealthShopKit>()
+        while (resultSet.next()) {
+            val itemsString = resultSet.getString("items")
+            val index = resultSet.getInt("index")
+            val healthShopItems = HealthShopMinigame.getShopItems()
+            val items = itemsString.split(",").mapNotNull { key -> healthShopItems.firstOrNull { it.key == key } }
+            kits.add(HealthShopKit(items, index))
+        }
+        return kits
+    }
+
+    fun deleteHealthShopKit(
+        uuid: UUID,
+        index: Int,
+    ) {
+        val statement = connection.prepareStatement("DELETE FROM healthshop_kits WHERE uuid = ? AND \"index\" = ?")
+        statement.setString(1, uuid.shorten())
+        statement.setInt(2, index)
+        statement.executeUpdate()
     }
 }

@@ -40,7 +40,10 @@ import kotlin.random.Random
 abstract class Minigame(
     protected val game: Game,
     minigameName: String,
+    val introductionType: IntroductionType = IntroductionType.CIRCLE,
 ) {
+    constructor(game: Game, minigameName: String) : this(game, minigameName, IntroductionType.CIRCLE)
+
     private var _running = false
     private var countdownUUID = UUID.randomUUID()
     protected val plugin = PartyGamesCore.getInstance()
@@ -63,7 +66,7 @@ abstract class Minigame(
         originalPlugin = minigameConfig.plugin
         worldIndex = Random.nextInt(0, minigameConfig.worlds.size)
         rootWorldName = minigameConfig.worlds[worldIndex].name
-        startPos = minigameConfig.worlds[worldIndex].startPos.toLocation(Bukkit.getWorld(rootWorldName)!!)
+        startPos = minigameConfig.worlds[worldIndex].toLocation(Bukkit.getWorld(rootWorldName)!!)
     }
 
     /**

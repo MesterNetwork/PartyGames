@@ -1,17 +1,25 @@
 package info.mester.network.partygames.placeholder
 
-import info.mester.network.partygames.game.QueueType
+import info.mester.network.partygames.PartyGames
+import info.mester.network.partygames.api.PartyGamesCore
 import me.clip.placeholderapi.expansion.PlaceholderExpansion
 import org.bukkit.entity.Player
 import java.util.concurrent.ConcurrentHashMap
 
-class PlayingPlaceholder : PlaceholderExpansion() {
+class PlayingPlaceholder(
+    plugin: PartyGames,
+) : PlaceholderExpansion() {
     private val playingMap: MutableMap<String, Int> = ConcurrentHashMap()
 
     init {
-        val queueTypes = QueueType.entries.map { it.name }
-        for (gameType in queueTypes) {
-            addPlaying(gameType, 0)
+        val bundles =
+            PartyGamesCore
+                .getInstance()
+                .gameRegistry
+                .getBundles()
+                .filter { it.plugin == plugin }
+        for (bundle in bundles) {
+            addPlaying(bundle.name, 0)
         }
     }
 

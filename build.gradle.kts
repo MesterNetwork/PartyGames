@@ -12,7 +12,7 @@ allprojects {
         mavenCentral()
     }
 }
-val targetJavaVersion = 21
+
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
 }
