@@ -651,7 +651,7 @@ class HealthShopMinigame(
 
                 // launch a fireball in the direction the player is looking
                 val fireball = event.player.launchProjectile(Fireball::class.java)
-                fireball.isIncendiary = false
+                fireball.setIsIncendiary(false)
                 fireball.yield = 4f
                 fireball.velocity =
                     event.player.location.direction
