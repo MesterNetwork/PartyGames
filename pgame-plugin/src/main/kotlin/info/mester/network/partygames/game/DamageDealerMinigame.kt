@@ -180,6 +180,7 @@ class DamageDealerMinigame(
 
     override fun onLoad() {
         game.world.setGameRule(GameRule.NATURAL_REGENERATION, false)
+        super.onLoad()
     }
 
     override fun start() {

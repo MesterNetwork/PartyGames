@@ -30,6 +30,17 @@ data class HealthShopKit(
                         ),
                     )
                 }
+                lore.add(
+                    mm.deserialize(
+                        "<!i><gray>Total: <red>${
+                            String.format(
+                                "%.1f",
+                                items.sumOf { it.price } / 2.0,
+                            )
+                        } ♥",
+                    ),
+                )
+
                 lore.add(Component.empty())
                 lore.add(mm.deserialize("<!i><gray>Click to select this kit!"))
                 if (index != 8) {

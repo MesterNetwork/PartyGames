@@ -8,6 +8,7 @@ import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
+import org.bukkit.GameRule
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
@@ -17,6 +18,7 @@ import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityCombustEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDismountEvent
 import org.bukkit.event.entity.EntityRegainHealthEvent
 import org.bukkit.event.entity.EntityShootBowEvent
@@ -41,6 +43,7 @@ abstract class Minigame(
     protected val game: Game,
     minigameName: String,
     val introductionType: IntroductionType = IntroductionType.CIRCLE,
+    val allowFallDamage: Boolean = false,
 ) {
     constructor(game: Game, minigameName: String) : this(game, minigameName, IntroductionType.CIRCLE)
 
@@ -86,7 +89,9 @@ abstract class Minigame(
      *
      * Can be used to set up the world (unlike in the constructor, where a world is not yet ready)
      */
-    open fun onLoad() {}
+    open fun onLoad() {
+        startPos.world.setGameRule(GameRule.FALL_DAMAGE, allowFallDamage)
+    }
 
     /**
      * A function to finish the minigame (roll back any changes, handle scores, etc.)
@@ -201,6 +206,8 @@ abstract class Minigame(
     open fun handleEntityCombust(event: EntityCombustEvent) {}
 
     open fun handleEntityDismount(event: EntityDismountEvent) {}
+
+    open fun handleEntityDamage(event: EntityDamageEvent) {}
 
     open fun handleEntityDamageByEntity(event: EntityDamageByEntityEvent) {}
 

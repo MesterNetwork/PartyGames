@@ -79,6 +79,7 @@ items:
       - <white>May cause a bit of pain.
     price: 12
     slot: 7
+    amount: 3
     group: sharpness
     category: combat
   sharpness_5:
@@ -89,6 +90,7 @@ items:
       - <red><bold>OUCH!
     price: 18
     slot: 8
+    amount: 5
     group: sharpness
     category: combat
 
@@ -96,8 +98,8 @@ items:
     id: chainmail_chestplate
     name: <gray>Chainmail Armor
     lore:
-      - <white>A basic chainmail armor.
-      - <white>Good for blocking attacks.
+      - <white>Surprisingly protective for interlinked metal rings.
+      - <white>Medieval drip, now in PvP!
     price: 8
     slot: 9
     group: armor
@@ -106,8 +108,8 @@ items:
     id: iron_chestplate
     name: <white>Iron Armor
     lore:
-      - <white>A basic iron armor.
-      - <white>Good for blocking attacks.
+      - <white>Reliable iron armor, forged for battle.
+      - <white>Rusts slightly under pressure.
     price: 12
     slot: 10
     group: armor
@@ -116,8 +118,8 @@ items:
     id: diamond_chestplate
     name: <aqua>Diamond Armor
     lore:
-      - <white>A basic diamond armor.
-      - <white>Good for blocking attacks.
+      - <white>Shiny, durable, and suspiciously flashy.
+      - <white>Perfect for flexing <i>and</i> surviving.
     price: 24
     slot: 11
     group: armor
@@ -126,8 +128,8 @@ items:
     id: netherite_chestplate
     name: <dark_purple>Netherite Armor
     lore:
-      - <white>The strongest armor in existence, imbued with ancient power.
-      - <white>Only the bravest wield this mighty armor.
+      - <white>The pinnacle of armor technology.
+      - '<white>Warning: may cause overconfidence.'
     price: 36
     slot: 12
     group: armor
@@ -147,6 +149,7 @@ items:
     name: <yellow>Protection I
     lore:
       - <white>Gives you a 16% damage reduction.
+      - <white>Every little bit helps, right?
     price: 8
     slot: 14
     group: protection
@@ -156,8 +159,10 @@ items:
     name: <yellow>Protection II
     lore:
       - <white>Gives you a 32% damage reduction.
+      - <white>Now with 200% more smugness.
     price: 16
     slot: 15
+    amount: 2
     group: protection
     category: combat
   protection_iii:
@@ -165,8 +170,10 @@ items:
     name: <yellow>Protection III
     lore:
       - <white>Gives you a 48% damage reduction.
+      - <white>Just walk it off. You'll be fine.
     price: 24
     slot: 16
+    amount: 3
     group: protection
     category: combat
   protection_iv:
@@ -174,8 +181,10 @@ items:
     name: <yellow>Protection IV
     lore:
       - <white>Gives you a 64% damage reduction.
+      - <white>Like bubble wrap, but for warriors.
     price: 32
     slot: 17
+    amount: 4
     group: protection
     category: combat
 
@@ -193,7 +202,7 @@ items:
     id: arrow
     name: <yellow>Arrow
     lore:
-      - <white>A basic arrow.
+      - <white>A single arrow for precise shots.
       - <white>Regenerates after 3 seconds.
     price: 3
     slot: 19
@@ -203,7 +212,7 @@ items:
     id: arrow
     name: <yellow>2x Arrow
     lore:
-      - <white>2 arrows.
+      - <white>Two arrows. Double the chances to whiff.
       - <white>Regenerates after 3 seconds.
     price: 6
     slot: 20
@@ -214,7 +223,7 @@ items:
     id: arrow
     name: <yellow>3x Arrow
     lore:
-      - <white>3 arrows.
+      - <white>A polite way to say “leave.”
       - <white>Regenerates after 3 seconds.
     price: 9
     slot: 21
@@ -311,6 +320,15 @@ items:
     slot: 3
     group: gap
     category: utility
+  enchanted_golden_apple:
+    id: enchanted_golden_apple
+    name: <gold>Enchanted Golden Apple
+    lore:
+      - <white>The forbidden fruit of PvP.
+      - <white>Eat this and become a mildly invincible war god.
+    price: 15
+    slot: 4
+    category: utility
 
   totem_of_undying:
     id: totem_of_undying
@@ -349,8 +367,8 @@ items:
     id: flint_and_steel
     name: <gray>Flint and Steel
     lore:
-      - <white>A flint and steel, the same thing that ooga-booga used.
-      - <white>Great if you want to get arrested for arson.
+      - <white>Sets things on fire. Intentionally.
+      - <white>Technically not arson if it’s in a video game.
     price: 5
     slot: 10
     amount: 1
@@ -491,6 +509,17 @@ items:
     amount: 16
     category: utility
 
+  water_bucket:
+    id: water_bucket
+    name: <blue>Water Bucket
+    lore:
+      - <white>Stops fall damage, lava, and your enemies’ fun.
+      - <white>The Swiss Army knife of Minecraft items.
+    price: 5
+    slot: 26
+    amount: 1
+    category: utility
+
   # Potions
   splash_healing_3:
     id: splash_potion
@@ -599,26 +628,112 @@ items:
     amount: 2
     category: potion
 
-  speed_potion:
+  speed_ii_2:
     id: potion
-    name: <yellow>3x Potion of Speed II
+    name: <yellow>2x Potion of Speed II
     lore:
-      - <white>Speeds you up for 15 seconds.
-      - <white>Perfect for catching goons.
-    price: 6
+      - <white>Boosts your speed for 20 seconds.
+      - <white>Why walk when you can run like a panic attack?
+    price: 4
+    amount: 2
     slot: 9
-    amount: 3
+    group: speed_ii
     category: potion
 
-  jump_potion:
+  speed_ii_4:
     id: potion
-    name: <yellow>3x Potion of Jump Boost IV
+    name: <yellow>4x Potion of Speed II
     lore:
-      - <white>Turns you into a rabbit for 20 seconds.
-      - <white>Boing-boing-boing!
+      - <white>Boosts your speed for 20 seconds.
+      - <white>Basically caffeine in a bottle.
     price: 6
+    amount: 4
     slot: 10
-    amount: 3
+    group: speed_ii
+    category: potion
+
+  speed_ii_6:
+    id: potion
+    name: <yellow>6x Potion of Speed II
+    lore:
+      - <white>Boosts your speed for 20 seconds.
+      - <white>Wanna break the sound barrier?
+    price: 8
+    amount: 6
+    slot: 11
+    group: speed_ii
+    category: potion
+
+  jump_boost_2:
+    id: potion
+    name: <yellow>2x Potion of Jump Boost IV
+    lore:
+      - <white>Leap up to 4 blocks for 20 seconds.
+      - <white>Gravity? Never heard of her.
+    price: 4
+    amount: 2
+    slot: 12
+    group: jump_boost
+    category: potion
+
+  jump_boost_4:
+    id: potion
+    name: <yellow>4x Potion of Jump Boost IV
+    lore:
+      - <white>Leap up to 4 blocks for 20 seconds.
+      - <white>You are now 50% rabbit.
+    price: 6
+    amount: 4
+    slot: 13
+    group: jump_boost
+    category: potion
+
+  jump_boost_6:
+    id: potion
+    name: <yellow>6x Potion of Jump Boost IV
+    lore:
+      - <white>Leap up to 4 blocks for 20 seconds.
+      - <white>Built for players who fear stairs.
+    price: 8
+    amount: 6
+    slot: 14
+    group: jump_boost
+    category: potion
+
+  turtle_master:
+    id: potion
+    name: <yellow>2x Potion of the Turtle Master
+    lore:
+      - <white>Gain Resistance III & Slowness IV.
+      - <white>Become invincible… eventually.
+    price: 8
+    amount: 2
+    slot: 15
+    group: turtle_master
+    category: potion
+
+  turtle_master_long:
+    id: potion
+    name: <yellow>2x Long Potion of the Turtle Master
+    lore:
+      - <white>Same effects, now with 40% more suffering.
+      - <white>Perfect for moving at glacial pace in style.
+    price: 12
+    amount: 2
+    slot: 16
+    group: turtle_master
+    category: potion
+
+  turtle_master_strong:
+    id: potion
+    name: <yellow>2x Strong Potion of the Turtle Master
+    lore:
+      - <white>Resistance IV & Slowness VI.
+      - <white>You are now a tank with two left feet.
+    price: 16
+    amount: 2
+    slot: 17
+    group: turtle_master
     category: potion
 
   # Miscellaneous Items
@@ -662,6 +777,16 @@ items:
     slot: 3
     group: perk
     category: miscellaneous
+  feather_fall:
+    id: feather
+    name: <yellow>Feather Fall
+    lore:
+      - <white>You will not take fall damage.
+    price: 6
+    slot: 4
+    group: perk
+    category: miscellaneous
+
 spawn-locations:
   0:
     - x: 52.5

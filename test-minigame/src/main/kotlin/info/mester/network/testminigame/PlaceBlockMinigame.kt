@@ -16,6 +16,7 @@ class PlaceBlockMinigame(
         val world = game.world
         world.worldBorder.size = 30.0
         world.worldBorder.center = startPos
+        super.onLoad()
     }
 
     override fun start() {

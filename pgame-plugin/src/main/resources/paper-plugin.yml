@@ -21,6 +21,14 @@ dependencies:
     My_Worlds:
       load: BEFORE
       required: false
+    FriendsAPIForPartyAndFriends:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    Spigot-Party-API-PAF:
+      load: BEFORE
+      required: false
+      join-classpath: true
 authors:
   - Mester
 description: The paper plugin for MesterNetwork's Party Games

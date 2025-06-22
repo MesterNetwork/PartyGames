@@ -192,6 +192,7 @@ class MineguessrMinigame(
 
     override fun onLoad() {
         game.world.setGameRule(GameRule.REDUCED_DEBUG_INFO, true)
+        super.onLoad()
     }
 
     override fun start() {

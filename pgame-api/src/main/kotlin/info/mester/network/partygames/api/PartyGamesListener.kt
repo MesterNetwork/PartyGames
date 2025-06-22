@@ -106,11 +106,15 @@ class PartyGamesListener(
 
     @EventHandler
     fun onEntityDamage(event: EntityDamageEvent) {
-        // cancel fall damage
+        // cancel fall damage unless the minigame allows it
+        val minigame = getMinigameFromWorld(event.entity.world)
         if (event.entity.type == EntityType.PLAYER && event.cause == EntityDamageEvent.DamageCause.FALL) {
-            event.isCancelled = true
-            return
+            if (minigame?.allowFallDamage != true) {
+                event.isCancelled = true
+                return
+            }
         }
+        minigame?.handleEntityDamage(event)
     }
 
     @EventHandler

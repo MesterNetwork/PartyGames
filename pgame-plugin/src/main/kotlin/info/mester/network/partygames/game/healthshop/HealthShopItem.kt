@@ -28,7 +28,7 @@ enum class HealthShopItemCategory(
     /**
      * Miscellaneous items that do not fit into other categories.
      */
-    MISCELLANEOUS(Material.ENDER_PEARL),
+    MISCELLANEOUS(Material.COMPASS),
 }
 
 class HealthShopItem(
@@ -87,12 +87,18 @@ class HealthShopItem(
                 HealthShopUI.setRegenPotion(item, false)
             }
             // apply speed potion to item
-            if (key == "speed_potion") {
+            if (group == "speed_ii") {
                 HealthShopUI.setSpeedPotion(item, false)
             }
             // apply jump potion to item
-            if (key == "jump_potion") {
+            if (group == "jump_boost") {
                 HealthShopUI.setJumpPotion(item, false)
+            }
+            // apply turtle master
+            if (group == "turtle_master") {
+                val long = key.endsWith("_long")
+                val strong = key.endsWith("_strong")
+                HealthShopUI.setTurtleMasterPotion(item, long, strong)
             }
 
             return HealthShopItem(

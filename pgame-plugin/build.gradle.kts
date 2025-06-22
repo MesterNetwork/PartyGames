@@ -17,6 +17,7 @@ repositories {
     maven("https://repo.rapture.pw/repository/maven-releases/")
     maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
     maven("https://repo.extendedclip.com/releases/")
+    maven("https://simonsator.de/repo/")
 }
 
 dependencies {
@@ -43,6 +44,9 @@ dependencies {
     compileOnly("me.clip:placeholderapi:2.11.6")
     // ConfigLib
     implementation("de.exlll:configlib-paper:4.5.0")
+    // Party and Friends
+    compileOnly("de.simonsator:Party-and-Friends-MySQL-Edition-Spigot-API:1.6.2-RELEASE")
+    compileOnly("de.simonsator:spigot-party-api-for-party-and-friends:1.0.7-RELEASE")
 }
 val targetJavaVersion = 21
 kotlin {

@@ -398,6 +398,7 @@ class SpeedBuildersMinigame(
         val clearRegion =
             when (withFloor) {
                 true -> playerArea
+
                 false -> {
                     // offset the player area by 1 block
                     val pos1 = playerArea.pos1.add(0, 1, 0)
@@ -917,6 +918,7 @@ class SpeedBuildersMinigame(
 
     override fun onLoad() {
         game.world.difficulty = Difficulty.NORMAL
+        super.onLoad()
     }
 
     override fun start() {

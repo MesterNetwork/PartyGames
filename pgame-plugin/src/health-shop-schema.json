@@ -53,7 +53,10 @@
                 "offhand",
                 "regen_ii",
                 "splash_healing_ii",
-                "splash_healing"
+                "splash_healing",
+                "speed_ii",
+                "jump_boost",
+                "turtle_master"
               ]
             },
             "category": {

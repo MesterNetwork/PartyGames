@@ -262,6 +262,7 @@ class GardeningMinigame(
         worldBorder.center = startPos
         worldBorder.size = 2 * MAP_RADIUS + 1.0
         worldBorder.warningDistance = 0
+        super.onLoad()
     }
 
     override fun start() {

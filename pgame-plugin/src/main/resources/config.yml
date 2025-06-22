@@ -14,7 +14,7 @@ minigames:
         y: 62.0
         z: 0.5
     class: info.mester.network.partygames.game.HealthShopMinigame
-    display-name: Health Shop
+    display-name: Health Shop v1.1
   speedbuilders:
     worlds:
       - world: mg-speedbuilders

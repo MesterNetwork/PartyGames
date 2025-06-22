@@ -8,16 +8,21 @@ import info.mester.network.partygames.api.events.PlayerRejoinedEvent
 import info.mester.network.partygames.api.events.PlayerRemovedFromGameEvent
 import info.mester.network.partygames.game.HealthShopMinigame
 import info.mester.network.partygames.game.SpeedBuildersMinigame
+import info.mester.network.partygames.game.healthshop.HealthShopUI
 import info.mester.network.partygames.util.snapTo90
 import io.papermc.paper.event.player.AsyncChatEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
+import org.bukkit.attribute.Attribute
+import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.ArrowBodyCountChangeEvent
 import org.bukkit.event.entity.CreatureSpawnEvent
+import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
@@ -336,6 +341,30 @@ class PartyListener(
         val target = event.attacked
         if (target.persistentDataContainer.has(SpeedBuildersMinigame.SPAWNED_ENTITY_KEY, PersistentDataType.BOOLEAN)) {
             target.remove()
+        }
+    }
+
+    @EventHandler
+    fun onInventoryClick(event: InventoryClickEvent) {
+        val holder = event.clickedInventory?.getHolder(false)
+        if (holder is HealthShopUI) {
+            // we handle Health Shop UI clicks here so we can create a test UI
+            event.isCancelled = true
+            holder.onInventoryClick(event)
+        }
+    }
+
+    @EventHandler
+    fun onInventoryClose(event: InventoryCloseEvent) {
+        val holder = event.inventory.holder
+        val player = event.player as? Player ?: return
+        if (holder is HealthShopUI && player.persistentDataContainer.has(Bootstrapper.TEST_HEALTHSHOP_UI_KEY)) {
+            player.getAttribute(Attribute.MAX_HEALTH)?.apply {
+                baseValue = defaultValue
+                player.health = baseValue
+                player.sendHealthUpdate()
+            }
+            player.persistentDataContainer.remove(Bootstrapper.TEST_HEALTHSHOP_UI_KEY)
         }
     }
 }

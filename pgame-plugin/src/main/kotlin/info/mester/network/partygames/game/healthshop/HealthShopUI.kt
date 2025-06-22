@@ -98,6 +98,23 @@ class HealthShopUI(
             }
         }
 
+        fun setTurtleMasterPotion(
+            item: ItemStack,
+            long: Boolean,
+            strong: Boolean,
+        ) {
+            item.editMeta(PotionMeta::class.java) { meta ->
+                applyGenericItemMeta(meta)
+                meta.basePotionType =
+                    when {
+                        !long && !strong -> PotionType.TURTLE_MASTER
+                        long -> PotionType.LONG_TURTLE_MASTER
+                        strong -> PotionType.STRONG_TURTLE_MASTER
+                        else -> PotionType.TURTLE_MASTER // fallback, should not happen
+                    }
+            }
+        }
+
         fun setRegenPotion(
             item: ItemStack,
             withName: Boolean = true,
@@ -113,7 +130,7 @@ class HealthShopUI(
             withName: Boolean = true,
         ) = setCustomPotion(
             item,
-            PotionEffect(PotionEffectType.SPEED, 15 * 20, 1, false),
+            PotionEffect(PotionEffectType.SPEED, 20 * 20, 1, false),
             Color.fromRGB(51, 235, 255),
             if (withName) "Speed" else null,
         )
@@ -493,54 +510,6 @@ class HealthShopUI(
             }
             player.inventory.setItem(EquipmentSlot.OFF_HAND, shield)
         }
-        // process golden apples
-        purchasedItems.filter { it.group == "gap" }.forEach { item ->
-            val apple = ItemStack.of(Material.GOLDEN_APPLE, item.amount)
-            @Suppress("UnstableApiUsage")
-            if (item.key == "golden_apple_inf") {
-                // use the cooldown component for infinite golden apples
-                val cooldown = UseCooldown.useCooldown(10f).cooldownGroup(INF_GAP_COOLDOWN_KEY)
-                apple.setData(DataComponentTypes.USE_COOLDOWN, cooldown)
-            }
-            player.inventory.addItem(apple)
-        }
-        // process regeneration potion
-        purchasedItems.firstOrNull { it.group == "regen_ii" }?.let { shopItem ->
-            val potion = ItemStack.of(Material.POTION)
-            setRegen2Potion(potion)
-            repeat(shopItem.amount) {
-                player.inventory.addItem(potion)
-            }
-        }
-        purchasedItems.firstOrNull { it.key == "regen_v" }?.let { shopItem ->
-            val potion = ItemStack.of(Material.POTION)
-            setRegenPotion(potion)
-            repeat(shopItem.amount) {
-                player.inventory.addItem(potion)
-            }
-        }
-        // process speed potion
-        purchasedItems.firstOrNull { it.key == "speed_potion" }?.let { shopItem ->
-            val potion = ItemStack.of(Material.POTION)
-            setSpeedPotion(potion)
-            repeat(shopItem.amount) {
-                player.inventory.addItem(potion)
-            }
-        }
-        // process jump potion
-        purchasedItems.firstOrNull { it.key == "jump_potion" }?.let { shopItem ->
-            val potion = ItemStack.of(Material.POTION)
-            setJumpPotion(potion)
-            repeat(shopItem.amount) {
-                player.inventory.addItem(potion)
-            }
-        }
-        // process healing potions
-        for (purchasedPotion in purchasedItems.filter { it.key == "splash_healing" || it.key == "splash_healing_ii" }) {
-            val potion = ItemStack.of(Material.SPLASH_POTION, purchasedPotion.amount)
-            setHealthPotion(potion, purchasedPotion.key == "splash_healing")
-            player.inventory.addItem(potion)
-        }
         // process armor
         kotlin
             .runCatching {
@@ -586,25 +555,21 @@ class HealthShopUI(
                 // 1 free arrow is included with the bow (which you need to buy an arrow)
                 playerData.maxArrows = shopItem.amount + 1
             }
-        // process tracker
-        if (purchasedItems.any { it.key == "tracker" }) {
-            val tracker = ItemStack.of(Material.COMPASS)
-            tracker.editMeta { meta ->
-                meta.setEnchantmentGlintOverride(false)
+
+        // process golden apples
+        purchasedItems.filter { it.group == "gap" }.forEach { item ->
+            val apple = ItemStack.of(Material.GOLDEN_APPLE, item.amount)
+            @Suppress("UnstableApiUsage")
+            if (item.key == "golden_apple_inf") {
+                // use the cooldown component for infinite golden apples
+                val cooldown = UseCooldown.useCooldown(10f).cooldownGroup(INF_GAP_COOLDOWN_KEY)
+                apple.setData(DataComponentTypes.USE_COOLDOWN, cooldown)
             }
-            player.inventory.addItem(tracker)
+            player.inventory.addItem(apple)
         }
-        // process steal perk
-        if (purchasedItems.any { it.key == "steal_perk" }) {
-            playerData.stealPerk = true
-        }
-        // process heal perk
-        if (purchasedItems.any { it.key == "heal_perk" }) {
-            playerData.healPerk = true
-        }
-        // process double jump
-        if (purchasedItems.any { it.key == "double_jump" }) {
-            playerData.doubleJump = true
+        if (purchasedItems.any { it.key == "enchanted_golden_apple" }) {
+            val apple = ItemStack.of(Material.ENCHANTED_GOLDEN_APPLE, 1)
+            player.inventory.addItem(apple)
         }
         // process flint and steel
         if (purchasedItems.any { it.key == "flint_and_steel" }) {
@@ -665,6 +630,87 @@ class HealthShopUI(
                 applyGenericItemMeta(meta)
             }
             player.inventory.addItem(snowBall)
+        }
+        // process water bucket
+        if (purchasedItems.any { it.key == "water_bucket" }) {
+            val waterBucket = ItemStack.of(Material.WATER_BUCKET, 1)
+            waterBucket.editMeta { meta ->
+                applyGenericItemMeta(meta)
+            }
+            player.inventory.addItem(waterBucket)
+        }
+
+        // process healing potions
+        for (purchasedPotion in purchasedItems.filter { it.key == "splash_healing" || it.key == "splash_healing_ii" }) {
+            val potion = ItemStack.of(Material.SPLASH_POTION, purchasedPotion.amount)
+            setHealthPotion(potion, purchasedPotion.key == "splash_healing")
+            player.inventory.addItem(potion)
+        }
+        // process regeneration potions
+        purchasedItems.firstOrNull { it.group == "regen_ii" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.POTION)
+            setRegen2Potion(potion)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+        purchasedItems.firstOrNull { it.key == "regen_v" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.POTION)
+            setRegenPotion(potion)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+        // process speed potion
+        purchasedItems.firstOrNull { it.group == "speed_ii" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.POTION)
+            setSpeedPotion(potion)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+        // process jump potion
+        purchasedItems.firstOrNull { it.group == "jump_boost" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.POTION)
+            setJumpPotion(potion)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+        // process turtle master potion
+        purchasedItems.firstOrNull { it.group == "turtle_master" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.POTION)
+            val long = shopItem.key.endsWith("_long")
+            val strong = shopItem.key.endsWith("_strong")
+            setTurtleMasterPotion(potion, long, strong)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+
+        // process tracker
+        if (purchasedItems.any { it.key == "tracker" }) {
+            val tracker = ItemStack.of(Material.COMPASS)
+            tracker.editMeta { meta ->
+                meta.setEnchantmentGlintOverride(false)
+            }
+            player.inventory.addItem(tracker)
+        }
+        // process steal perk
+        if (purchasedItems.any { it.key == "steal_perk" }) {
+            playerData.stealPerk = true
+        }
+        // process heal perk
+        if (purchasedItems.any { it.key == "heal_perk" }) {
+            playerData.healPerk = true
+        }
+        // process double jump
+        if (purchasedItems.any { it.key == "double_jump" }) {
+            playerData.doubleJump = true
+        }
+        // process feather fall
+        if (purchasedItems.any { it.key == "feather_fall" }) {
+            playerData.featherFall = true
         }
 
         // save this kit (index 8 is the last used kit)

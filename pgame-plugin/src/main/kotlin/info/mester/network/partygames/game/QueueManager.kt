@@ -1,9 +1,12 @@
 package info.mester.network.partygames.game
 
+import de.simonsator.partyandfriends.spigot.api.pafplayers.PAFPlayerManager
+import de.simonsator.partyandfriends.spigot.api.party.PartyManager
 import info.mester.network.partygames.PartyGames
 import info.mester.network.partygames.api.MinigameBundle
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.minimessage.MiniMessage
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.UUID
 
@@ -12,6 +15,33 @@ private val mm = MiniMessage.miniMessage()
 class QueueManager(
     plugin: PartyGames,
 ) {
+    companion object {
+        val partyAvailable: Boolean
+            get() {
+                return try {
+                    Class.forName("de.simonsator.partyandfriends.spigot.api.pafplayers.PAFPlayerManager")
+                    true
+                } catch (_: ClassNotFoundException) {
+                    false
+                }
+            }
+
+        val pafPlayerManager: PAFPlayerManager by lazy {
+            if (partyAvailable) {
+                PAFPlayerManager.getInstance()
+            } else {
+                throw IllegalStateException("Party and Friends plugin is not available.")
+            }
+        }
+        val pafPartyManager: PartyManager by lazy {
+            if (partyAvailable) {
+                PartyManager.getInstance()
+            } else {
+                throw IllegalStateException("Party and Friends plugin is not available.")
+            }
+        }
+    }
+
     private val core = plugin.core
     private val gameRegistry = core.gameRegistry
     private val queues = mutableMapOf<UUID, Queue>()
@@ -42,6 +72,28 @@ class QueueManager(
     }
 
     fun joinQueue(
+        bundle: MinigameBundle,
+        player: Player,
+    ) {
+        if (partyAvailable) {
+            val pafPlayer = pafPlayerManager.getPlayer(player.uniqueId)
+            val party = pafPartyManager.getParty(pafPlayer)
+            if (party != null) {
+                if (party.leader.uniqueId != player.uniqueId) {
+                    Audience.audience(player).sendMessage(
+                        mm.deserialize("<red>You must be the party leader to join a game!"),
+                    )
+                    return
+                }
+                val players = party.allPlayers.mapNotNull { Bukkit.getPlayer(it.uniqueId) }
+                joinQueue(bundle, players)
+                return
+            }
+        }
+        joinQueue(bundle, listOf(player))
+    }
+
+    private fun joinQueue(
         bundle: MinigameBundle,
         players: List<Player>,
     ) {

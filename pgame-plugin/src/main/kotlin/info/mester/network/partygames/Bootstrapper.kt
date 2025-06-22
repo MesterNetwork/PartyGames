@@ -4,6 +4,8 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.arguments.StringArgumentType
 import info.mester.network.partygames.api.PartyGamesCore
 import info.mester.network.partygames.game.GravjumpMinigame
+import info.mester.network.partygames.game.HealthShopMinigame
+import info.mester.network.partygames.game.healthshop.HealthShopUI
 import io.papermc.paper.command.brigadier.Commands
 import io.papermc.paper.plugin.bootstrap.BootstrapContext
 import io.papermc.paper.plugin.bootstrap.PluginBootstrap
@@ -13,12 +15,19 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.minimessage.MiniMessage
+import org.bukkit.NamespacedKey
+import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
+import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.UUID
 
 @Suppress("UnstableApiUsage", "unused")
 class Bootstrapper : PluginBootstrap {
+    companion object {
+        val TEST_HEALTHSHOP_UI_KEY = NamespacedKey("partygames", "test_healthshop_ui")
+    }
+
     val gameLeaveAttempts = mutableMapOf<UUID, Long>()
 
     override fun bootstrap(context: BootstrapContext) {
@@ -105,7 +114,7 @@ class Bootstrapper : PluginBootstrap {
                                     )
                                     return@executes 1
                                 }
-                                PartyGames.plugin.queueManager.joinQueue(bundle, listOf(sender))
+                                PartyGames.plugin.queueManager.joinQueue(bundle, sender)
                                 Command.SINGLE_SUCCESS
                             },
                     ).build(),
@@ -126,6 +135,29 @@ class Bootstrapper : PluginBootstrap {
                             val minigame = game.runningMinigame as? GravjumpMinigame ?: return@executes 1
 
                             minigame.flip()
+                            Command.SINGLE_SUCCESS
+                        },
+                    ).build(),
+            )
+
+            // healthshop
+            commands.register(
+                Commands
+                    .literal("healthshop")
+                    .requires { it.sender.hasPermission("partygames.healthshop") }
+                    .then(
+                        Commands.literal("testui").executes { ctx ->
+                            val player = ctx.source.sender as? Player ?: return@executes 1
+                            val healthShop = HealthShopUI(player.uniqueId, HealthShopMinigame.startingHealth)
+                            player.openInventory(healthShop.inventory)
+                            player.persistentDataContainer.set(TEST_HEALTHSHOP_UI_KEY, PersistentDataType.BOOLEAN, true)
+
+                            player.getAttribute(Attribute.MAX_HEALTH)?.apply {
+                                baseValue = HealthShopMinigame.startingHealth
+                                player.health = baseValue
+                                player.sendHealthUpdate()
+                            }
+
                             Command.SINGLE_SUCCESS
                         },
                     ).build(),

@@ -39,26 +39,24 @@ import org.bukkit.event.Event
 import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityRegainHealthEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
-import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerToggleFlightEvent
-import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.CompassMeta
 import org.bukkit.persistence.PersistentDataType
-import org.bukkit.scheduler.BukkitTask
+import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import java.util.function.Consumer
 import java.util.logging.Level
 import kotlin.math.floor
 import kotlin.math.max
@@ -89,12 +87,13 @@ class ShopFailedException(
 
 class HealthShopMinigame(
     game: Game,
-) : Minigame(game, "healthshop") {
+) : Minigame(game, "healthshop", allowFallDamage = true) {
     companion object {
         private val shopItems: MutableList<HealthShopItem> = mutableListOf()
         private val startLocations: MutableMap<Int, Array<StartLocation>> = mutableMapOf()
         private val supplyDrops: MutableList<WeightedItem<String>> = mutableListOf()
-        private var startingHealth: Double = 80.0
+        var startingHealth: Double = 80.0
+            private set
         private val plugin = PartyGames.plugin
 
         fun getShopItems(): List<HealthShopItem> = shopItems.toList()
@@ -251,7 +250,7 @@ class HealthShopMinigame(
         val survivedSeconds = survivedTicks / 20
         // for every 20th second the player has survived, give them a point
         // 1 point every 10th second if the player is still alive (last player standing, time is up)
-        val survivedPoints = floor((survivedSeconds / 20).toDouble()).toInt() * (if (didSurvive) 2 else 1)
+        val survivedPoints = floor(survivedSeconds / if (didSurvive) 10.0 else 20.0).toInt()
         if (survivedPoints > 0) {
             game.addScore(player, survivedPoints, "Survived $survivedSeconds seconds")
         }
@@ -266,6 +265,7 @@ class HealthShopMinigame(
         worldBorder.warningDistance = 2
         worldBorder.damageBuffer = 0.0
         worldBorder.damageAmount = 1.5
+        super.onLoad()
     }
 
     override fun start() {
@@ -358,13 +358,18 @@ class HealthShopMinigame(
         val worldBorder = startPos.world.worldBorder
         // generate a random location within the world border (minus 2 blocks to avoid spawning on the border)
         val maxSize = (worldBorder.size.toInt() - 2) / 2
-        var x: Double
-        var z: Double
-        while (true) {
+        var x: Double = worldBorder.center.x
+        var z: Double = worldBorder.center.z
+        var attempts = 0
+        while (attempts < 5) {
+            attempts++
             x = worldBorder.center.x + Random.nextInt(-maxSize, maxSize)
             z = worldBorder.center.z + Random.nextInt(-maxSize, maxSize)
             // check if the location is not facing the void
-            if (startPos.world.getHighestBlockAt(x.toInt(), z.toInt()).type != Material.AIR) {
+            if (!startPos.world
+                    .getHighestBlockAt(x.toInt(), z.toInt())
+                    .type.isEmpty
+            ) {
                 break
             }
         }
@@ -475,6 +480,14 @@ class HealthShopMinigame(
         }
         sendReadyStatus()
         event.player.sendMessage(Component.text("Left click to reopen the shop.", NamedTextColor.AQUA))
+    }
+
+    override fun handleEntityDamage(event: EntityDamageEvent) {
+        val player = event.entity as? Player ?: return
+        if (event.damageSource.damageType == DamageType.FALL && getPlayerData(player).featherFall) {
+            event.isCancelled = true
+        }
+        super.handleEntityDamage(event)
     }
 
     @Suppress("UnstableApiUsage")
@@ -698,32 +711,38 @@ class HealthShopMinigame(
     override fun handleBlockPlace(event: BlockPlaceEvent) {
         val block = event.block
         if (block.type == Material.OAK_PLANKS) {
-            // start a nice animation that eventually breaks the block
-            Bukkit.getScheduler().runTaskTimer(
-                plugin,
-                object : Consumer<BukkitTask> {
-                    private var remainingTime = 6 * 20
+            val location = block.location.clone()
+            val world = block.world
+            val totalTime = 6 * 20 // 6 seconds in ticks
 
-                    override fun accept(t: BukkitTask) {
-                        if (!running) {
-                            t.cancel()
-                            return
-                        }
-                        remainingTime -= 1
-                        if (remainingTime <= 0) {
-                            block.type = Material.AIR
-                            t.cancel()
-                            return
-                        } else {
-                            // calculate the progress
-                            val progress = 1 - (remainingTime.toFloat() / (6 * 20))
-                            game.onlinePlayers.forEach { it.sendBlockDamage(event.block.location, progress) }
-                        }
+            object : BukkitRunnable() {
+                var remainingTime = totalTime
+
+                override fun run() {
+                    if (!running) {
+                        cancel()
+                        return
                     }
-                },
-                0,
-                1,
-            )
+
+                    // Check if the block is still the expected type
+                    if (world.getBlockAt(location).type != Material.OAK_PLANKS) {
+                        cancel()
+                        return
+                    }
+
+                    remainingTime--
+                    if (remainingTime <= 0) {
+                        world.getBlockAt(location).type = Material.AIR
+                        cancel()
+                        return
+                    }
+
+                    val progress = 1 - (remainingTime.toFloat() / totalTime)
+                    for (player in game.onlinePlayers) {
+                        player.sendBlockDamage(location, progress)
+                    }
+                }
+            }.runTaskTimer(plugin, 0, 1)
         }
         if (block.type == Material.TNT) {
             block.type = Material.AIR
@@ -783,17 +802,6 @@ class HealthShopMinigame(
                 HealthShopUI.setRegenPotion(potion, true)
                 player.inventory.addItem(potion)
             }
-        }
-    }
-
-    override fun handleInventoryClick(
-        event: InventoryClickEvent,
-        clickedInventory: Inventory,
-    ) {
-        val holder = clickedInventory.getHolder(false)
-        if (holder is HealthShopUI) {
-            event.isCancelled = true
-            holder.onInventoryClick(event)
         }
     }
 
