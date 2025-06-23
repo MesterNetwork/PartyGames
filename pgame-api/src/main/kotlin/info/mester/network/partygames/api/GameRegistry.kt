@@ -12,6 +12,7 @@ data class MinigameWorld(
     val startPos: Vector,
     val yaw: Float,
     val pitch: Float,
+    val displayName: String? = null,
 ) {
     constructor(name: String, startPos: Vector) : this(
         name,

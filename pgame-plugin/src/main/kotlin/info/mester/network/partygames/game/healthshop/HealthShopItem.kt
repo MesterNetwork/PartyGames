@@ -98,7 +98,19 @@ class HealthShopItem(
             if (group == "turtle_master") {
                 val long = key.endsWith("_long")
                 val strong = key.endsWith("_strong")
-                HealthShopUI.setTurtleMasterPotion(item, long, strong)
+                HealthShopUI.setTurtleMasterPotion(item, long, strong, false)
+            }
+            // apply poison
+            if (group == "poison") {
+                HealthShopUI.setPoisonPotion(item, if (key == "poison_ii") 1 else 0, false)
+            }
+            // apply blindness potion
+            if (group == "blindness") {
+                HealthShopUI.setBlindnessPotion(item, false)
+            }
+            // apply levitation potion
+            if (group == "levitation") {
+                HealthShopUI.setLevitationPotion(item, if (key == "levitation_ii") 1 else 0, false)
             }
 
             return HealthShopItem(

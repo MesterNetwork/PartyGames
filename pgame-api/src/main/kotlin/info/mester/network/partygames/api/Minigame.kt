@@ -59,7 +59,7 @@ abstract class Minigame(
             pos.world = Bukkit.getWorld(game.worldName)!!
             return pos
         }
-    val rootWorldName: String
+    val rootWorld: MinigameWorld
     val worldIndex: Int
     val originalPlugin: JavaPlugin
 
@@ -68,8 +68,8 @@ abstract class Minigame(
         val minigameConfig = core.gameRegistry.getMinigame(minigameName)!!
         originalPlugin = minigameConfig.plugin
         worldIndex = Random.nextInt(0, minigameConfig.worlds.size)
-        rootWorldName = minigameConfig.worlds[worldIndex].name
-        startPos = minigameConfig.worlds[worldIndex].toLocation(Bukkit.getWorld(rootWorldName)!!)
+        rootWorld = minigameConfig.worlds[worldIndex]
+        startPos = minigameConfig.worlds[worldIndex].toLocation(Bukkit.getWorld(rootWorld.name)!!)
     }
 
     /**

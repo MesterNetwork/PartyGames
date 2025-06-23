@@ -56,7 +56,10 @@
                 "splash_healing",
                 "speed_ii",
                 "jump_boost",
-                "turtle_master"
+                "turtle_master",
+                "levitation",
+                "blindness",
+                "poison"
               ]
             },
             "category": {

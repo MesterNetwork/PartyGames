@@ -302,7 +302,7 @@ class Game(
         // start an async task to load the world
         Bukkit.getAsyncScheduler().runNow(core) {
             // clone the minigame's world into the game's world
-            val minigameWorld = slimeAPI.getLoadedWorld(_runningMinigame!!.rootWorldName)
+            val minigameWorld = slimeAPI.getLoadedWorld(_runningMinigame!!.rootWorld.name)
             val gameWorld = minigameWorld.clone(worldName)
             // now switch to sync mode
             Bukkit.getScheduler().runTask(

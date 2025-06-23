@@ -167,7 +167,8 @@ class PartyGames : JavaPlugin() {
                         val z = entry["z"] as Double
                         val yaw = entry["yaw"] as? Double ?: 0.0
                         val pitch = entry["pitch"] as? Double ?: 0.0
-                        MinigameWorld(world, Vector(x, y, z), yaw.toFloat(), pitch.toFloat())
+                        val displayName = entry["display-name"] as? String
+                        MinigameWorld(world, Vector(x, y, z), yaw.toFloat(), pitch.toFloat(), displayName)
                     } else {
                         null
                     }

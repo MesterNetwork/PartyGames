@@ -336,8 +336,27 @@ class HealthShopMinigame(
         }
         // start the supply chest timer
         Bukkit.getScheduler().runTaskTimer(plugin, SupplyChestTimer(this, 3 * 60 * 20), 0, 1)
-        // shrink the world border to completely close in the last 30 seconds (5 minutes is the fight duration)
-        startPos.world.worldBorder.setSize(5.0, TimeUnit.SECONDS, 3 * 60 - 30)
+        // shrink the world border to close to 3 blocks in the last 15 seconds
+        startPos.world.worldBorder.setSize(3.0, TimeUnit.SECONDS, 3 * 60 - 20)
+        // randomly move the world border in the last 20 seconds every 2.5 seconds
+        Bukkit.getScheduler().runTaskTimer(
+            plugin,
+            { t ->
+                if (!running) {
+                    t.cancel()
+                    return@runTaskTimer
+                }
+
+                val worldBorder = startPos.world.worldBorder
+                val x = worldBorder.center.x + Random.nextInt(-8, 8)
+                val z = worldBorder.center.z + Random.nextInt(-8, 8)
+                worldBorder.setCenter(x, z)
+                worldBorder.damageAmount = 3.0
+                worldBorder.damageBuffer = 4.0
+            },
+            3 * 60 - 20,
+            50,
+        )
     }
 
     override fun finish() {

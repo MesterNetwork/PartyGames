@@ -71,26 +71,26 @@ items:
     slot: 6
     category: combat
 
-  sharpness_3:
-    id: enchanted_book
-    name: <yellow>Sharpness III
-    lore:
-      - <white>Increases your damage by 1<red>♥
-      - <white>May cause a bit of pain.
-    price: 12
-    slot: 7
-    amount: 3
-    group: sharpness
-    category: combat
   sharpness_5:
     id: enchanted_book
     name: <yellow>Sharpness V
     lore:
       - <white>Increases your damage by 1.5<red>♥
+      - <white>May cause a bit of pain.
+    price: 10
+    slot: 7
+    amount: 5
+    group: sharpness
+    category: combat
+  sharpness_10:
+    id: enchanted_book
+    name: <yellow>Sharpness X
+    lore:
+      - <white>Increases your damage by 2.75<red>♥
       - <red><bold>OUCH!
     price: 18
     slot: 8
-    amount: 5
+    amount: 10
     group: sharpness
     category: combat
 
@@ -595,7 +595,7 @@ items:
 
   regen_ii_2:
     id: potion
-    name: <light_purple>2x Potion of Regeneration II
+    name: <light_purple>2x Regeneration II
     lore:
       - <white>Restores 2 <red>♥</red> every 5 seconds.
       - <white>Slow but steady wins... maybe.
@@ -607,7 +607,7 @@ items:
 
   regen_ii_4:
     id: potion
-    name: <light_purple>4x Potion of Regeneration II
+    name: <light_purple>4x Regeneration II
     lore:
       - <white>Restores 2 <red>♥</red> every 5 seconds.
       - <white>Patience is a virtue. Healing is a luxury.
@@ -619,7 +619,7 @@ items:
 
   regen_v:
     id: potion
-    name: <light_purple>2x Potion of Regeneration V
+    name: <light_purple>2x Regeneration V
     lore:
       - <white>Restores 3 <red>♥</red> per second.
       - <white>Certified LEGA (Liquid Enchanted Golden Apples).
@@ -630,7 +630,7 @@ items:
 
   speed_ii_2:
     id: potion
-    name: <yellow>2x Potion of Speed II
+    name: <yellow>2x Speed II
     lore:
       - <white>Boosts your speed for 20 seconds.
       - <white>Why walk when you can run like a panic attack?
@@ -642,7 +642,7 @@ items:
 
   speed_ii_4:
     id: potion
-    name: <yellow>4x Potion of Speed II
+    name: <yellow>4x Speed II
     lore:
       - <white>Boosts your speed for 20 seconds.
       - <white>Basically caffeine in a bottle.
@@ -654,7 +654,7 @@ items:
 
   speed_ii_6:
     id: potion
-    name: <yellow>6x Potion of Speed II
+    name: <yellow>6x Speed II
     lore:
       - <white>Boosts your speed for 20 seconds.
       - <white>Wanna break the sound barrier?
@@ -666,7 +666,7 @@ items:
 
   jump_boost_2:
     id: potion
-    name: <yellow>2x Potion of Jump Boost IV
+    name: <yellow>2x Jump Boost IV
     lore:
       - <white>Leap up to 4 blocks for 20 seconds.
       - <white>Gravity? Never heard of her.
@@ -678,10 +678,10 @@ items:
 
   jump_boost_4:
     id: potion
-    name: <yellow>4x Potion of Jump Boost IV
+    name: <yellow>4x Jump Boost IV
     lore:
       - <white>Leap up to 4 blocks for 20 seconds.
-      - <white>You are now 50% rabbit.
+      - <white>Kangaroos' favourite morning drink.
     price: 6
     amount: 4
     slot: 13
@@ -690,7 +690,7 @@ items:
 
   jump_boost_6:
     id: potion
-    name: <yellow>6x Potion of Jump Boost IV
+    name: <yellow>6x Jump Boost IV
     lore:
       - <white>Leap up to 4 blocks for 20 seconds.
       - <white>Built for players who fear stairs.
@@ -702,38 +702,103 @@ items:
 
   turtle_master:
     id: potion
-    name: <yellow>2x Potion of the Turtle Master
+    name: <yellow>2x Turtle Master
     lore:
-      - <white>Gain Resistance III & Slowness IV.
       - <white>Become invincible… eventually.
     price: 8
     amount: 2
     slot: 15
     group: turtle_master
     category: potion
-
   turtle_master_long:
     id: potion
-    name: <yellow>2x Long Potion of the Turtle Master
+    name: <yellow>2x Long Turtle Master
     lore:
-      - <white>Same effects, now with 40% more suffering.
+      - <white>Same effects, now with 100% more suffering.
       - <white>Perfect for moving at glacial pace in style.
     price: 12
     amount: 2
     slot: 16
     group: turtle_master
     category: potion
-
   turtle_master_strong:
     id: potion
-    name: <yellow>2x Strong Potion of the Turtle Master
+    name: <yellow>2x Strong Turtle Master
     lore:
-      - <white>Resistance IV & Slowness VI.
       - <white>You are now a tank with two left feet.
     price: 16
     amount: 2
     slot: 17
     group: turtle_master
+    category: potion
+
+  poison_i:
+    id: splash_potion
+    name: <yellow>Splash Poison I
+    lore:
+      - <white>Deals 0.4 <red>♥</red> per second.
+      - <white>A slow, satisfying descent into regret.
+    price: 7
+    slot: 18
+    amount: 1
+    group: poison
+    category: potion
+  poison_ii:
+    id: splash_potion
+    name: <yellow>Splash Poison II
+    lore:
+      - <white>Deals 0.8 <red>♥</red> per second.
+      - <white>The “why is this still happening” experience.
+    price: 10
+    slot: 19
+    amount: 1
+    group: poison
+    category: potion
+
+  blindness_1:
+    id: splash_potion
+    name: <yellow>Splash Blindness
+    lore:
+      - <white>Blinds for 10 seconds.
+      - <white>Suddenly PvP becomes a horror game.
+    price: 6
+    slot: 20
+    amount: 1
+    group: blindness
+    category: potion
+  blindness_2:
+    id: splash_potion
+    name: <yellow>2x Splash Blindness
+    lore:
+      - <white>Blinds for 10 seconds.
+      - <white>Double the disorientation, double the fun.
+    price: 11
+    slot: 21
+    amount: 2
+    group: blindness
+    category: potion
+
+  levitation_i:
+    id: splash_potion
+    name: <yellow>Splash Levitation
+    lore:
+      - <white>Lifts enemies for 5 seconds.
+      - <white>Gravity is just a suggestion.
+    price: 8
+    slot: 22
+    amount: 1
+    group: levitation
+    category: potion
+  levitation_ii:
+    id: splash_potion
+    name: <yellow>Splash Levitation II
+    lore:
+      - <white>Lifts enemies even higher for 5 seconds.
+      - <white>“Where we’re going, we don’t need logic.”
+    price: 12
+    slot: 23
+    amount: 1
+    group: levitation
     category: potion
 
   # Miscellaneous Items

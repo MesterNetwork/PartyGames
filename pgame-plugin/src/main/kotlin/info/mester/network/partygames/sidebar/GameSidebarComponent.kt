@@ -50,6 +50,9 @@ class GameSidebarComponent(
             GameState.PRE_GAME -> {
                 val minigame = game.runningMinigame!!
                 drawable.drawLine(mm.deserialize("<white>Loading: ").append(minigame.name))
+                if (minigame.rootWorld.displayName != null) {
+                    drawable.drawLine(mm.deserialize("<white>Map: <yellow>${minigame.rootWorld.displayName}"))
+                }
                 drawable.drawLine(mm.deserialize("<green>Get ready!"))
                 renderLeaderboard(drawable)
             }
@@ -57,6 +60,9 @@ class GameSidebarComponent(
             GameState.PLAYING -> {
                 val minigame = game.runningMinigame!!
                 drawable.drawLine(mm.deserialize("<white>Playing: ").append(minigame.name))
+                if (minigame.rootWorld.displayName != null) {
+                    drawable.drawLine(mm.deserialize("<white>Map: <yellow>${minigame.rootWorld.displayName}"))
+                }
                 drawable.drawLine(Component.empty())
                 drawable.drawLine(mm.deserialize("<white>Your stars: <yellow>${game.playerData(player)!!.stars}★"))
                 drawable.drawLine(mm.deserialize("<white>Your current score: <yellow>${game.playerData(player)!!.score}"))

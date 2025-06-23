@@ -26,20 +26,19 @@ class QueueManager(
                 }
             }
 
-        val pafPlayerManager: PAFPlayerManager by lazy {
-            if (partyAvailable) {
-                PAFPlayerManager.getInstance()
-            } else {
-                throw IllegalStateException("Party and Friends plugin is not available.")
-            }
-        }
-        val pafPartyManager: PartyManager by lazy {
+        fun getPartyManager(): PartyManager? =
             if (partyAvailable) {
                 PartyManager.getInstance()
             } else {
-                throw IllegalStateException("Party and Friends plugin is not available.")
+                null
             }
-        }
+
+        fun getPAFPlayerManager(): PAFPlayerManager? =
+            if (partyAvailable) {
+                PAFPlayerManager.getInstance()
+            } else {
+                null
+            }
     }
 
     private val core = plugin.core
@@ -76,8 +75,8 @@ class QueueManager(
         player: Player,
     ) {
         if (partyAvailable) {
-            val pafPlayer = pafPlayerManager.getPlayer(player.uniqueId)
-            val party = pafPartyManager.getParty(pafPlayer)
+            val pafPlayer = getPAFPlayerManager()!!.getPlayer(player.uniqueId)
+            val party = getPartyManager()!!.getParty(pafPlayer)
             if (party != null) {
                 if (party.leader.uniqueId != player.uniqueId) {
                     Audience.audience(player).sendMessage(

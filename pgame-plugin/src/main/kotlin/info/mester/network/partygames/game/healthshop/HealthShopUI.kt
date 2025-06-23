@@ -12,8 +12,10 @@ import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.Style
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.translation.GlobalTranslator
 import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.Material
@@ -31,6 +33,7 @@ import org.bukkit.inventory.meta.PotionMeta
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.potion.PotionType
+import java.util.Locale
 import java.util.UUID
 
 class HealthShopUI(
@@ -55,17 +58,20 @@ class HealthShopUI(
 
         private fun setCustomPotion(
             item: ItemStack,
-            potionEffect: PotionEffect,
+            potionEffects: List<PotionEffect>,
             color: Color,
             potionName: String?,
+            showExtraData: Boolean = true,
         ) {
             item.editMeta(PotionMeta::class.java) { meta ->
                 applyGenericItemMeta(meta)
 
-                meta.addCustomEffect(potionEffect, true)
+                potionEffects.forEach { potionEffect ->
+                    meta.addCustomEffect(potionEffect, true)
+                }
                 meta.color = color
 
-                val duration = potionEffect.duration / 20
+                val duration = potionEffects.minBy { it.duration }.duration / 20
                 val minutes = duration / 60
                 val seconds = String.format("%02d", duration % 60)
 
@@ -74,12 +80,64 @@ class HealthShopUI(
                         MiniMessage
                             .miniMessage()
                             .deserialize(
-                                "<!i><green>$potionName ${(potionEffect.amplifier + 1).toRomanNumeral()} <gray>(<yellow>$minutes<gray>:<yellow>$seconds<gray>)",
+                                buildString {
+                                    append("<!i><green>$potionName ")
+                                    if (showExtraData) {
+                                        append(
+                                            "<yellow>${(potionEffects[0].amplifier + 1).toRomanNumeral()} <gray>(<yellow>$minutes<gray>:<yellow>$seconds<gray>)",
+                                        )
+                                    }
+                                },
                             )
                     meta.displayName(name)
                 }
+
+                // if we have a composite potion, display all the effects
+                if (potionEffects.size > 1) {
+                    val lore = mutableListOf<Component>()
+                    for (effect in potionEffects) {
+                        val name =
+                            GlobalTranslator.render(
+                                Component.translatable(
+                                    effect.type.translationKey(),
+                                    Style
+                                        .style(
+                                            NamedTextColor.BLUE,
+                                        ).decoration(TextDecoration.ITALIC, false),
+                                ),
+                                Locale.US,
+                            )
+                        val duration = effect.duration / 20
+                        val minutes = duration / 60
+                        val seconds = String.format("%02d", duration % 60)
+
+                        val durationData =
+                            mm.deserialize(
+                                " <yellow>${(effect.amplifier + 1).toRomanNumeral()} <gray>(<yellow>$minutes<gray>:<yellow>$seconds<gray>)",
+                            )
+                        lore.add(name.append(durationData))
+                    }
+                    val currentLore = meta.lore() ?: mutableListOf()
+                    if (currentLore.isNotEmpty()) {
+                        lore.add(Component.empty())
+                    }
+                    lore.addAll(currentLore)
+                    meta.lore(lore)
+                }
             }
         }
+
+        private fun setCustomPotion(
+            item: ItemStack,
+            potionEffect: PotionEffect,
+            color: Color,
+            potionName: String?,
+        ) = setCustomPotion(
+            item,
+            listOf(potionEffect),
+            color,
+            potionName,
+        )
 
         fun setHealthPotion(
             item: ItemStack,
@@ -102,18 +160,57 @@ class HealthShopUI(
             item: ItemStack,
             long: Boolean,
             strong: Boolean,
+            withName: Boolean = true,
         ) {
-            item.editMeta(PotionMeta::class.java) { meta ->
-                applyGenericItemMeta(meta)
-                meta.basePotionType =
-                    when {
-                        !long && !strong -> PotionType.TURTLE_MASTER
-                        long -> PotionType.LONG_TURTLE_MASTER
-                        strong -> PotionType.STRONG_TURTLE_MASTER
-                        else -> PotionType.TURTLE_MASTER // fallback, should not happen
-                    }
-            }
+            val name =
+                when {
+                    !withName -> null
+                    !long && !strong -> "Turtle Master"
+                    long -> "Long Turtle Master"
+                    else -> "Strong Turtle Master"
+                }
+            return setCustomPotion(
+                item,
+                listOf(
+                    PotionEffect(PotionEffectType.SLOWNESS, 20 * if (long) 40 else 20, if (strong) 5 else 3, false),
+                    PotionEffect(PotionEffectType.RESISTANCE, 20 * if (long) 40 else 20, if (strong) 3 else 2, false),
+                ),
+                PotionEffectType.RESISTANCE.color,
+                name,
+            )
         }
+
+        fun setLevitationPotion(
+            item: ItemStack,
+            level: Int,
+            withName: Boolean = true,
+        ) = setCustomPotion(
+            item,
+            PotionEffect(PotionEffectType.LEVITATION, 5 * 20, level, false),
+            PotionEffectType.LEVITATION.color,
+            if (withName) "Levitation" else null,
+        )
+
+        fun setBlindnessPotion(
+            item: ItemStack,
+            withName: Boolean = true,
+        ) = setCustomPotion(
+            item,
+            PotionEffect(PotionEffectType.BLINDNESS, 10 * 20, 0, false),
+            PotionEffectType.BLINDNESS.color,
+            if (withName) "Blindness" else null,
+        )
+
+        fun setPoisonPotion(
+            item: ItemStack,
+            level: Int,
+            withName: Boolean = true,
+        ) = setCustomPotion(
+            item,
+            PotionEffect(PotionEffectType.POISON, 20 * 20, level, false),
+            PotionEffectType.POISON.color,
+            if (withName) "Poison" else null,
+        )
 
         fun setRegenPotion(
             item: ItemStack,
@@ -477,7 +574,7 @@ class HealthShopUI(
                 }
                 purchasedItems.firstOrNull { it.key.startsWith("sharpness_") }.let { sharpnessItem ->
                     if (sharpnessItem != null) {
-                        val sharpness = sharpnessItem.key.substringAfter("sharpness_").toInt()
+                        val sharpness = sharpnessItem.amount
                         meta.addEnchant(Enchantment.SHARPNESS, sharpness, true)
                     }
                 }
@@ -683,6 +780,30 @@ class HealthShopUI(
             val long = shopItem.key.endsWith("_long")
             val strong = shopItem.key.endsWith("_strong")
             setTurtleMasterPotion(potion, long, strong)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+        // process poison potion
+        purchasedItems.firstOrNull { it.group == "poison" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.SPLASH_POTION)
+            setPoisonPotion(potion, if (shopItem.key == "poison_ii") 1 else 0)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+        // process blindness potion
+        purchasedItems.firstOrNull { it.group == "poison" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.SPLASH_POTION)
+            setBlindnessPotion(potion)
+            repeat(shopItem.amount) {
+                player.inventory.addItem(potion)
+            }
+        }
+        // process levitation potion
+        purchasedItems.firstOrNull { it.group == "levitation" }?.let { shopItem ->
+            val potion = ItemStack.of(Material.SPLASH_POTION)
+            setLevitationPotion(potion, if (shopItem.key == "levitation_ii") 1 else 0)
             repeat(shopItem.amount) {
                 player.inventory.addItem(potion)
             }
