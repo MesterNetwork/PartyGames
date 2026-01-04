@@ -50,8 +50,12 @@ import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerToggleFlightEvent
 import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.ItemType
 import org.bukkit.inventory.meta.CompassMeta
+import org.bukkit.inventory.meta.FireworkMeta
 import org.bukkit.persistence.PersistentDataType
+import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
 import java.io.File
@@ -92,6 +96,7 @@ class HealthShopMinigame(
         private val shopItems: MutableList<HealthShopItem> = mutableListOf()
         private val startLocations: MutableMap<Int, Array<StartLocation>> = mutableMapOf()
         private val supplyDrops: MutableList<WeightedItem<String>> = mutableListOf()
+        private val gameTimes = mutableMapOf<String, Int>()
         var startingHealth: Double = 80.0
             private set
         private val plugin = PartyGames.plugin
@@ -104,8 +109,9 @@ class HealthShopMinigame(
 
         fun reload() {
             val config = YamlConfiguration.loadConfiguration(File(plugin.dataFolder, "health-shop.yml"))
-            // load shop items by obtaining the config and reading every key inside "items" of "health-shop.yml"
-            plugin.logger.info("Loading shop items...")
+            plugin.logger.info("Loading Health Shop config...")
+
+            // load shop items
             shopItems.clear()
             config.getConfigurationSection("items")?.getKeys(false)?.forEach { key ->
                 try {
@@ -116,15 +122,15 @@ class HealthShopMinigame(
                     plugin.logger.log(Level.WARNING, e.message, e)
                 }
             }
+
             // load spawn locations
-            plugin.logger.info("Loading spawn locations...")
-            val spawnLocationConfig = config.getConfigurationSection("spawn-locations")!!
-            spawnLocationConfig.getKeys(false).forEach { key ->
+            startLocations.clear()
+            config.getConfigurationSection("spawn-locations")?.getKeys(false)?.forEach { key ->
                 try {
                     // try to convert the key to an integer
                     val id = key.toIntOrNull() ?: return@forEach
                     // now load all the spawn locations
-                    val locationList = spawnLocationConfig.getList(key) ?: return@forEach
+                    val locationList = config.getList("spawn-locations.$key") ?: return@forEach
                     val locations =
                         locationList.mapNotNull { entry ->
                             if (entry is Map<*, *>) {
@@ -148,6 +154,20 @@ class HealthShopMinigame(
                     plugin.logger.log(Level.WARNING, e.message, e)
                 }
             }
+
+            // load game times
+            gameTimes.clear()
+            config.getConfigurationSection("game-times")?.getKeys(false)?.forEach { map ->
+                try {
+                    val time = config.getInt("game-times.$map")
+                    gameTimes[map] = time
+                } catch (e: Exception) {
+                    plugin.logger.warning("Failed to load game time $map")
+                    plugin.logger.log(Level.WARNING, e.message, e)
+                }
+            }
+
+            // load supply drops
             supplyDrops.clear()
             config.getList("supply-drops")?.forEach { entry ->
                 if (entry is Map<*, *>) {
@@ -156,6 +176,7 @@ class HealthShopMinigame(
                     supplyDrops.add(WeightedItem(key, weight))
                 }
             }
+
             startingHealth = config.getDouble("health", 80.0)
         }
     }
@@ -309,6 +330,7 @@ class HealthShopMinigame(
 
         state = HealthShopMinigameState.FIGHT
         fightStartedTime = Bukkit.getCurrentTick()
+        val gameTime = gameTimes[rootWorld.name] ?: (3 * 60) // default to 3 minutes if not specified
 
         for (player in game.onlinePlayers) {
             // close the shop UI
@@ -324,20 +346,40 @@ class HealthShopMinigame(
             // time to give the items! :)
             player.inventory.clear()
             shops[player.uniqueId]!!.giveItems()
+            // if we're on the urban map, make every armor piece act as an elytra
+            if (rootWorld.name == "mg-healthshop4") {
+                @Suppress("UnstableApiUsage")
+                player.inventory.chestplate?.apply {
+                    val elytraEquip = ItemType.ELYTRA.getDefaultData(DataComponentTypes.EQUIPPABLE) ?: return@apply
+                    setData(DataComponentTypes.EQUIPPABLE, elytraEquip)
+                    setData(DataComponentTypes.GLIDER)
+                }
+                val firework =
+                    ItemStack.of(Material.FIREWORK_ROCKET, 8).apply {
+                        editMeta(FireworkMeta::class.java) { meta ->
+                            meta.power = 6
+                        }
+                    }
+                player.inventory.addItem(firework)
+            }
             // give the actual arrow items based on maxArrows
             val maxArrows = getPlayerData(player).maxArrows
             if (maxArrows > 0) {
                 player.inventory.addItem(ItemStack.of(Material.ARROW, maxArrows))
             }
         }
-        // start a 3-minute countdown for the fight
-        startCountdown(3 * 60 * 20) {
+
+        // start the countdown for the end
+        startCountdown(gameTime * 20) {
             end()
         }
+
         // start the supply chest timer
-        Bukkit.getScheduler().runTaskTimer(plugin, SupplyChestTimer(this, 3 * 60 * 20), 0, 1)
-        // shrink the world border to close to 3 blocks in the last 15 seconds
-        startPos.world.worldBorder.setSize(3.0, TimeUnit.SECONDS, 3 * 60 - 20)
+        Bukkit.getScheduler().runTaskTimer(plugin, SupplyChestTimer(this, gameTime * 20), 0, 1)
+
+        // shrink the world border to close to 3 blocks in the last 20 seconds
+        startPos.world.worldBorder.setSize(3.0, TimeUnit.SECONDS, gameTime - 20L)
+
         // randomly move the world border in the last 20 seconds every 2.5 seconds
         Bukkit.getScheduler().runTaskTimer(
             plugin,
@@ -348,13 +390,13 @@ class HealthShopMinigame(
                 }
 
                 val worldBorder = startPos.world.worldBorder
-                val x = worldBorder.center.x + Random.nextInt(-8, 8)
-                val z = worldBorder.center.z + Random.nextInt(-8, 8)
+                val x = worldBorder.center.x + Random.nextInt(-3, 3)
+                val z = worldBorder.center.z + Random.nextInt(-3, 3)
                 worldBorder.setCenter(x, z)
-                worldBorder.damageAmount = 3.0
-                worldBorder.damageBuffer = 4.0
+                worldBorder.damageAmount = 4.5
+                worldBorder.damageBuffer = 0.0
             },
-            3 * 60 - 20,
+            (gameTime) * 20 + 50L,
             50,
         )
     }
@@ -501,9 +543,14 @@ class HealthShopMinigame(
         event.player.sendMessage(Component.text("Left click to reopen the shop.", NamedTextColor.AQUA))
     }
 
+    @Suppress("UnstableApiUsage")
     override fun handleEntityDamage(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
-        if (event.damageSource.damageType == DamageType.FALL && getPlayerData(player).featherFall) {
+        val damageType = event.damageSource.damageType
+        if (damageType == DamageType.FALL && getPlayerData(player).featherFall) {
+            event.isCancelled = true
+        }
+        if ((damageType == DamageType.EXPLOSION || damageType == DamageType.PLAYER_EXPLOSION) && getPlayerData(player).blastProtection) {
             event.isCancelled = true
         }
         super.handleEntityDamage(event)
@@ -669,6 +716,16 @@ class HealthShopMinigame(
                 }
                 player.setCooldown(Material.COMPASS, 5 * 20)
                 nearestPlayer.sendMessage(Component.text("You have been tracked!", NamedTextColor.GREEN))
+                // apply 20 seconds of glowing effect to the nearest player
+                nearestPlayer.addPotionEffect(
+                    PotionEffect(
+                        PotionEffectType.GLOWING,
+                        20 * 20,
+                        0,
+                        false,
+                        false,
+                    ),
+                )
                 // set the compass' direction to the nearest player's location
                 item.editMeta { meta ->
                     val compassMeta = meta as CompassMeta
@@ -724,6 +781,22 @@ class HealthShopMinigame(
                 9999.0,
                 DamageSource.builder(DamageType.OUT_OF_WORLD).build(),
             )
+        }
+
+        // show warning particles when player is below 10
+        if (player.location.y < 10 && Bukkit.getCurrentTick() % 3 == 0) {
+            for (x in -5..5) {
+                for (z in -5..5) {
+                    val location = player.location.clone().add(x.toDouble(), 0.0, z.toDouble())
+                    location.y = 0.0
+                    ParticleBuilder(Particle.DUST)
+                        .location(location)
+                        .color(255, 0, 0)
+                        .count(1)
+                        .receivers(player)
+                        .spawn()
+                }
+            }
         }
     }
 
@@ -860,7 +933,7 @@ class HealthShopMinigame(
         player.playSound(sound, Sound.Emitter.self())
     }
 
-    override val name = Component.text("Health Shop", NamedTextColor.AQUA)
+    override val name = mm.deserialize("<aqua>Health Shop <green>v1.1")
     override val description =
         Component.text(
             "Buy items and weapons to fight in a free for all battleground.\nWatch out, the items cost not money, but your own health!",

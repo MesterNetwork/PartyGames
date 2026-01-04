@@ -6,4 +6,5 @@ data class HealthShopPlayerData(
     var healPerk: Boolean = false,
     var doubleJump: Boolean = false,
     var featherFall: Boolean = false,
+    var blastProtection: Boolean = false,
 )

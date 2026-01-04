@@ -851,6 +851,16 @@ items:
     slot: 4
     group: perk
     category: miscellaneous
+  blast_protection:
+    id: nether_star
+    name: <yellow>Blast Protection
+    lore:
+      - <white>You will not take damage from explosions.
+      - <white>Great for when you want to be a walking bomb shelter.
+    price: 8
+    slot: 5
+    group: perk
+    category: miscellaneous
 
 spawn-locations:
   0:

@@ -833,6 +833,10 @@ class HealthShopUI(
         if (purchasedItems.any { it.key == "feather_fall" }) {
             playerData.featherFall = true
         }
+        // process blast protection
+        if (purchasedItems.any { it.key == "blast_protection" }) {
+            playerData.blastProtection = true
+        }
 
         // save this kit (index 8 is the last used kit)
         if (purchasedItems.isEmpty()) {
