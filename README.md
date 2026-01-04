@@ -11,7 +11,7 @@ By itself it does not contain any minigames, they have to be registered by exter
 
 #### Dependencies
 
-- AdvancedSlimePaper for MC 1.21.4
+- AdvancedSlimePaper for MC 1.21.11
 
 ### Plugin
 

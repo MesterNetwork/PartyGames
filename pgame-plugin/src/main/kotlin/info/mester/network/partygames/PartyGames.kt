@@ -18,7 +18,7 @@ import net.megavex.scoreboardlibrary.api.ScoreboardLibrary
 import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableException
 import net.megavex.scoreboardlibrary.api.noop.NoopScoreboardLibrary
 import org.bukkit.Bukkit
-import org.bukkit.GameRule
+import org.bukkit.GameRules
 import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
@@ -29,6 +29,8 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 val mm = MiniMessage.miniMessage()
+
+fun mm(input: String) = mm.deserialize(input)
 
 fun UUID.shorten() = this.toString().replace("-", "")
 
@@ -86,15 +88,15 @@ class PartyGames : JavaPlugin() {
         val plugin get() = _plugin!!
 
         fun initWorld(world: World) {
-            world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false)
-            world.setGameRule(GameRule.DO_WEATHER_CYCLE, false)
-            world.setGameRule(GameRule.DO_MOB_SPAWNING, false)
-            world.setGameRule(GameRule.DO_TILE_DROPS, false)
-            world.setGameRule(GameRule.DO_FIRE_TICK, false)
-            world.setGameRule(GameRule.DO_MOB_LOOT, false)
-            world.setGameRule(GameRule.DO_INSOMNIA, false)
-            world.setGameRule(GameRule.NATURAL_REGENERATION, true)
-            world.setGameRule(GameRule.RANDOM_TICK_SPEED, 0)
+            world.setGameRule(GameRules.ADVANCE_TIME, false)
+            world.setGameRule(GameRules.ADVANCE_WEATHER, false)
+            world.setGameRule(GameRules.SPAWN_MOBS, false)
+            world.setGameRule(GameRules.BLOCK_DROPS, false)
+            world.setGameRule(GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER, 0)
+            world.setGameRule(GameRules.MOB_DROPS, false)
+            world.setGameRule(GameRules.SPAWN_PHANTOMS, false)
+            world.setGameRule(GameRules.NATURAL_HEALTH_REGENERATION, true)
+            world.setGameRule(GameRules.RANDOM_TICK_SPEED, 0)
             world.time = 6000
         }
     }
@@ -130,7 +132,7 @@ class PartyGames : JavaPlugin() {
         try {
             scoreboardLibrary = ScoreboardLibrary.loadScoreboardLibrary(this)
         } catch (e: NoPacketAdapterAvailableException) {
-            logger.warning("Failed to load ScoreboardLibrary, fallbacking to no-op")
+            logger.warning("Failed to load ScoreboardLibrary, falling back to no-op")
             scoreboardLibrary = NoopScoreboardLibrary()
         }
         // register managers

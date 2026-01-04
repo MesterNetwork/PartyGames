@@ -8,11 +8,12 @@ import info.mester.network.partygames.util.WeightedItem
 import info.mester.network.partygames.util.selectWeightedRandom
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.ItemEnchantments
+import io.papermc.paper.datacomponent.item.TooltipDisplay
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.GameMode
-import org.bukkit.GameRule
+import org.bukkit.GameRules
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.enchantments.Enchantment
@@ -106,7 +107,7 @@ data class DamageDealerItem(
                             ),
                 ).toInt()
             val enchantments = mutableListOf<ItemStack>()
-            for (i in 0 until enchantmentCount) {
+            repeat(enchantmentCount) {
                 val enchantment =
                     listOf(
                         WeightedItem(Enchantment.UNBREAKING, 12),
@@ -118,14 +119,18 @@ data class DamageDealerItem(
                 val enchantmentLevel =
                     exponentialRandom(1..enchantment.maxLevel, 0.6).coerceAtLeast(0)
                 val enchantmentItem = ItemStack.of(Material.ENCHANTED_BOOK, 1)
+
                 val enchantmentData =
                     ItemEnchantments
                         .itemEnchantments()
                         .add(enchantment, enchantmentLevel)
-                        .showInTooltip(true)
                         .build()
                 enchantmentItem.setData(DataComponentTypes.STORED_ENCHANTMENTS, enchantmentData)
                 enchantments.add(enchantmentItem)
+
+                val tooltipData =
+                    TooltipDisplay.tooltipDisplay().hiddenComponents(setOf(DataComponentTypes.ENCHANTMENTS)).build()
+                enchantmentItem.setData(DataComponentTypes.TOOLTIP_DISPLAY, tooltipData)
             }
             return DamageDealerItem(
                 experience,
@@ -179,7 +184,7 @@ class DamageDealerMinigame(
         }
 
     override fun onLoad() {
-        game.world.setGameRule(GameRule.NATURAL_REGENERATION, false)
+        game.world.setGameRule(GameRules.NATURAL_HEALTH_REGENERATION, false)
         super.onLoad()
     }
 

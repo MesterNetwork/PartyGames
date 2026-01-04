@@ -1,5 +1,5 @@
 plugins {
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.3.0"
     id("io.papermc.paperweight.userdev")
     id("org.jetbrains.dokka") version "2.0.0"
     java
@@ -17,11 +17,11 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation(kotlin("reflect"))
 
-    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
-    compileOnly("com.infernalsuite.aswm:api:3.0.0-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
+    compileOnly("com.infernalsuite.asp:api:4.0.0-SNAPSHOT")
 }
 val targetJavaVersion = 21
 kotlin {

@@ -1,7 +1,7 @@
 package info.mester.network.partygames.api
 
-import com.infernalsuite.aswm.api.AdvancedSlimePaperAPI
-import com.infernalsuite.aswm.api.world.SlimeWorld
+import com.infernalsuite.asp.api.AdvancedSlimePaperAPI
+import com.infernalsuite.asp.api.world.SlimeWorld
 import info.mester.network.partygames.api.events.GameEndedEvent
 import info.mester.network.partygames.api.events.GameStartedEvent
 import info.mester.network.partygames.api.events.GameTerminatedEvent

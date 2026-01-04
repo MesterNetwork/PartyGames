@@ -5,6 +5,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.TreeType
 import org.bukkit.util.Vector
+import java.util.Random
 
 class OakTree(
     location: Location,
@@ -12,7 +13,10 @@ class OakTree(
 ) : Plant(location, game) {
     override fun spawn() {
         when (level) {
-            0 -> placeBlock(Vector(0.0, 0.0, 0.0), Material.OAK_SAPLING)
+            0 -> {
+                placeBlock(Vector(0.0, 0.0, 0.0), Material.OAK_SAPLING)
+            }
+
             1 -> {
                 placeBlock(Vector(0.0, 0.0, 0.0), Material.OAK_LOG)
                 placeBlock(Vector(0.0, 1.0, 0.0), Material.OAK_LEAVES)
@@ -43,7 +47,7 @@ class OakTree(
             }
 
             3 -> {
-                location.world.generateTree(location, TreeType.TREE)
+                location.world.generateTree(location, Random(), TreeType.TREE)
                 deactivate()
             }
         }

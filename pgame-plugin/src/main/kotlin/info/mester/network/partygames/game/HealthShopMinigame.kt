@@ -60,7 +60,6 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
 import java.io.File
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import java.util.logging.Level
 import kotlin.math.floor
 import kotlin.math.max
@@ -378,7 +377,7 @@ class HealthShopMinigame(
         Bukkit.getScheduler().runTaskTimer(plugin, SupplyChestTimer(this, gameTime * 20), 0, 1)
 
         // shrink the world border to close to 3 blocks in the last 20 seconds
-        startPos.world.worldBorder.setSize(3.0, TimeUnit.SECONDS, gameTime - 20L)
+        startPos.world.worldBorder.changeSize(3.0, gameTime - 20L)
 
         // randomly move the world border in the last 20 seconds every 2.5 seconds
         Bukkit.getScheduler().runTaskTimer(
@@ -429,7 +428,7 @@ class HealthShopMinigame(
             // check if the location is not facing the void
             if (!startPos.world
                     .getHighestBlockAt(x.toInt(), z.toInt())
-                    .type.isEmpty
+                    .type.isAir
             ) {
                 break
             }
@@ -543,7 +542,6 @@ class HealthShopMinigame(
         event.player.sendMessage(Component.text("Left click to reopen the shop.", NamedTextColor.AQUA))
     }
 
-    @Suppress("UnstableApiUsage")
     override fun handleEntityDamage(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
         val damageType = event.damageSource.damageType
@@ -556,7 +554,6 @@ class HealthShopMinigame(
         super.handleEntityDamage(event)
     }
 
-    @Suppress("UnstableApiUsage")
     override fun handleEntityDamageByEntity(event: EntityDamageByEntityEvent) {
         if (state != HealthShopMinigameState.FIGHT) {
             return
@@ -614,7 +611,6 @@ class HealthShopMinigame(
         killedPlayer.gameMode = GameMode.SPECTATOR
         giveSurvivePoints(event.entity, false)
         // check if the player died from a player damage
-        @Suppress("UnstableApiUsage")
         val killerPlayer = event.damageSource.causingEntity
         // handle assist
         lastDamageTimes[event.entity.uniqueId]?.let { (lastDamagerUUID, lastDamageTime) ->
@@ -776,7 +772,6 @@ class HealthShopMinigame(
         // check if player is below 0 (kill instantly)
         if (player.location.y < 0) {
             player.teleport(startPos)
-            @Suppress("UnstableApiUsage")
             player.damage(
                 9999.0,
                 DamageSource.builder(DamageType.OUT_OF_WORLD).build(),

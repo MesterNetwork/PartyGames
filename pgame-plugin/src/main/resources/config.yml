@@ -64,6 +64,14 @@ minigames:
         yaw: -90.0
     class: info.mester.network.partygames.game.GravjumpMinigame
     display-name: Gravjump
+  macebounce:
+    worlds:
+      - world: mg-macebounce
+        x: 0.5
+        y: 70.0
+        z: 0.5
+    class: info.mester.network.partygames.game.MaceBounceMinigame
+    display-name: Mace Bounce
 family-night:
   - healthshop
   - speedbuilders

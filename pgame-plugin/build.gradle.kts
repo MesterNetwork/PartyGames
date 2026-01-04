@@ -1,7 +1,7 @@
 import com.diffplug.spotless.LineEnding
 
 plugins {
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.3.0"
     id("io.papermc.paperweight.userdev")
     id("com.diffplug.spotless") version "7.0.2"
     java
@@ -21,21 +21,21 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation(kotlin("reflect"))
     compileOnly(project(":pgame-api"))
 
-    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
     // FAWE
     implementation(platform("com.intellectualsites.bom:bom-newest:1.52"))
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit") { isTransitive = false }
     // AdvancedSlimePaper
-    compileOnly("com.infernalsuite.aswm:api:3.0.0-SNAPSHOT")
+    // compileOnly("com.infernalsuite.asp:api:4.0.0-SNAPSHOT")
     // Testing
     testImplementation(kotlin("test"))
     // ScoreboardLibrary
-    val scoreboardLibraryVersion = "2.2.2"
+    val scoreboardLibraryVersion = "2.4.4"
     implementation("net.megavex:scoreboard-library-api:$scoreboardLibraryVersion")
     runtimeOnly("net.megavex:scoreboard-library-implementation:$scoreboardLibraryVersion")
     implementation("net.megavex:scoreboard-library-extra-kotlin:$scoreboardLibraryVersion") // Kotlin specific extensions (optional)

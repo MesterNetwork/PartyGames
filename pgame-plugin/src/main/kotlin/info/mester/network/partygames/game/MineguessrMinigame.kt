@@ -12,7 +12,7 @@ import net.kyori.adventure.translation.GlobalTranslator
 import org.bukkit.Bukkit
 import org.bukkit.ChunkSnapshot
 import org.bukkit.GameMode
-import org.bukkit.GameRule
+import org.bukkit.GameRules
 import org.bukkit.World
 import org.bukkit.block.Biome
 import org.bukkit.event.block.BlockPhysicsEvent
@@ -191,7 +191,7 @@ class MineguessrMinigame(
     }
 
     override fun onLoad() {
-        game.world.setGameRule(GameRule.REDUCED_DEBUG_INFO, true)
+        game.world.setGameRule(GameRules.REDUCED_DEBUG_INFO, true)
         super.onLoad()
     }
 

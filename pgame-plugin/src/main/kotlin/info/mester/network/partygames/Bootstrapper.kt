@@ -31,6 +31,8 @@ class Bootstrapper : PluginBootstrap {
     val gameLeaveAttempts = mutableMapOf<UUID, Long>()
 
     override fun bootstrap(context: BootstrapContext) {
+        System.setProperty("net.megavex.scoreboardlibrary.forceModern", "true") // force modern implementation for ScoreboardLibrary
+
         val manager: LifecycleEventManager<BootstrapContext> = context.lifecycleManager
         manager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
             val commands = event.registrar()

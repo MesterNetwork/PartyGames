@@ -8,7 +8,7 @@ import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
-import org.bukkit.GameRule
+import org.bukkit.GameRules
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
@@ -35,7 +35,7 @@ import org.bukkit.event.player.PlayerToggleFlightEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
-import java.util.UUID
+import java.util.*
 import java.util.function.Consumer
 import kotlin.random.Random
 
@@ -90,7 +90,7 @@ abstract class Minigame(
      * Can be used to set up the world (unlike in the constructor, where a world is not yet ready)
      */
     open fun onLoad() {
-        startPos.world.setGameRule(GameRule.FALL_DAMAGE, allowFallDamage)
+        startPos.world.setGameRule(GameRules.FALL_DAMAGE, allowFallDamage)
     }
 
     /**
