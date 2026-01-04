@@ -1,0 +1,100 @@
+structures:
+  # Easy difficulty
+  portal:
+    difficulty: EASY
+    display_name: Portal
+  bed:
+    difficulty: EASY
+    display_name: Bed
+  farm:
+    difficulty: EASY
+    display_name: Farm
+  japanese_idk:
+    difficulty: EASY
+    display_name: Japanese Arch Thingy (?)
+  well:
+    difficulty: EASY
+    display_name: Well, well, well
+  first_house:
+    difficulty: EASY
+    display_name: First House
+  herobrine:
+    difficulty: EASY
+    display_name: Herobrine
+  kitchen:
+    difficulty: EASY
+    display_name: Kitchen
+  drug_farm:
+    difficulty: EASY
+    display_name: Drug Farm (very legal, trust)
+  animal_farm:
+    difficulty: EASY
+    display_name: Animal Farm
+  village:
+    difficulty: EASY
+    display_name: Village
+  stronghold:
+    difficulty: EASY
+    display_name: Stronghold
+  bordem:
+    difficulty: EASY
+    display_name: Bordem
+  # Medium difficulty
+  bookshelves:
+    difficulty: MEDIUM
+    display_name: Bookshelves & Enchanting Table
+  dragon:
+    difficulty: MEDIUM
+    display_name: Dragon
+  bigportal:
+    difficulty: MEDIUM
+    display_name: Big Portal
+  warrior:
+    difficulty: MEDIUM
+    display_name: Warrior
+  cart:
+    difficulty: MEDIUM
+    display_name: Cart
+  botanic:
+    difficulty: MEDIUM
+    display_name: Botanic Garden
+  witch_hut:
+    difficulty: MEDIUM
+    display_name: Witch Hut
+  # Hard difficulty
+  enchanting:
+    difficulty: HARD
+    display_name: Enchanting Room
+  colors:
+    difficulty: HARD
+    display_name: Colors
+  tree:
+    difficulty: HARD
+    display_name: Tree
+  arcade:
+    difficulty: HARD
+    display_name: Arcade
+  boat:
+    difficulty: HARD
+    display_name: Boat
+  car:
+    difficulty: HARD
+    display_name: Car
+  graveyard:
+    difficulty: HARD
+    display_name: Graveyard
+  icecaps:
+    difficulty: HARD
+    display_name: Ice Caps
+  # Insane difficulty
+  outpost:
+    difficulty: INSANE
+    display_name: Outpost
+  end_city:
+    difficulty: INSANE
+    display_name: End City
+scores:
+  EASY: 10
+  MEDIUM: 15
+  HARD: 25
+  INSANE: 40

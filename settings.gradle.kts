@@ -6,3 +6,7 @@ pluginManagement {
         maven("https://repo.papermc.io/repository/maven-public/")
     }
 }
+
+include("pgame-api")
+include("pgame-plugin")
+include("test-minigame")

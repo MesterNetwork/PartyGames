@@ -1,0 +1,123 @@
+import com.diffplug.spotless.LineEnding
+
+plugins {
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("io.papermc.paperweight.userdev")
+    id("com.diffplug.spotless") version "7.0.2"
+    java
+}
+
+group = "info.mester.network.partygames"
+version = "1.0"
+
+repositories {
+    maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://oss.sonatype.org/content/groups/public/")
+    maven("https://maven.enginehub.org/repo/")
+    maven("https://repo.rapture.pw/repository/maven-releases/")
+    maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
+    maven("https://repo.extendedclip.com/releases/")
+    maven("https://simonsator.de/repo/")
+}
+
+dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation(kotlin("reflect"))
+    compileOnly(project(":pgame-api"))
+
+    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
+    // FAWE
+    implementation(platform("com.intellectualsites.bom:bom-newest:1.52"))
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit") { isTransitive = false }
+    // AdvancedSlimePaper
+    compileOnly("com.infernalsuite.aswm:api:3.0.0-SNAPSHOT")
+    // Testing
+    testImplementation(kotlin("test"))
+    // ScoreboardLibrary
+    val scoreboardLibraryVersion = "2.2.2"
+    implementation("net.megavex:scoreboard-library-api:$scoreboardLibraryVersion")
+    runtimeOnly("net.megavex:scoreboard-library-implementation:$scoreboardLibraryVersion")
+    implementation("net.megavex:scoreboard-library-extra-kotlin:$scoreboardLibraryVersion") // Kotlin specific extensions (optional)
+    runtimeOnly("net.megavex:scoreboard-library-modern:$scoreboardLibraryVersion:mojmap")
+    // PlaceholderAPI
+    compileOnly("me.clip:placeholderapi:2.11.6")
+    // ConfigLib
+    implementation("de.exlll:configlib-paper:4.5.0")
+    // Party and Friends
+    compileOnly("de.simonsator:Party-and-Friends-MySQL-Edition-Spigot-API:1.6.2-RELEASE")
+    compileOnly("de.simonsator:spigot-party-api-for-party-and-friends:1.0.7-RELEASE")
+}
+val targetJavaVersion = 21
+kotlin {
+    jvmToolchain(targetJavaVersion)
+}
+
+spotless {
+    kotlin {
+        targetExclude("build/generated/**/*")
+        targetExclude("build/generated-src/**/*")
+        toggleOffOn()
+        ktlint("1.5.0")
+        lineEndings = LineEnding.GIT_ATTRIBUTES
+    }
+}
+
+tasks {
+    processResources {
+        val props = mapOf("version" to version)
+        inputs.properties(props)
+        filteringCharset = "UTF-8"
+        filesMatching("paper-plugin.yml") {
+            expand(props)
+        }
+    }
+
+    build {
+        dependsOn("shadowJar")
+    }
+
+    register("writeVersion") {
+        doLast {
+            val versionFile =
+                layout.buildDirectory
+                    .file("version.txt")
+                    .get()
+                    .asFile
+            versionFile.writeText(project.version.toString())
+        }
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}
+
+tasks.register<Copy>("copyPluginToRun") {
+    dependsOn("build")
+    val jarFile =
+        layout.buildDirectory
+            .file("libs/pgame-plugin-${project.version}-all.jar")
+            .get()
+            .asFile
+    val destination =
+        layout.buildDirectory
+            .dir("../../run/plugins")
+            .get()
+            .asFile
+    from(jarFile)
+    into(destination)
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir("src/main/kotlin")
+        }
+    }
+    test {
+        java {
+            srcDir("src/test/kotlin")
+        }
+    }
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "structures": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_]+$": {
+          "type": "object",
+          "properties": {
+            "difficulty": {
+              "type": "string",
+              "description": "Difficulty of the structure.",
+              "enum": [
+                "EASY",
+                "MEDIUM",
+                "HARD",
+                "INSANE"
+              ]
+            },
+            "display_name": {
+              "type": "string",
+              "description": "Display name of the structure."
+            }
+          },
+          "required": [
+            "difficulty",
+            "display_name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "scores": {
+      "type": "object",
+      "properties": {
+        "EASY": {
+          "type": "integer",
+          "description": "Score for an EASY difficulty minigame."
+        },
+        "MEDIUM": {
+          "type": "integer",
+          "description": "Score for a MEDIUM difficulty minigame."
+        },
+        "HARD": {
+          "type": "integer",
+          "description": "Score for a HARD difficulty minigame."
+        },
+        "INSANE": {
+          "type": "integer",
+          "description": "Score for an INSANE difficulty minigame."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "EASY",
+        "MEDIUM",
+        "HARD",
+        "INSANE"
+      ]
+    }
+  },
+  "required": [
+    "structures",
+    "scores"
+  ],
+  "additionalProperties": false
+}

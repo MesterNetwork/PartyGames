@@ -1,0 +1,83 @@
+minigames:
+  healthshop:
+    worlds:
+      - world: mg-healthshop
+        x: 0.5
+        y: 63.0
+        z: 0.5
+      - world: mg-healthshop2
+        x: 0.5
+        y: 65.0
+        z: 0.5
+      - world: mg-healthshop3
+        x: 0.5
+        y: 62.0
+        z: 0.5
+    class: info.mester.network.partygames.game.HealthShopMinigame
+    display-name: Health Shop v1.1
+  speedbuilders:
+    worlds:
+      - world: mg-speedbuilders
+        x: 0.5
+        y: 60.0
+        z: 0.5
+    class: info.mester.network.partygames.game.SpeedBuildersMinigame
+    display-name: Speed Builders
+  gardening:
+    worlds:
+      - world: mg-gardening
+        x: 0.5
+        y: 65.0
+        z: 0.5
+    class: info.mester.network.partygames.game.GardeningMinigame
+    display-name: Gardening
+  damagedealer:
+    worlds:
+      - world: mg-damagedealer
+        x: 0.5
+        y: 62.0
+        z: 0.5
+    class: info.mester.network.partygames.game.DamageDealerMinigame
+    display-name: Damage Dealer
+  snifferhunt:
+    worlds:
+      - world: mg-snifferhunt
+        x: 0.5
+        y: 65.0
+        z: 0.5
+    class: info.mester.network.partygames.game.SnifferHuntMinigame
+    display-name: Sniffer Hunt
+  mineguessr:
+    worlds:
+      - world: mg-mineguessr
+        x: 8.0
+        y: 35.0
+        z: 4.0
+    class: info.mester.network.partygames.game.MineguessrMinigame
+    display-name: Mine Guesser
+  gravjump:
+    worlds:
+      - world: mg-gravjump
+        x: 0.5
+        y: 65.0
+        z: 0.5
+        yaw: -90.0
+    class: info.mester.network.partygames.game.GravjumpMinigame
+    display-name: Gravjump
+family-night:
+  - healthshop
+  - speedbuilders
+  - damagedealer
+  - mineguessr
+save-interval: 10
+spawn-location:
+  ==: org.bukkit.Location
+  world: world
+  x: 78.5
+  y: 93.0
+  z: 40.5
+  yaw: 90.0
+  pitch: 0.0
+mineguessr:
+  world: world
+  max-size: 1000

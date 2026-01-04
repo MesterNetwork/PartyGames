@@ -1,0 +1,40 @@
+name: PartyGames
+version: '1.0'
+main: info.mester.network.partygames.PartyGames
+api-version: '1.21'
+bootstrapper: info.mester.network.partygames.Bootstrapper
+load: POSTWORLD
+dependencies:
+  server:
+    PartyGamesCore:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    FastAsyncWorldEdit:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    PlaceholderAPI:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    My_Worlds:
+      load: BEFORE
+      required: false
+    FriendsAPIForPartyAndFriends:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    Spigot-Party-API-PAF:
+      load: BEFORE
+      required: false
+      join-classpath: true
+authors:
+  - Mester
+description: The paper plugin for MesterNetwork's Party Games
+website: https://github.com/MesterNetwork/PartyGames
+contributors:
+  - Pansexuality (lol)
+  - Lots of coffee
+  - Sleepless nights
+  - Send help please

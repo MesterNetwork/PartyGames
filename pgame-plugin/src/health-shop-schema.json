@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_]+$": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "ID of the item, used to identify the item type."
+            },
+            "name": {
+              "type": "string",
+              "description": "Name of the item, supports MiniMessage format for color and style."
+            },
+            "lore": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Lore lines of the item, supports MiniMessage format for color and style."
+              },
+              "description": "Lore description of the item, displayed to the player."
+            },
+            "price": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Price of the item in in-game currency."
+            },
+            "slot": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Inventory slot number for the item."
+            },
+            "group": {
+              "type": "string",
+              "description": "The group this item belongs to. Only one item of a group can be purchased at a time.",
+              "enum": [
+                "sword",
+                "sharpness",
+                "gap",
+                "armor",
+                "protection",
+                "arrow",
+                "power",
+                "punch",
+                "perk",
+                "ender_pearl",
+                "tnt",
+                "fireball",
+                "offhand",
+                "regen_ii",
+                "splash_healing_ii",
+                "splash_healing",
+                "speed_ii",
+                "jump_boost",
+                "turtle_master",
+                "levitation",
+                "blindness",
+                "poison"
+              ]
+            },
+            "category": {
+              "type": "string",
+              "description": "The category of the item, used for pagination.",
+              "enum": [
+                "combat",
+                "utility",
+                "potion",
+                "miscellaneous"
+              ]
+            },
+            "amount": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "description": "Quantity of the item if applicable."
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "price",
+            "slot"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "health": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The starting max health of players."
+    },
+    "spawn-locations": {
+      "type": "object",
+      "patternProperties": {
+        "^[0-9]+$": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "The x coordinate of the spawn location."
+              },
+              "y": {
+                "type": "number",
+                "description": "The y coordinate of the spawn location."
+              },
+              "z": {
+                "type": "number",
+                "description": "The z coordinate of the spawn location."
+              },
+              "yaw": {
+                "type": "number",
+                "description": "The yaw rotation of the spawn location."
+              },
+              "pitch": {
+                "type": "number",
+                "description": "The pitch rotation of the spawn location."
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "supply-drops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The key of the supply drop."
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The weight of the supply drop."
+          }
+        },
+        "required": [
+          "key",
+          "weight"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "items",
+    "spawn-locations",
+    "health",
+    "supply-drops"
+  ],
+  "additionalProperties": false
+}

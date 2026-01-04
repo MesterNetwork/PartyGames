@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "minigames": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_]+$": {
+          "type": "object",
+          "properties": {
+            "worlds": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "world": {
+                    "type": "string"
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  },
+                  "yaw": {
+                    "type": "number"
+                  },
+                  "pitch": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "world",
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "class": {
+              "type": "string"
+            },
+            "display-name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "worlds",
+            "class"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "save-interval": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "spawn-location": {
+      "type": "object",
+      "properties": {
+        "world": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        },
+        "yaw": {
+          "type": "number"
+        },
+        "pitch": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "world",
+        "x",
+        "y",
+        "z",
+        "yaw",
+        "pitch"
+      ]
+    },
+    "mineguessr": {
+      "type": "object",
+      "properties": {
+        "world": {
+          "type": "string"
+        },
+        "max-size": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "world",
+        "max-size"
+      ]
+    },
+    "replace-config": {
+      "type": "boolean"
+    },
+    "family-night": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "minigames",
+    "save-interval",
+    "spawn-location",
+    "mineguessr",
+    "family-night"
+  ],
+  "additionalProperties": false
+}

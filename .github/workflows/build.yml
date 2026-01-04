@@ -26,4 +26,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: partygames.jar
-          path: build/libs/partygames-*-dev-all.jar
+          path: pgame-plugin/build/libs/partygames-*-all.jar

@@ -1,0 +1,27 @@
+# Where to place the start platform
+start:
+  x: -3
+  y: 59
+  z: -7
+
+# Where the wall starts
+wall-from:
+  x: 3
+  y: 65
+  z: -3
+
+# Where the wall ends
+wall-to:
+  x: 3
+  y: 68
+  z: 3
+
+# Where the first section starts
+section-start:
+  x: 4
+  y: 59
+  z: -7
+
+sections:
+  - 'plains'
+  - 'castle'

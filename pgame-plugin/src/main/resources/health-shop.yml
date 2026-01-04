@@ -1,0 +1,960 @@
+items:
+  # Combat Items
+  stone_sword:
+    id: stone_sword
+    name: <gray>Stone Sword
+    lore:
+      - <white>A basic, but trustworthy stone sword.
+      - <white>9 out of 10 cavemen recommend it.
+    price: 8
+    slot: 0
+    group: sword
+    category: combat
+  iron_sword:
+    id: iron_sword
+    name: <white>Iron Sword
+    lore:
+      - <white>A sharp and durable iron sword.
+      - <white>10 out of 10 blacksmiths recommend it.
+    price: 12
+    slot: 1
+    group: sword
+    category: combat
+  diamond_sword:
+    id: diamond_sword
+    name: <aqua>Diamond Sword
+    lore:
+      - <white>A powerful and enduring diamond sword.
+      - <white>A favorite among treasure hunters.
+    price: 16
+    slot: 2
+    group: sword
+    category: combat
+  netherite_sword:
+    id: netherite_sword
+    name: <dark_purple>Netherite Sword
+    lore:
+      - <white>The strongest sword in existence, imbued with ancient power.
+      - <white>Only the bravest wield this mighty blade.
+    price: 20
+    slot: 3
+    group: sword
+    category: combat
+
+  shield:
+    id: shield
+    name: <gray>Shield
+    lore:
+      - <white>A basic shield, good for blocking attacks.
+      - <white>Has a 1.5 second cooldown after use.
+    price: 3
+    slot: 4
+    group: offhand
+    category: combat
+
+  knockback_stick:
+    id: stick
+    name: <yellow>Knockback Stick
+    lore:
+      - <white>A stick with Knockback II.
+      - <white>Great if you want to be annoying.
+    price: 5
+    slot: 5
+    category: combat
+
+  fire_aspect:
+    id: enchanted_book
+    name: <yellow>Fire Aspect
+    lore:
+      - <white>Let the world burn!
+    price: 10
+    slot: 6
+    category: combat
+
+  sharpness_5:
+    id: enchanted_book
+    name: <yellow>Sharpness V
+    lore:
+      - <white>Increases your damage by 1.5<red>♥
+      - <white>May cause a bit of pain.
+    price: 10
+    slot: 7
+    amount: 5
+    group: sharpness
+    category: combat
+  sharpness_10:
+    id: enchanted_book
+    name: <yellow>Sharpness X
+    lore:
+      - <white>Increases your damage by 2.75<red>♥
+      - <red><bold>OUCH!
+    price: 18
+    slot: 8
+    amount: 10
+    group: sharpness
+    category: combat
+
+  chainmail_armor:
+    id: chainmail_chestplate
+    name: <gray>Chainmail Armor
+    lore:
+      - <white>Surprisingly protective for interlinked metal rings.
+      - <white>Medieval drip, now in PvP!
+    price: 8
+    slot: 9
+    group: armor
+    category: combat
+  iron_armor:
+    id: iron_chestplate
+    name: <white>Iron Armor
+    lore:
+      - <white>Reliable iron armor, forged for battle.
+      - <white>Rusts slightly under pressure.
+    price: 12
+    slot: 10
+    group: armor
+    category: combat
+  diamond_armor:
+    id: diamond_chestplate
+    name: <aqua>Diamond Armor
+    lore:
+      - <white>Shiny, durable, and suspiciously flashy.
+      - <white>Perfect for flexing <i>and</i> surviving.
+    price: 24
+    slot: 11
+    group: armor
+    category: combat
+  netherite_armor:
+    id: netherite_chestplate
+    name: <dark_purple>Netherite Armor
+    lore:
+      - <white>The pinnacle of armor technology.
+      - '<white>Warning: may cause overconfidence.'
+    price: 36
+    slot: 12
+    group: armor
+    category: combat
+
+  thorns:
+    id: enchanted_book
+    name: <yellow>Thorns
+    lore:
+      - <white>Damages anyone who attacks you.
+      - <white>Maybe don't use it on yourself.
+    price: 14
+    slot: 13
+    category: combat
+  protection_i:
+    id: enchanted_book
+    name: <yellow>Protection I
+    lore:
+      - <white>Gives you a 16% damage reduction.
+      - <white>Every little bit helps, right?
+    price: 8
+    slot: 14
+    group: protection
+    category: combat
+  protection_ii:
+    id: enchanted_book
+    name: <yellow>Protection II
+    lore:
+      - <white>Gives you a 32% damage reduction.
+      - <white>Now with 200% more smugness.
+    price: 16
+    slot: 15
+    amount: 2
+    group: protection
+    category: combat
+  protection_iii:
+    id: enchanted_book
+    name: <yellow>Protection III
+    lore:
+      - <white>Gives you a 48% damage reduction.
+      - <white>Just walk it off. You'll be fine.
+    price: 24
+    slot: 16
+    amount: 3
+    group: protection
+    category: combat
+  protection_iv:
+    id: enchanted_book
+    name: <yellow>Protection IV
+    lore:
+      - <white>Gives you a 64% damage reduction.
+      - <white>Like bubble wrap, but for warriors.
+    price: 32
+    slot: 17
+    amount: 4
+    group: protection
+    category: combat
+
+  bow:
+    id: bow
+    name: <yellow>Bow
+    lore:
+      - <white>A bow that shoots arrows.
+      - <white>Comes with a regenerating arrow.
+    price: 8
+    slot: 18
+    category: combat
+
+  arrow_1:
+    id: arrow
+    name: <yellow>Arrow
+    lore:
+      - <white>A single arrow for precise shots.
+      - <white>Regenerates after 3 seconds.
+    price: 3
+    slot: 19
+    group: arrow
+    category: combat
+  arrow_2:
+    id: arrow
+    name: <yellow>2x Arrow
+    lore:
+      - <white>Two arrows. Double the chances to whiff.
+      - <white>Regenerates after 3 seconds.
+    price: 6
+    slot: 20
+    group: arrow
+    amount: 2
+    category: combat
+  arrow_3:
+    id: arrow
+    name: <yellow>3x Arrow
+    lore:
+      - <white>A polite way to say “leave.”
+      - <white>Regenerates after 3 seconds.
+    price: 9
+    slot: 21
+    group: arrow
+    amount: 3
+    category: combat
+
+  flame:
+    id: enchanted_book
+    name: <yellow>Flame
+    lore:
+      - <white>Didn't they use flaming arrows in the past?
+    price: 10
+    slot: 22
+    category: combat
+  power_i:
+    id: enchanted_book
+    name: <yellow>Power I
+    lore:
+      - <white>Increases your damage by 50%, kinda hurts.
+    price: 8
+    slot: 23
+    group: power
+    category: combat
+  power_ii:
+    id: enchanted_book
+    name: <yellow>Power II
+    lore:
+      - <white>Increases your damage by 75%.
+      - <white>Use it well, and you can one-shot someone.
+    price: 12
+    slot: 24
+    group: power
+    category: combat
+  punch_i:
+    id: enchanted_book
+    name: <yellow>Punch I
+    lore:
+      - <white>Send them flying!
+    price: 6
+    slot: 25
+    group: punch
+    category: combat
+  punch_ii:
+    id: enchanted_book
+    name: <yellow>Punch II
+    lore:
+      - <white>Can't touch this!
+    price: 10
+    slot: 26
+    group: punch
+    category: combat
+
+  # Utility Items
+  golden_apple_1:
+    id: golden_apple
+    name: <gold>Golden Apple
+    lore:
+      - <white>A single golden apple.
+      - <white>It's a delicious treat!
+    price: 2
+    slot: 0
+    group: gap
+    category: utility
+  golden_apple_2:
+    id: golden_apple
+    name: <gold>2x Golden Apple
+    lore:
+      - <white>Two golden apples.
+      - <white>Now we're talking!
+    price: 4
+    slot: 1
+    group: gap
+    amount: 2
+    category: utility
+  golden_apple_3:
+    id: golden_apple
+    name: <gold>3x Golden Apple
+    lore:
+      - <white>Three golden apples.
+      - <white>Enough regen for the whole family!
+    price: 6
+    slot: 2
+    group: gap
+    amount: 3
+    category: utility
+  golden_apple_inf:
+    id: enchanted_golden_apple
+    name: <rainbow>Infinite Golden Apple</rainbow>
+    lore:
+      - <white>Infinite golden apples.
+      - <white>Regenerates every <yellow>10</yellow> seconds!
+    price: 14
+    slot: 3
+    group: gap
+    category: utility
+  enchanted_golden_apple:
+    id: enchanted_golden_apple
+    name: <gold>Enchanted Golden Apple
+    lore:
+      - <white>The forbidden fruit of PvP.
+      - <white>Eat this and become a mildly invincible war god.
+    price: 15
+    slot: 4
+    category: utility
+
+  totem_of_undying:
+    id: totem_of_undying
+    name: <green>Totem of Undying
+    lore:
+      - <white>A totem that saves you from one death.
+    price: 15
+    slot: 7
+    amount: 1
+    group: offhand
+    category: utility
+
+  milk:
+    id: milk_bucket
+    name: <yellow>Milk Bucket
+    lore:
+      - <white>A bucket of milk.
+      - <white>Removes all potion effects.
+    price: 5
+    slot: 8
+    amount: 1
+    category: utility
+
+  oak_planks:
+    id: oak_planks
+    name: <gray>64x Oak Plank
+    lore:
+      - <white>A basic oak plank.
+      - <white>Good for building.
+    price: 3
+    slot: 9
+    amount: 64
+    category: utility
+
+  flint_and_steel:
+    id: flint_and_steel
+    name: <gray>Flint and Steel
+    lore:
+      - <white>Sets things on fire. Intentionally.
+      - <white>Technically not arson if it’s in a video game.
+    price: 5
+    slot: 10
+    amount: 1
+    category: utility
+
+  fishing_rod:
+    id: fishing_rod
+    name: <yellow>Fishing Rod
+    lore:
+      - <white>A fishing rod, great for fishing.
+      - <white>But I think you'll use it to pull people towards you.
+    price: 4
+    slot: 11
+    amount: 1
+    category: utility
+
+  fireball:
+    id: fire_charge
+    name: <red>Fireball
+    lore:
+      - <white>A fireball, great for throwing at people.
+      - <white>Just don't burn down the whole place, okay?
+    price: 4
+    slot: 12
+    amount: 1
+    group: fireball
+    category: utility
+  fireball_2:
+    id: fire_charge
+    name: <red>2x Fireball
+    lore:
+      - <white>Now with double the combustion.
+      - <white>Because one fireball isn't annoying enough.
+    price: 8
+    slot: 13
+    amount: 2
+    group: fireball
+    category: utility
+  fireball_3:
+    id: fire_charge
+    name: <red>3x Fireball
+    lore:
+      - <white>You’ve officially entered the chaos bracket.
+      - <white>Great for clearing bridges, friendships optional.
+    price: 12
+    slot: 14
+    amount: 3
+    group: fireball
+    category: utility
+
+  tnt:
+    id: tnt
+    name: <red>TNT
+    lore:
+      - <white>For when subtlety just isn't your thing.
+      - '<white>Warning: May attract unwanted attention.'
+    price: 4
+    slot: 15
+    amount: 1
+    group: tnt
+    category: utility
+  tnt_2:
+    id: tnt
+    name: <red>2x TNT
+    lore:
+      - <white>Double the boom, double the bad decisions.
+      - <white>You're not here to make friends, are you?
+    price: 8
+    slot: 16
+    amount: 2
+    group: tnt
+    category: utility
+  tnt_3:
+    id: tnt
+    name: <red>3x TNT
+    lore:
+      - <white>A demolition plan disguised as strategy.
+      - <white>They’ll never rebuild in time.
+    price: 12
+    slot: 17
+    amount: 3
+    group: tnt
+    category: utility
+
+  ender_pearl:
+    id: ender_pearl
+    name: <yellow>Ender Pearl
+    lore:
+      - <white>An ender pearl, great for teleporting.
+      - <white>Just don't break the space-time continuum, please?
+    price: 6
+    slot: 18
+    amount: 1
+    group: ender_pearl
+    category: utility
+  ender_pearl_2:
+    id: ender_pearl
+    name: <yellow>2x Ender Pearl
+    lore:
+      - <white>Two ender pearls, great for teleporting twice I guess.
+      - <white>Moderately annoying to your enemies.
+    price: 11
+    slot: 19
+    amount: 2
+    group: ender_pearl
+    category: utility
+  ender_pearl_3:
+    id: ender_pearl
+    name: <yellow>3x Ender Pearl
+    lore:
+      - <white>Three ender pearls, practically a new transportation system.
+      - <white>Oh right, I guess it does have a cooldown.
+    price: 16
+    slot: 20
+    amount: 3
+    group: ender_pearl
+    category: utility
+  ender_pearl_4:
+    id: ender_pearl
+    name: <yellow>4x Ender Pearl
+    lore:
+      - <white>Basically an Enderman at this point.
+      - <white>Do you even want to fight?
+    price: 21
+    slot: 21
+    amount: 4
+    group: ender_pearl
+    category: utility
+
+  snowball:
+    id: snowball
+    name: <white>16x Snowball
+    lore:
+      - <white>A snowball, great for throwing at people.
+      - <white>You can definitely lose friends with this.
+    price: 2
+    slot: 22
+    amount: 16
+    category: utility
+
+  water_bucket:
+    id: water_bucket
+    name: <blue>Water Bucket
+    lore:
+      - <white>Stops fall damage, lava, and your enemies’ fun.
+      - <white>The Swiss Army knife of Minecraft items.
+    price: 5
+    slot: 26
+    amount: 1
+    category: utility
+
+  # Potions
+  splash_healing_3:
+    id: splash_potion
+    name: <light_purple>3x Splash Healing I
+    lore:
+      - <white>Heals 2 <red>♥</red> instantly.
+      - <white>Great for quick fixes and bad decisions.
+    price: 5
+    slot: 0
+    amount: 3
+    group: splash_healing
+    category: potion
+
+  splash_healing_5:
+    id: splash_potion
+    name: <light_purple>5x Splash Healing I
+    lore:
+      - <white>Heals 2 <red>♥</red> instantly.
+      - <white>Enough to patch a party-wide disaster.
+    price: 8
+    slot: 1
+    amount: 5
+    group: splash_healing
+    category: potion
+
+  splash_healing_7:
+    id: splash_potion
+    name: <light_purple>7x Splash Healing I
+    lore:
+      - <white>Heals 2 <red>♥</red> instantly.
+      - <white>Why stop panicking when you can heal mid-scream?
+    price: 11
+    slot: 2
+    amount: 7
+    group: splash_healing
+    category: potion
+
+  splash_healing_ii_3:
+    id: splash_potion
+    name: <light_purple>3x Splash Healing II
+    lore:
+      - <white>Heals 4 <red>♥</red> instantly.
+      - <white>Basically a medical airstrike.
+    price: 9
+    slot: 3
+    amount: 3
+    group: splash_healing_ii
+    category: potion
+
+  splash_healing_ii_5:
+    id: splash_potion
+    name: <light_purple>5x Splash Healing II
+    lore:
+      - <white>Heals 4 <red>♥</red> instantly.
+      - <white>Your enemies hate this one simple trick.
+    price: 14
+    slot: 4
+    amount: 5
+    group: splash_healing_ii
+    category: potion
+
+  splash_healing_ii_7:
+    id: splash_potion
+    name: <light_purple>7x Splash Healing II
+    lore:
+      - <white>Heals 4 <red>♥</red> instantly.
+      - <white>May cause extreme survivability.
+    price: 19
+    slot: 5
+    amount: 7
+    group: splash_healing_ii
+    category: potion
+
+  regen_ii_2:
+    id: potion
+    name: <light_purple>2x Regeneration II
+    lore:
+      - <white>Restores 2 <red>♥</red> every 5 seconds.
+      - <white>Slow but steady wins... maybe.
+    price: 6
+    slot: 6
+    amount: 2
+    group: regen_ii
+    category: potion
+
+  regen_ii_4:
+    id: potion
+    name: <light_purple>4x Regeneration II
+    lore:
+      - <white>Restores 2 <red>♥</red> every 5 seconds.
+      - <white>Patience is a virtue. Healing is a luxury.
+    price: 10
+    slot: 7
+    amount: 4
+    group: regen_ii
+    category: potion
+
+  regen_v:
+    id: potion
+    name: <light_purple>2x Regeneration V
+    lore:
+      - <white>Restores 3 <red>♥</red> per second.
+      - <white>Certified LEGA (Liquid Enchanted Golden Apples).
+    price: 14
+    slot: 8
+    amount: 2
+    category: potion
+
+  speed_ii_2:
+    id: potion
+    name: <yellow>2x Speed II
+    lore:
+      - <white>Boosts your speed for 20 seconds.
+      - <white>Why walk when you can run like a panic attack?
+    price: 4
+    amount: 2
+    slot: 9
+    group: speed_ii
+    category: potion
+
+  speed_ii_4:
+    id: potion
+    name: <yellow>4x Speed II
+    lore:
+      - <white>Boosts your speed for 20 seconds.
+      - <white>Basically caffeine in a bottle.
+    price: 6
+    amount: 4
+    slot: 10
+    group: speed_ii
+    category: potion
+
+  speed_ii_6:
+    id: potion
+    name: <yellow>6x Speed II
+    lore:
+      - <white>Boosts your speed for 20 seconds.
+      - <white>Wanna break the sound barrier?
+    price: 8
+    amount: 6
+    slot: 11
+    group: speed_ii
+    category: potion
+
+  jump_boost_2:
+    id: potion
+    name: <yellow>2x Jump Boost IV
+    lore:
+      - <white>Leap up to 4 blocks for 20 seconds.
+      - <white>Gravity? Never heard of her.
+    price: 4
+    amount: 2
+    slot: 12
+    group: jump_boost
+    category: potion
+
+  jump_boost_4:
+    id: potion
+    name: <yellow>4x Jump Boost IV
+    lore:
+      - <white>Leap up to 4 blocks for 20 seconds.
+      - <white>Kangaroos' favourite morning drink.
+    price: 6
+    amount: 4
+    slot: 13
+    group: jump_boost
+    category: potion
+
+  jump_boost_6:
+    id: potion
+    name: <yellow>6x Jump Boost IV
+    lore:
+      - <white>Leap up to 4 blocks for 20 seconds.
+      - <white>Built for players who fear stairs.
+    price: 8
+    amount: 6
+    slot: 14
+    group: jump_boost
+    category: potion
+
+  turtle_master:
+    id: potion
+    name: <yellow>2x Turtle Master
+    lore:
+      - <white>Become invincible… eventually.
+    price: 8
+    amount: 2
+    slot: 15
+    group: turtle_master
+    category: potion
+  turtle_master_long:
+    id: potion
+    name: <yellow>2x Long Turtle Master
+    lore:
+      - <white>Same effects, now with 100% more suffering.
+      - <white>Perfect for moving at glacial pace in style.
+    price: 12
+    amount: 2
+    slot: 16
+    group: turtle_master
+    category: potion
+  turtle_master_strong:
+    id: potion
+    name: <yellow>2x Strong Turtle Master
+    lore:
+      - <white>You are now a tank with two left feet.
+    price: 16
+    amount: 2
+    slot: 17
+    group: turtle_master
+    category: potion
+
+  poison_i:
+    id: splash_potion
+    name: <yellow>Splash Poison I
+    lore:
+      - <white>Deals 0.4 <red>♥</red> per second.
+      - <white>A slow, satisfying descent into regret.
+    price: 7
+    slot: 18
+    amount: 1
+    group: poison
+    category: potion
+  poison_ii:
+    id: splash_potion
+    name: <yellow>Splash Poison II
+    lore:
+      - <white>Deals 0.8 <red>♥</red> per second.
+      - <white>The “why is this still happening” experience.
+    price: 10
+    slot: 19
+    amount: 1
+    group: poison
+    category: potion
+
+  blindness_1:
+    id: splash_potion
+    name: <yellow>Splash Blindness
+    lore:
+      - <white>Blinds for 10 seconds.
+      - <white>Suddenly PvP becomes a horror game.
+    price: 6
+    slot: 20
+    amount: 1
+    group: blindness
+    category: potion
+  blindness_2:
+    id: splash_potion
+    name: <yellow>2x Splash Blindness
+    lore:
+      - <white>Blinds for 10 seconds.
+      - <white>Double the disorientation, double the fun.
+    price: 11
+    slot: 21
+    amount: 2
+    group: blindness
+    category: potion
+
+  levitation_i:
+    id: splash_potion
+    name: <yellow>Splash Levitation
+    lore:
+      - <white>Lifts enemies for 5 seconds.
+      - <white>Gravity is just a suggestion.
+    price: 8
+    slot: 22
+    amount: 1
+    group: levitation
+    category: potion
+  levitation_ii:
+    id: splash_potion
+    name: <yellow>Splash Levitation II
+    lore:
+      - <white>Lifts enemies even higher for 5 seconds.
+      - <white>“Where we’re going, we don’t need logic.”
+    price: 12
+    slot: 23
+    amount: 1
+    group: levitation
+    category: potion
+
+  # Miscellaneous Items
+  tracker:
+    id: compass
+    name: <yellow>Tracker
+    lore:
+      - <white>Right click to point to the nearest player.
+      - <white>Has a 5-second cooldown and alerts the tracked player.
+    price: 6
+    slot: 0
+    category: miscellaneous
+
+  steal_perk:
+    id: bundle
+    name: <yellow>Steal Perk
+    lore:
+      - <white>You will get every item from the players you kill.
+      - <white>The perk can only be used once. Very high risk, high reward.
+    price: 20
+    slot: 1
+    group: perk
+    category: miscellaneous
+  heal_perk:
+    id: red_dye
+    name: <yellow>Heal Perk
+    lore:
+      - <white>You will heal to full health when you kill a player.
+      - <white>The perk is kept after use.
+    price: 7
+    slot: 2
+    group: perk
+    category: miscellaneous
+  double_jump:
+    id: rabbit_foot
+    name: <yellow>Double Jump
+    lore:
+      - <white>Gives you the ability to jump twice.
+      - <white>The perk is kept after use and has a 3 second cooldown.
+    price: 10
+    slot: 3
+    group: perk
+    category: miscellaneous
+  feather_fall:
+    id: feather
+    name: <yellow>Feather Fall
+    lore:
+      - <white>You will not take fall damage.
+    price: 6
+    slot: 4
+    group: perk
+    category: miscellaneous
+  blast_protection:
+    id: nether_star
+    name: <yellow>Blast Protection
+    lore:
+      - <white>You will not take damage from explosions.
+      - <white>Great for when you want to be a walking bomb shelter.
+    price: 8
+    slot: 5
+    group: perk
+    category: miscellaneous
+
+spawn-locations:
+  0:
+    - x: 52.5
+      y: 64.0
+      z: -51.5
+    - x: 13.5
+      y: 69.0
+      z: -58.5
+    - x: -48.5
+      y: 65.0
+      z: -43.5
+    - x: -48.5
+      y: 64.0
+      z: 22.5
+    - x: -26.5
+      y: 77.0
+      z: 54.5
+    - x: 49.5
+      y: 77.0
+      z: 45.5
+    - x: 48.5
+      y: 67.0
+      z: 3.5
+    - x: -0.5
+      y: 64.0
+      z: -0.5
+  1:
+    - x: 36.5
+      y: 56.0
+      z: 36.5
+    - x: 28.5
+      y: 58.0
+      z: 28.5
+    - x: -34.5
+      y: 56.0
+      z: 36.5
+    - x: -27.5
+      y: 58.0
+      z: 29.5
+    - x: -34.5
+      y: 56.0
+      z: -35.5
+    - x: -27.5
+      y: 58.0
+      z: -28.5
+    - x: 35.5
+      y: 56.0
+      z: -35.5
+    - x: 28.5
+      y: 58.0
+      z: -28.5
+  2:
+    - x: 28.5
+      y: 63.0
+      z: 53.5
+      yaw: 180.0
+    - x: -34.5
+      y: 63.0
+      z: 45.5
+      yaw: -135.0
+    - x: -31.5
+      y: 63.0
+      z: 19.5
+      yaw: -90.0
+    - x: -42.5
+      y: 63.0
+      z: -48.5
+      yaw: -45.0
+    - x: -26.5
+      y: 63.0
+      z: -22.5
+      yaw: -90.0
+    - x: -1.5
+      y: 63.0
+      z: 2.5
+      yaw: -90.0
+    - x: 35.5
+      y: 63.0
+      z: -11.5
+      yaw: 90.0
+    - x: 48.5
+      y: 63.0
+      z: -49.5
+      yaw: 45.0
+supply-drops:
+  - key: golden_apple_1
+    weight: 60
+  - key: golden_apple_2
+    weight: 20
+  - key: golden_apple_3
+    weight: 5
+  - key: jump_potion
+    weight: 15
+  - key: regen_potion
+    weight: 1
+health: 80
