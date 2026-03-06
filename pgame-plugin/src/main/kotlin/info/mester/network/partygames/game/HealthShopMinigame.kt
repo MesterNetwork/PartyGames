@@ -377,7 +377,7 @@ class HealthShopMinigame(
         Bukkit.getScheduler().runTaskTimer(plugin, SupplyChestTimer(this, gameTime * 20), 0, 1)
 
         // shrink the world border to close to 3 blocks in the last 20 seconds
-        startPos.world.worldBorder.changeSize(3.0, gameTime - 20L)
+        startPos.world.worldBorder.changeSize(3.0, (gameTime - 20) * 20L)
 
         // randomly move the world border in the last 20 seconds every 2.5 seconds
         Bukkit.getScheduler().runTaskTimer(
