@@ -12,7 +12,7 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://oss.sonatype.org/content/groups/public/")
     maven("https://maven.enginehub.org/repo/")
-    maven("https://repo.rapture.pw/repository/maven-releases/")
+    maven("https://repo.infernalsuite.com/repository/maven-releases/")
     maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
 }
 
