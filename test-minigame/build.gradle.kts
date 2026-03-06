@@ -1,5 +1,5 @@
 plugins {
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.0.0-beta8"
     id("io.papermc.paperweight.userdev")
     java
 }
@@ -17,7 +17,7 @@ dependencies {
     implementation(kotlin("reflect"))
     compileOnly(project(":pgame-api"))
 
-    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
 }
 val targetJavaVersion = 21
 kotlin {
