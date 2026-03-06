@@ -1,5 +1,5 @@
 plugins {
-    id("com.gradleup.shadow") version "9.3.0"
+    id("com.gradleup.shadow") version "9.0.0-beta8"
     id("io.papermc.paperweight.userdev")
     id("org.jetbrains.dokka") version "2.0.0"
     java
@@ -12,7 +12,7 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://oss.sonatype.org/content/groups/public/")
     maven("https://maven.enginehub.org/repo/")
-    maven("https://repo.rapture.pw/repository/maven-releases/")
+    maven("https://repo.infernalsuite.com/repository/maven-releases/")
     maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
 }
 
@@ -21,7 +21,7 @@ dependencies {
     implementation(kotlin("reflect"))
 
     paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
-    compileOnly("com.infernalsuite.asp:api:4.0.0-SNAPSHOT")
+    compileOnly("com.infernalsuite.asp:api:4.2.0-SNAPSHOT")
 }
 val targetJavaVersion = 21
 kotlin {

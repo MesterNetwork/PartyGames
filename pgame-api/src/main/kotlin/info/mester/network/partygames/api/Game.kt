@@ -436,6 +436,9 @@ class Game(
      * Gracefully shut down the game (used when the game has to be ended without announcing the winners)
      */
     fun terminate() {
+        if(_state == GameState.STOPPED) {
+            return
+        }
         _state = GameState.STOPPED
         // this could be the case if we forcefully end the tournament with the command
         runningMinigame?.terminate()

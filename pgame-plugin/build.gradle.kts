@@ -1,7 +1,7 @@
 import com.diffplug.spotless.LineEnding
 
 plugins {
-    id("com.gradleup.shadow") version "9.3.0"
+    id("com.gradleup.shadow") version "9.0.0-beta8"
     id("io.papermc.paperweight.userdev")
     id("com.diffplug.spotless") version "7.0.2"
     java
@@ -14,8 +14,6 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://oss.sonatype.org/content/groups/public/")
     maven("https://maven.enginehub.org/repo/")
-    maven("https://repo.rapture.pw/repository/maven-releases/")
-    maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
     maven("https://repo.extendedclip.com/releases/")
     maven("https://simonsator.de/repo/")
 }
@@ -30,8 +28,6 @@ dependencies {
     implementation(platform("com.intellectualsites.bom:bom-newest:1.52"))
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit") { isTransitive = false }
-    // AdvancedSlimePaper
-    // compileOnly("com.infernalsuite.asp:api:4.0.0-SNAPSHOT")
     // Testing
     testImplementation(kotlin("test"))
     // ScoreboardLibrary
